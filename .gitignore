@@ -1,11 +1,7 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-node_modules/
-=======
-=======
->>>>>>> 5666181455d8ac07e4ec4d01fa56962c0021d845
 # Dependencies
 node_modules/
+backend/node_modules/
+frontend/node_modules/
 
 # Build output
 **/dist/
@@ -26,13 +22,3 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
-<<<<<<< HEAD
->>>>>>> 7e256ad (Fix merge conflicts)
-=======
->>>>>>> 5666181455d8ac07e4ec4d01fa56962c0021d845
