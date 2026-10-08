@@ -46,7 +46,7 @@ function ChatContainer() {
                 <div
                   className={`chat-bubble relative ${
                     msg.senderId === authUser._id
-                      ? "bg-cyan-600 text-white"
+                      ? "bg-primary text-primary-content"
                       : "bg-base-200 text-base-content"
                   }`}
                 >
