@@ -4,6 +4,8 @@ import { useThemeStore } from "../store/useThemeStore";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
 import { MessageCircleIcon, MailIcon, LoaderIcon, LockIcon } from "lucide-react";
 import { Link } from "react-router-dom";
+import logoLight from "../assets/logo-light.png";
+import logoDark from "../assets/logo-dark.png";
 
 function SigninPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -23,7 +25,7 @@ function SigninPage() {
             <div className="flex items-center justify-center p-8 md:w-1/2 md:border-r md:border-[#3d2a20]/10">
               <div className="w-full max-w-md">
                 <div className="mb-8 text-center">
-                  <img src={theme === "dark" ? "/logo-dark.png" : "/logo-light.png"} alt="Logo" className="mx-auto mb-4 h-12 w-12" />
+                  <img src={theme === "dark" ? logoDark : logoLight} alt="Logo" className="mx-auto mb-4 h-12 w-12" />
                   <h2 className="mb-2 text-2xl font-bold text-[#3d2a20]">Welcome Back</h2>
                   <p className="text-[#5f4a3b]">Login to access your account</p>
                 </div>

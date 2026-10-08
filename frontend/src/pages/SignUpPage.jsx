@@ -4,6 +4,8 @@ import { useThemeStore } from "../store/useThemeStore";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
 import { MessageCircleIcon, LockIcon, MailIcon, UserIcon, LoaderIcon } from "lucide-react";
 import { Link } from "react-router";
+import logoLight from "../assets/logo-light.png";
+import logoDark from "../assets/logo-dark.png";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
@@ -25,7 +27,7 @@ function SignUpPage() {
               <div className="w-full max-w-md">
                 {/* HEADING TEXT */}
                 <div className="text-center mb-8">
-                  <img src={theme === "dark" ? "/logo-dark.png" : "/logo-light.png"} alt="Let's Connect Logo" className="w-12 h-12 mx-auto mb-4" />
+                  <img src={theme === "dark" ? logoDark : logoLight} alt="Let's Connect Logo" className="w-12 h-12 mx-auto mb-4" />
                   <h2 className="text-2xl font-bold text-base-content mb-2">Create Account</h2>
                   <p className="text-base-content/60">Sign up for a new account</p>
                 </div>
