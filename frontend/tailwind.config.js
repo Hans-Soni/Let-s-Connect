@@ -39,11 +39,11 @@ export default {
           primary: "#E07A5F", // Terracotta orange
           secondary: "#F4A261", // Warm peach
           accent: "#E25822",
-          neutral: "#1F2937",
-          "base-100": "#1E293B", // Innermost cards (Slate 800)
-          "base-200": "#2D3238", // Card / Container Backgrounds (Muted dark gray)
-          "base-300": "#121212", // Background: Deep dark charcoal / near black
-          "base-content": "#FAFAFA", // Text: Soft off-white / cream
+          neutral: "#1E293B", // Slate 800
+          "base-100": "#334155", // Innermost cards (Slate 700)
+          "base-200": "#1E293B", // Card / Container Backgrounds (Muted dark gray / slate)
+          "base-300": "#0F172A", // Background: Deep dark charcoal / near black (Slate 900)
+          "base-content": "#F8FAFC", // Text: Soft off-white / cream (Slate 50)
           info: "#3b82f6",
           success: "#22c55e",
           warning: "#eab308",
