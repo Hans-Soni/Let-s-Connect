@@ -1,15 +1,13 @@
 import { useState, useRef } from "react";
-import { LogOutIcon, VolumeOffIcon, Volume2Icon, Sun, Moon } from "lucide-react";
+import { LogOutIcon, VolumeOffIcon, Volume2Icon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
-import { useThemeStore } from "../store/useThemeStore";
 
 const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile } = useAuthStore();
   const { isSoundEnabled, toggleSound } = useChatStore();
-  const { theme, setTheme } = useThemeStore();
   const [selectedImg, setSelectedImg] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -75,14 +73,6 @@ function ProfileHeader() {
             onClick={logout}
           >
             <LogOutIcon className="size-5" />
-          </button>
-
-          {/* THEME TOGGLE BTN */}
-          <button
-            className="text-base-content/60 hover:text-base-content transition-colors"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </button>
 
           {/* SOUND TOGGLE BTN */}
