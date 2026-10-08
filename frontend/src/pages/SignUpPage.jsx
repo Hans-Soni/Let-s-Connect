@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
-import { MessageCircleIcon, LockIcon, MailIcon, UserIcon, LoaderIcon } from "lucide-react";
+import { MessageCircleIcon, LockIcon, MailIcon, UserIcon, LoaderIcon, DownloadIcon } from "lucide-react";
 import { Link } from "react-router";
 import logoLight from "../assets/logo-light.png";
 import logoDark from "../assets/logo-dark.png";
@@ -18,10 +18,10 @@ function SignUpPage() {
   };
 
   return (
-    <div className="w-full flex items-center justify-center p-4 bg-base-300">
-      <div className="relative w-full max-w-6xl md:h-[800px] h-[650px]">
+    <div className="w-full flex items-center justify-center p-4 min-h-screen bg-base-300 py-10">
+      <div className="relative w-full max-w-6xl md:h-[800px] h-auto">
         <BorderAnimatedContainer>
-          <div className="w-full flex flex-col md:flex-row">
+          <div className="w-full h-full flex flex-col md:flex-row">
             {/* FORM CLOUMN - LEFT SIDE */}
             <div className="md:w-1/2 p-8 flex items-center justify-center md:border-r border-slate-600/30">
               <div className="w-full max-w-md">
@@ -96,6 +96,26 @@ function SignUpPage() {
                   <Link to="/login" className="auth-link">
                     Already have an account? Login
                   </Link>
+                </div>
+
+                {/* MOBILE APP DOWNLOAD BUTTON - ONLY VISIBLE ON SMALL SCREENS */}
+                <div className="mt-8 text-center md:hidden">
+                  <div className="relative flex py-5 items-center">
+                    <div className="flex-grow border-t border-base-content/20"></div>
+                    <span className="flex-shrink-0 mx-4 text-base-content/50 text-sm">Or</span>
+                    <div className="flex-grow border-t border-base-content/20"></div>
+                  </div>
+                  
+                  <button 
+                    className="w-full bg-base-100 border border-primary text-primary rounded-lg py-2.5 font-medium hover:bg-primary/10 focus:ring-2 focus:ring-primary flex items-center justify-center gap-2 transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert("App download link will go here!");
+                    }}
+                  >
+                    <DownloadIcon className="size-5" />
+                    Download App
+                  </button>
                 </div>
               </div>
             </div>
