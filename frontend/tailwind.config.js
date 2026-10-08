@@ -34,7 +34,22 @@ export default {
           error: "#ef4444",
         },
       },
-      "dark",
+      {
+        dark: {
+          primary: "#E07A5F", // Terracotta orange
+          secondary: "#F4A261", // Warm peach
+          accent: "#E25822",
+          neutral: "#1F2937",
+          "base-100": "#1E293B", // Innermost cards (Slate 800)
+          "base-200": "#2D3238", // Card / Container Backgrounds (Muted dark gray)
+          "base-300": "#121212", // Background: Deep dark charcoal / near black
+          "base-content": "#FAFAFA", // Text: Soft off-white / cream
+          info: "#3b82f6",
+          success: "#22c55e",
+          warning: "#eab308",
+          error: "#ef4444",
+        },
+      },
     ],
   },
 };
