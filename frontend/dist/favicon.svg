@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 1250" width="1250" height="1250" role="img" aria-label="LC logo, dark mode">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 1250" width="1250" height="1250" role="img" aria-label="LC logo, light mode">
   <defs>
     <linearGradient id="l-main" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#FBF6EE"/>
-      <stop offset="1" stop-color="#E4DCCF"/>
+      <stop offset="0" stop-color="#3A3732"/>
+      <stop offset="1" stop-color="#171615"/>
     </linearGradient>
     <linearGradient id="l-fold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#E9E1D4"/>
-      <stop offset="1" stop-color="#CFC5B5"/>
+      <stop offset="0" stop-color="#2A2825"/>
+      <stop offset="1" stop-color="#0F0E0D"/>
     </linearGradient>
     <linearGradient id="c-main" x1="0.15" y1="1" x2="0.9" y2="0.05">
       <stop offset="0" stop-color="#D4623B"/>
@@ -19,22 +19,23 @@
     </linearGradient>
   </defs>
 
-  <!-- Background: deep charcoal -->
-  <rect width="1250" height="1250" fill="#161514"/>
+  <!-- Background: clean off-white / cream -->
+  <rect width="1250" height="1250" fill="#FAF7F2"/>
 
   <!-- L -->
   <path d="M265 370 C265 335 292 308 326 308 C375 308 417 365 417 410 L417 735 C417 760 435 775 460 775 L600 775 C690 775 745 830 775 893 L465 893 C340 893 265 800 265 685 Z" fill="url(#l-main)"/>
-  <path d="M265 685 C290 760 350 795 420 793 C470 792 510 780 545 775 L600 775 C690 775 745 830 775 893 L465 893 C340 893 275 800 265 685 Z" fill="url(#l-fold)" opacity="0.9"/>
+  <path d="M265 685 C290 760 350 795 420 793 C470 792 510 780 545 775 L600 775 C690 775 745 830 775 893 L465 893 C340 893 275 800 265 685 Z" fill="url(#l-fold)" opacity="0.85"/>
 
   <!-- C / chat bubble -->
   <path d="M995 495 C960 430 880 368 780 368 C620 368 500 500 500 640 C500 700 520 740 543 775 L600 775 C690 775 745 830 775 893 L800 892 C830 895 860 920 880 938 C895 948 903 935 905 915 L912 860 C915 848 925 845 935 838 C965 820 985 800 997 780 C1002 768 995 762 985 758 L935 732 C920 725 905 728 890 740 C860 762 825 775 780 775 C690 775 620 710 620 640 C620 560 690 488 780 488 C830 488 862 515 890 543 C900 553 915 555 930 550 L975 527 C995 517 1005 508 995 495 Z" fill="url(#c-main)"/>
-  <path d="M507 692 C520 625 585 565 662 534 C632 565 620 605 620 640 C620 700 665 750 725 770 L543 775 C525 750 512 722 507 692 Z" fill="#8F3615" opacity="0.35"/>
+  <path d="M507 692 C520 625 585 565 662 534 C632 565 620 605 620 640 C620 700 665 750 725 770 L543 775 C525 750 512 722 507 692 Z" fill="#B84A25" opacity="0.28"/>
 
-  <!-- Slate bubble interior -->
-  <ellipse cx="770" cy="632" rx="150" ry="144" fill="#2A2927"/>
+  <!-- Card-colored bubble interior -->
+  <path d="M780 488 C690 488 620 560 620 640 C620 710 690 775 780 775 C825 775 860 762 890 740 C905 728 920 725 935 732 L985 758 C990 760 995 762 997 765 L900 700 L900 580 C892 565 890 560 890 543 C862 515 830 488 780 488 Z" fill="#F1EFEA" opacity="0"/>
+  <ellipse cx="770" cy="632" rx="150" ry="144" fill="#F1EFEA"/>
 
   <!-- Typing dots -->
   <circle cx="700" cy="640" r="31" fill="url(#dot)"/>
   <circle cx="783" cy="640" r="31" fill="url(#dot)"/>
-  <circle cx="868" cy="640" r="31" fill="#F4EEE4"/>
+  <circle cx="868" cy="640" r="31" fill="#1F1E1C"/>
 </svg>
