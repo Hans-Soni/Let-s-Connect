@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { UseAuthStore } from "../store/UseAuthStore";
+import { useThemeStore } from "../store/useThemeStore";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
 import { MessageCircleIcon, MailIcon, LoaderIcon, LockIcon } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -7,6 +8,7 @@ import { Link } from "react-router-dom";
 function SigninPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const { signin, IsSigningIn } = UseAuthStore();
+  const { theme } = useThemeStore();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ function SigninPage() {
             <div className="flex items-center justify-center p-8 md:w-1/2 md:border-r md:border-[#3d2a20]/10">
               <div className="w-full max-w-md">
                 <div className="mb-8 text-center">
-                  <MessageCircleIcon className="mx-auto mb-4 h-12 w-12 text-[#f6a06b]" />
+                  <img src={theme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"} alt="Logo" className="mx-auto mb-4 h-12 w-12" />
                   <h2 className="mb-2 text-2xl font-bold text-[#3d2a20]">Welcome Back</h2>
                   <p className="text-[#5f4a3b]">Login to access your account</p>
                 </div>

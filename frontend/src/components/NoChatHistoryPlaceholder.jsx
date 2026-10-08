@@ -1,10 +1,11 @@
-import { MessageCircleIcon } from "lucide-react";
+import { useThemeStore } from "../store/useThemeStore";
 
 const NoChatHistoryPlaceholder = ({ name }) => {
+  const { theme } = useThemeStore();
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-6">
       <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center mb-5">
-        <MessageCircleIcon className="size-8 text-primary" />
+        <img src={theme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"} alt="Logo" className="size-8" />
       </div>
       <h3 className="text-lg font-medium text-base-content mb-3">
         Start your conversation with {name}
