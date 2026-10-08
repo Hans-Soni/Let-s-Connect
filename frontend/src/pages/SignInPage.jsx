@@ -77,7 +77,7 @@ function SigninPage() {
             <div className="hidden items-center justify-center bg-gradient-to-bl from-[#aebf92]/25 via-[#f5ead8]/20 to-transparent p-6 md:flex md:w-1/2">
               <div>
                 <img
-                  src="/login.png"
+                  src="./login.png"
                   alt="People using mobile devices"
                   className="h-auto w-full object-contain"
                 />
