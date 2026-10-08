@@ -14,7 +14,7 @@ function LoginPage() {
   };
 
   return (
-    <div className="w-full flex items-center justify-center p-4 bg-slate-900">
+    <div className="w-full flex items-center justify-center p-4 bg-base-300">
       <div className="relative w-full max-w-6xl md:h-[800px] h-[650px]">
         <BorderAnimatedContainer>
           <div className="w-full flex flex-col md:flex-row">
@@ -23,9 +23,9 @@ function LoginPage() {
               <div className="w-full max-w-md">
                 {/* HEADING TEXT */}
                 <div className="text-center mb-8">
-                  <MessageCircleIcon className="w-12 h-12 mx-auto text-slate-400 mb-4" />
-                  <h2 className="text-2xl font-bold text-slate-200 mb-2">Welcome Back</h2>
-                  <p className="text-slate-400">Login to access to your account</p>
+                  <MessageCircleIcon className="w-12 h-12 mx-auto text-base-content/60 mb-4" />
+                  <h2 className="text-2xl font-bold text-base-content mb-2">Welcome Back</h2>
+                  <p className="text-base-content/60">Login to access to your account</p>
                 </div>
 
                 {/* FORM */}
