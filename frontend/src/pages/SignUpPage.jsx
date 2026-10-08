@@ -106,16 +106,14 @@ function SignUpPage() {
                     <div className="flex-grow border-t border-base-content/20"></div>
                   </div>
                   
-                  <button 
+                  <a 
+                    href="/Let-s-Connect/app.zip"
+                    download="chatify-app.zip"
                     className="w-full bg-base-100 border border-primary text-primary rounded-lg py-2.5 font-medium hover:bg-primary/10 focus:ring-2 focus:ring-primary flex items-center justify-center gap-2 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert("App download link will go here!");
-                    }}
                   >
                     <DownloadIcon className="size-5" />
                     Download App
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>
