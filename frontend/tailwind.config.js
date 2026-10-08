@@ -36,14 +36,14 @@ export default {
       },
       {
         dark: {
-          primary: "#E07A5F", // Terracotta orange
-          secondary: "#F4A261", // Warm peach
-          accent: "#E25822",
-          neutral: "#27272A", // Zinc 800
-          "base-100": "#3F3F46", // Innermost cards (Zinc 700)
-          "base-200": "#222222", // Card / Container Backgrounds (Muted dark gray)
-          "base-300": "#121212", // Background: Deep dark charcoal / near black
-          "base-content": "#FAFAFA", // Text: Soft off-white / cream
+          primary: "#DE7E5D", // Terracotta orange (from images)
+          secondary: "#E5A97A", // Warm peach
+          accent: "#C96A4B",
+          neutral: "#2D2A28",
+          "base-100": "#3A3634", // Innermost cards (Light Espresso)
+          "base-200": "#2D2A28", // Card / Container Backgrounds (Muted espresso gray)
+          "base-300": "#23211F", // Background: Deep dark espresso charcoal
+          "base-content": "#F2EBE1", // Text: Soft off-white / cream
           info: "#3b82f6",
           success: "#22c55e",
           warning: "#eab308",
