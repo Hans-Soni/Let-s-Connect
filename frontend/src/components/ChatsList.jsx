@@ -29,10 +29,7 @@ function ChatsList() {
                 <img src={chat.profilePic || "./avatar.png"} alt={chat.fullName} />
               </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{chat.fullName}</h4>
-              {chat.email && <p className="text-xs text-base-content/60 truncate font-mono">{chat.email}</p>}
-            </div>
+            <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{chat.fullName}</h4>
           </div>
         </div>
       ))}

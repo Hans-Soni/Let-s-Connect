@@ -29,10 +29,7 @@ function ContactList() {
                 <img src={contact.profilePic || "./avatar.png"} alt={contact.fullName} />
               </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{contact.fullName}</h4>
-              <p className="text-xs text-base-content/60 truncate font-mono">{contact.email}</p>
-            </div>
+            <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{contact.fullName}</h4>
           </div>
         </div>
       ))}
