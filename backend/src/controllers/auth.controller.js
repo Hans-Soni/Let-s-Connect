@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { ENV } from "../lib/env.js";
 import cloudinary from "../lib/cloudinary.js";
+import { io } from "../lib/socket.js";
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -54,6 +55,18 @@ export const signup = async (req, res) => {
         profilePic: newUser.profilePic,
         token: token,
       });
+
+      // Broadcast new user arrival to all connected clients
+      try {
+        io.emit("newUser", {
+          _id: savedUser._id,
+          fullName: savedUser.fullName,
+          email: savedUser.email,
+          profilePic: savedUser.profilePic,
+        });
+      } catch (socketErr) {
+        console.error("Socket broadcast error for newUser:", socketErr);
+      }
 
       try {
         await sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
