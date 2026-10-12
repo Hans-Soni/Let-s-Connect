@@ -8,8 +8,26 @@ import ContactList from "../components/ContactList";
 import ChatContainer from "../components/ChatContainer";
 import NoConversationPlaceholder from "../components/NoConversationPlaceholder";
 
+import { useEffect } from "react";
+
 function ChatPage() {
-  const { activeTab, selectedUser } = useChatStore();
+  const { activeTab, selectedUser, setSelectedUser } = useChatStore();
+
+  // Support mobile system back button/swipe gesture
+  useEffect(() => {
+    if (selectedUser) {
+      window.history.pushState({ inChat: true }, "");
+
+      const onPopState = () => {
+        setSelectedUser(null);
+      };
+
+      window.addEventListener("popstate", onPopState);
+      return () => {
+        window.removeEventListener("popstate", onPopState);
+      };
+    }
+  }, [selectedUser, setSelectedUser]);
 
   return (
     <div className="relative w-full max-w-6xl h-[100dvh] md:h-[800px] flex overflow-hidden">

@@ -19,6 +19,7 @@ function ChatContainer() {
   const messageEndRef = useRef(null);
 
   useEffect(() => {
+    if (!selectedUser?._id) return;
     getMessagesByUserId(selectedUser._id);
     subscribeToMessages();
 
@@ -31,6 +32,8 @@ function ChatContainer() {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  if (!selectedUser) return null;
 
   return (
     <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">

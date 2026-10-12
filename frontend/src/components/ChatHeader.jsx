@@ -8,7 +8,6 @@ function ChatHeader() {
   const { selectedUser, setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
-  const isOnline = onlineUsers.includes(selectedUser._id);
 
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -21,16 +20,29 @@ function ChatHeader() {
     return () => window.removeEventListener("keydown", handleEscKey);
   }, [setSelectedUser]);
 
+  if (!selectedUser) return null;
+
+  const isOnline = selectedUser._id ? onlineUsers.includes(selectedUser._id) : false;
+
+  const handleBack = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setSelectedUser(null);
+  };
+
   return (
-    <div className="flex justify-between items-center bg-base-200/80 backdrop-blur-md border-b border-base-100/50 h-16 md:h-20 px-2.5 sm:px-4 md:px-6 shrink-0 z-10 w-full">
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+    <div className="flex justify-between items-center bg-base-200/80 backdrop-blur-md border-b border-base-100/50 h-16 md:h-20 px-2 sm:px-4 md:px-6 shrink-0 z-20 w-full relative">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
         {/* Mobile Back Button */}
         <button 
-          onClick={() => setSelectedUser(null)}
-          className="md:hidden p-2 -ml-1 rounded-full hover:bg-base-300/70 active:scale-95 transition-all text-base-content/80 hover:text-base-content flex items-center justify-center shrink-0"
+          type="button"
+          onClick={handleBack}
+          className="md:hidden p-2.5 -ml-1 rounded-full hover:bg-base-300/80 active:bg-base-300 active:scale-95 transition-all text-base-content hover:text-primary flex items-center justify-center shrink-0 cursor-pointer z-30"
           aria-label="Back to conversations"
         >
-          <ArrowLeftIcon className="w-5 h-5" />
+          <ArrowLeftIcon className="size-6 stroke-[2.5]" />
         </button>
 
         <div className={`avatar ${isOnline ? "online" : "offline"} shrink-0`}>
@@ -53,6 +65,7 @@ function ChatHeader() {
       <div className="flex items-center gap-1">
         {/* Theme toggle directly inside header */}
         <button
+          type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
           title="Toggle theme"
@@ -62,7 +75,8 @@ function ChatHeader() {
 
         {/* Desktop close button */}
         <button 
-          onClick={() => setSelectedUser(null)} 
+          type="button"
+          onClick={handleBack} 
           className="hidden md:flex btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
           title="Close conversation"
         >
