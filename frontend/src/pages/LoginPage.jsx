@@ -18,12 +18,12 @@ function LoginPage() {
   };
 
   return (
-    <div className="w-full flex items-center justify-center p-4 bg-base-300">
-      <div className="relative w-full max-w-6xl md:h-[800px] h-[650px]">
+    <div className="w-full min-h-[100dvh] flex items-center justify-center p-2 sm:p-4 bg-base-300 py-6 md:py-10">
+      <div className="relative w-full max-w-6xl md:h-[800px] min-h-fit">
         <BorderAnimatedContainer>
-          <div className="w-full flex flex-col md:flex-row">
-            {/* FORM CLOUMN - LEFT SIDE */}
-            <div className="md:w-1/2 p-8 flex items-center justify-center md:border-r border-slate-600/30">
+          <div className="w-full flex flex-col md:flex-row min-h-fit">
+            {/* FORM COLUMN - LEFT SIDE */}
+            <div className="w-full md:w-1/2 p-4 sm:p-8 flex items-center justify-center md:border-r border-slate-600/30">
               <div className="w-full max-w-md">
                 {/* HEADING TEXT */}
                 <div className="text-center mb-8">

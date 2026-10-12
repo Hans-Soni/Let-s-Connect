@@ -33,28 +33,29 @@ function ChatContainer() {
   }, [messages]);
 
   return (
-    <>
+    <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
       <ChatHeader />
-      <div className="flex-1 px-6 overflow-y-auto py-8">
+
+      <div className="flex-1 min-h-0 px-3 sm:px-6 overflow-y-auto py-4 md:py-6">
         {messages.length > 0 && !isMessagesLoading ? (
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
             {messages.map((msg) => (
               <div
                 key={msg._id}
                 className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"}`}
               >
                 <div
-                  className={`chat-bubble relative ${
+                  className={`chat-bubble relative max-w-[85%] sm:max-w-[75%] break-words whitespace-pre-wrap shadow-sm text-sm sm:text-base ${
                     msg.senderId === authUser._id
                       ? "bg-primary text-primary-content"
                       : "bg-base-200 text-base-content"
                   }`}
                 >
                   {msg.image && (
-                    <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
+                    <img src={msg.image} alt="Shared" className="rounded-lg max-h-52 w-auto object-cover mb-1.5" />
                   )}
-                  {msg.text && <p className="mt-2">{msg.text}</p>}
-                  <p className="text-xs mt-1 opacity-75 flex items-center gap-1">
+                  {msg.text && <p className="leading-relaxed">{msg.text}</p>}
+                  <p className="text-[10px] sm:text-xs mt-1 opacity-75 flex items-center justify-end gap-1">
                     {new Date(msg.createdAt).toLocaleTimeString(undefined, {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -74,7 +75,7 @@ function ChatContainer() {
       </div>
 
       <MessageInput />
-    </>
+    </div>
   );
 }
 

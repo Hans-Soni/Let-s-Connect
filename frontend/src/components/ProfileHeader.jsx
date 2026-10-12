@@ -1,13 +1,15 @@
 import { useState, useRef } from "react";
-import { LogOutIcon, VolumeOffIcon, Volume2Icon } from "lucide-react";
+import { LogOutIcon, VolumeOffIcon, Volume2Icon, Sun, Moon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import { useThemeStore } from "../store/useThemeStore";
 
 const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile } = useAuthStore();
   const { isSoundEnabled, toggleSound } = useChatStore();
+  const { theme, setTheme } = useThemeStore();
   const [selectedImg, setSelectedImg] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -27,7 +29,7 @@ function ProfileHeader() {
   };
 
   return (
-    <div className="p-6 border-b border-base-100/50">
+    <div className="p-3.5 sm:p-5 border-b border-base-100/50 shrink-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* AVATAR */}
@@ -66,30 +68,40 @@ function ProfileHeader() {
         </div>
 
         {/* BUTTONS */}
-        <div className="flex gap-4 items-center">
-          {/* LOGOUT BTN */}
+        <div className="flex gap-2.5 sm:gap-3 items-center">
+          {/* THEME TOGGLE BTN */}
           <button
-            className="text-base-content/60 hover:text-base-content transition-colors"
-            onClick={logout}
+            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title="Toggle theme"
           >
-            <LogOutIcon className="size-5" />
+            {theme === "dark" ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
           </button>
 
           {/* SOUND TOGGLE BTN */}
           <button
-            className="text-base-content/60 hover:text-base-content transition-colors"
+            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
             onClick={() => {
-              // play click sound before toggling
-              mouseClickSound.currentTime = 0; // reset to start
+              mouseClickSound.currentTime = 0;
               mouseClickSound.play().catch((error) => console.log("Audio play failed:", error));
               toggleSound();
             }}
+            title={isSoundEnabled ? "Mute sounds" : "Enable sounds"}
           >
             {isSoundEnabled ? (
-              <Volume2Icon className="size-5" />
+              <Volume2Icon className="size-4.5" />
             ) : (
-              <VolumeOffIcon className="size-5" />
+              <VolumeOffIcon className="size-4.5" />
             )}
+          </button>
+
+          {/* LOGOUT BTN */}
+          <button
+            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-error transition-colors"
+            onClick={logout}
+            title="Log out"
+          >
+            <LogOutIcon className="size-4.5" />
           </button>
         </div>
       </div>
