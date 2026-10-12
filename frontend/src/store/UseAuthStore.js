@@ -16,12 +16,22 @@ export const useAuthStore = create((set, get) => ({
   onlineUsers: [],
 
   checkAuth: async () => {
+    // If user left/closed the website, sessionStorage is empty
+    const token = sessionStorage.getItem("jwt");
+    if (!token) {
+      localStorage.removeItem("jwt");
+      set({ authUser: null, isCheckingAuth: false });
+      return;
+    }
+
     try {
       const res = await axiosInstance.get("/auth/check");
       set({ authUser: res.data });
       get().connectSocket();
     } catch (error) {
       console.log("Error in authCheck:", error);
+      sessionStorage.removeItem("jwt");
+      localStorage.removeItem("jwt");
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });
@@ -32,7 +42,8 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      localStorage.setItem("jwt", res.data.token);
+      sessionStorage.setItem("jwt", res.data.token);
+      localStorage.removeItem("jwt");
       set({ authUser: res.data });
 
       toast.success("Account created successfully!");
@@ -48,7 +59,8 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
-      localStorage.setItem("jwt", res.data.token);
+      sessionStorage.setItem("jwt", res.data.token);
+      localStorage.removeItem("jwt");
       set({ authUser: res.data });
 
       toast.success("Logged in successfully");
@@ -64,11 +76,15 @@ export const useAuthStore = create((set, get) => ({
   logout: async () => {
     try {
       await axiosInstance.post("/auth/logout");
+      sessionStorage.removeItem("jwt");
       localStorage.removeItem("jwt");
       set({ authUser: null });
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error) {
+      sessionStorage.removeItem("jwt");
+      localStorage.removeItem("jwt");
+      set({ authUser: null });
       toast.error("Error logging out");
       console.log("Logout error:", error);
     }
@@ -90,7 +106,7 @@ export const useAuthStore = create((set, get) => ({
     if (!authUser || get().socket?.connected) return;
 
     const socket = io(BASE_URL, {
-      query: { token: localStorage.getItem("jwt") },
+      query: { token: sessionStorage.getItem("jwt") },
       withCredentials: true, // this ensures cookies are sent with the connection
     });
 
