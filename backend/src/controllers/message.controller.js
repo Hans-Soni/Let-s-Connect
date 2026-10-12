@@ -7,7 +7,10 @@ import { encryptText, decryptText } from "../lib/encryption.js";
 export const getAllContacts = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } })
+      .select("-password")
+      .collation({ locale: "en", strength: 2 })
+      .sort({ email: 1 });
 
     res.status(200).json(filteredUsers);
   } catch (error) {
@@ -112,7 +115,10 @@ export const getChatPartners = async (req, res) => {
       ),
     ];
 
-    const chatPartners = await User.find({ _id: { $in: chatPartnerIds } }).select("-password");
+    const chatPartners = await User.find({ _id: { $in: chatPartnerIds } })
+      .select("-password")
+      .collation({ locale: "en", strength: 2 })
+      .sort({ email: 1 });
 
     res.status(200).json(chatPartners);
   } catch (error) {
