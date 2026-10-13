@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
+import { showInAppNotification } from "../components/NotificationToast";
 
 /**
  * Strict Dictionary Rule (A to Z):
@@ -61,6 +62,28 @@ export const useChatStore = create((set, get) => ({
   toggleSound: () => {
     localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
     set({ isSoundEnabled: !get().isSoundEnabled });
+  },
+
+  isNotificationSupported: typeof window !== "undefined" && "Notification" in window,
+  notificationPermission: typeof window !== "undefined" && "Notification" in window ? Notification.permission : "denied",
+
+  requestNotificationPermission: async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      try {
+        const permission = await Notification.requestPermission();
+        set({ notificationPermission: permission });
+        if (permission === "granted") {
+          toast.success("Device notifications enabled!");
+        } else if (permission === "denied") {
+          toast.error("Device notifications blocked in browser settings");
+        }
+        return permission;
+      } catch (err) {
+        console.log("Error requesting notification permission:", err);
+      }
+    } else {
+      toast.error("Device notifications not supported in this browser");
+    }
   },
 
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -136,28 +159,83 @@ export const useChatStore = create((set, get) => ({
   },
 
   subscribeToMessages: () => {
-    const { selectedUser, isSoundEnabled } = get();
-    if (!selectedUser) return;
-
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
 
     socket.off("newMessage");
     socket.on("newMessage", (newMessage) => {
-      const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
-      if (!isMessageSentFromSelectedUser) return;
+      const { selectedUser, isSoundEnabled, allContacts, chats, getMyChatPartners } = get();
+      const isCurrentChat = selectedUser?._id && selectedUser._id === newMessage.senderId;
 
-      set((state) => {
-        if (state.messages.some((m) => m._id === newMessage._id)) return state;
-        return { messages: [...state.messages, newMessage] };
-      });
+      if (isCurrentChat) {
+        set((state) => {
+          if (state.messages.some((m) => m._id === newMessage._id)) return state;
+          return { messages: [...state.messages, newMessage] };
+        });
+      }
 
+      // Always play notification sound if sound is enabled
       if (isSoundEnabled) {
         const soundPath = `${import.meta.env.BASE_URL}sounds/notification.mp3`;
         const notificationSound = new Audio(soundPath);
-
-        notificationSound.currentTime = 0; // reset to start
+        notificationSound.currentTime = 0;
         notificationSound.play().catch((e) => console.log("Audio play failed:", e));
+      }
+
+      // Vibrate mobile device if supported
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try {
+          navigator.vibrate([100, 50, 100]);
+        } catch {
+          // ignore
+        }
+      }
+
+      // Auto-refresh chat list so the sender moves to the top or appears in chats
+      getMyChatPartners();
+
+      // Find sender info for the notification
+      const sender = newMessage.sender ||
+        allContacts.find((u) => u._id === newMessage.senderId) ||
+        chats.find((u) => u._id === newMessage.senderId) ||
+        { _id: newMessage.senderId, fullName: "New Message", profilePic: "" };
+
+      const senderName = sender.fullName || "Someone";
+      const messageSnippet = newMessage.text
+        ? (newMessage.text.length > 50 ? `${newMessage.text.substring(0, 50)}...` : newMessage.text)
+        : (newMessage.image ? "📷 Sent an image" : "Sent you a message");
+      const senderPic = sender.profilePic || `${import.meta.env.BASE_URL}avatar.png`;
+
+      // 1. In-App Notification Toast (if receiver is not currently in this chat)
+      if (!isCurrentChat) {
+        showInAppNotification({
+          sender,
+          senderName,
+          senderPic,
+          messageSnippet,
+          id: `msg-${newMessage._id || Date.now()}`,
+          onSelect: get().setSelectedUser,
+        });
+      }
+
+      // 2. Device / System Web Notification (when tab is in background OR receiver is not in this chat)
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        if (document.hidden || !isCurrentChat) {
+          try {
+            const notif = new Notification(senderName, {
+              body: messageSnippet,
+              icon: senderPic,
+              tag: `msg-${newMessage.senderId}`,
+            });
+            notif.onclick = () => {
+              window.focus();
+              get().setSelectedUser(sender);
+              notif.close();
+            };
+          } catch (err) {
+            console.log("Device notification error:", err);
+          }
+        }
       }
     });
   },

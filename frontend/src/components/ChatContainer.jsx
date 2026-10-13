@@ -13,7 +13,6 @@ function ChatContainer() {
     messages,
     isMessagesLoading,
     subscribeToMessages,
-    unsubscribeFromMessages,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messagesContainerRef = useRef(null);
@@ -23,14 +22,7 @@ function ChatContainer() {
     if (!selectedUser?._id) return;
     getMessagesByUserId(selectedUser._id);
     subscribeToMessages();
-
-    // clean up
-    return () => {
-      if (typeof unsubscribeFromMessages === "function") {
-        unsubscribeFromMessages();
-      }
-    };
-  }, [selectedUser, getMessagesByUserId, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser, getMessagesByUserId, subscribeToMessages]);
 
   const scrollToBottom = (behavior = "auto") => {
     if (messagesContainerRef.current) {

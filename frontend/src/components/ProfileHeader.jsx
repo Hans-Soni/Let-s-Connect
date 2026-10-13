@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { LogOutIcon, VolumeOffIcon, Volume2Icon, Sun, Moon } from "lucide-react";
+import { LogOutIcon, VolumeOffIcon, Volume2Icon, Sun, Moon, BellIcon, BellOffIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { useThemeStore } from "../store/useThemeStore";
@@ -8,7 +8,7 @@ const mouseClickSound = new Audio(`${import.meta.env.BASE_URL}sounds/mouse-click
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile } = useAuthStore();
-  const { isSoundEnabled, toggleSound } = useChatStore();
+  const { isSoundEnabled, toggleSound, notificationPermission, requestNotificationPermission } = useChatStore();
   const { theme, setTheme } = useThemeStore();
   const [selectedImg, setSelectedImg] = useState(null);
 
@@ -94,6 +94,23 @@ function ProfileHeader() {
               <Volume2Icon className="size-4.5" />
             ) : (
               <VolumeOffIcon className="size-4.5" />
+            )}
+          </button>
+
+          {/* NOTIFICATION PERMISSION BTN */}
+          <button
+            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
+            onClick={requestNotificationPermission}
+            title={
+              notificationPermission === "granted"
+                ? "Device notifications enabled"
+                : "Enable device notifications"
+            }
+          >
+            {notificationPermission === "granted" ? (
+              <BellIcon className="size-4.5 text-primary" />
+            ) : (
+              <BellOffIcon className="size-4.5 opacity-60" />
             )}
           </button>
 

@@ -11,7 +11,14 @@ import NoConversationPlaceholder from "../components/NoConversationPlaceholder";
 import { useEffect } from "react";
 
 function ChatPage() {
-  const { activeTab, selectedUser, setSelectedUser } = useChatStore();
+  const { activeTab, selectedUser, setSelectedUser, subscribeToMessages } = useChatStore();
+
+  useEffect(() => {
+    subscribeToMessages();
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [subscribeToMessages]);
 
   // Support mobile system back button/swipe gesture
   useEffect(() => {

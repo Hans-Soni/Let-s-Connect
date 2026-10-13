@@ -82,6 +82,11 @@ export const sendMessage = async (req, res) => {
     const messageResponse = {
       ...newMessage.toObject(),
       text, // deliver plaintext to connected clients
+      sender: {
+        _id: req.user._id,
+        fullName: req.user.fullName,
+        profilePic: req.user.profilePic,
+      },
     };
 
     const receiverSocketId = getReceiverSocketId(receiverId);

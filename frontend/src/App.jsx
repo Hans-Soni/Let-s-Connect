@@ -64,7 +64,7 @@ function App() {
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
       </Routes>
 
-      <Toaster />
+      <Toaster position="top-right" containerClassName="z-[99999]" toastOptions={{ duration: 4000 }} />
     </div>
   );
 }
