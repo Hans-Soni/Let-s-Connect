@@ -41,7 +41,7 @@ function ProfileHeader() {
               onClick={() => fileInputRef.current.click()}
             >
               <img
-                src={selectedImg || authUser.profilePic || "./avatar.png"}
+                src={selectedImg || authUser.profilePic || `${import.meta.env.BASE_URL}avatar.png`}
                 alt="User image"
                 className="size-full object-cover"
               />

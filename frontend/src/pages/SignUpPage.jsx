@@ -122,7 +122,7 @@ function SignUpPage() {
             <div className="hidden md:w-1/2 md:flex items-center justify-center p-6 bg-gradient-to-bl from-base-200/50 to-transparent">
               <div>
                 <img
-                  src="./signup.png"
+                  src={`${import.meta.env.BASE_URL}signup.png`}
                   alt="People using mobile devices"
                   className="w-full h-auto object-contain"
                 />

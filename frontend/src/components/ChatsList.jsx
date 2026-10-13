@@ -5,14 +5,16 @@ import NoChatsFound from "./NoChatsFound";
 import { useAuthStore } from "../store/useAuthStore";
 
 function ChatsList() {
-  const { getMyChatPartners, chats, isUsersLoading, setSelectedUser } = useChatStore();
+  const { getMyChatPartners, chats, isUsersLoading, setSelectedUser, selectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   useEffect(() => {
-    getMyChatPartners();
-  }, [getMyChatPartners]);
+    if (!selectedUser) {
+      getMyChatPartners();
+    }
+  }, [getMyChatPartners, selectedUser]);
 
-  if (isUsersLoading) return <UsersLoadingSkeleton />;
+  if (isUsersLoading && chats.length === 0) return <UsersLoadingSkeleton />;
   if (chats.length === 0) return <NoChatsFound />;
 
   return (
@@ -26,7 +28,7 @@ function ChatsList() {
           <div className="flex items-center gap-3 min-w-0">
             <div className={`avatar ${onlineUsers.includes(chat._id) ? "online" : "offline"} shrink-0`}>
               <div className="size-11 sm:size-12 rounded-full ring-1 ring-base-content/10">
-                <img src={chat.profilePic || "./avatar.png"} alt={chat.fullName} />
+                <img src={chat.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={chat.fullName} />
               </div>
             </div>
             <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{chat.fullName}</h4>

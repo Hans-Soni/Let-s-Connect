@@ -50,7 +50,7 @@ function ChatHeader() {
 
         <div className={`avatar ${isOnline ? "online" : "offline"} shrink-0`}>
           <div className="size-10 sm:size-11 rounded-full ring-1 ring-base-content/10">
-            <img src={selectedUser.profilePic || "./avatar.png"} alt={selectedUser.fullName} />
+            <img src={selectedUser.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={selectedUser.fullName} />
           </div>
         </div>
 

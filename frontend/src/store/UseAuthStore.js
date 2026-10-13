@@ -30,8 +30,10 @@ export const useAuthStore = create((set, get) => ({
       get().connectSocket();
     } catch (error) {
       console.log("Error in authCheck:", error);
-      sessionStorage.removeItem("jwt");
-      localStorage.removeItem("jwt");
+      if (error.response?.status === 401) {
+        sessionStorage.removeItem("jwt");
+        localStorage.removeItem("jwt");
+      }
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });

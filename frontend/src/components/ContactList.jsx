@@ -4,16 +4,18 @@ import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
 function ContactList() {
-  const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, subscribeToUsers, unsubscribeFromUsers } = useChatStore();
+  const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, subscribeToUsers, unsubscribeFromUsers, selectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   useEffect(() => {
-    getAllContacts();
+    if (!selectedUser) {
+      getAllContacts();
+    }
     subscribeToUsers();
     return () => unsubscribeFromUsers();
-  }, [getAllContacts, subscribeToUsers, unsubscribeFromUsers]);
+  }, [getAllContacts, subscribeToUsers, unsubscribeFromUsers, selectedUser]);
 
-  if (isUsersLoading) return <UsersLoadingSkeleton />;
+  if (isUsersLoading && allContacts.length === 0) return <UsersLoadingSkeleton />;
 
   if (allContacts.length === 0) {
     return (
@@ -34,7 +36,7 @@ function ContactList() {
           <div className="flex items-center gap-3 min-w-0">
             <div className={`avatar ${onlineUsers.includes(contact._id) ? "online" : "offline"} shrink-0`}>
               <div className="size-11 sm:size-12 rounded-full ring-1 ring-base-content/10">
-                <img src={contact.profilePic || "./avatar.png"} alt={contact.fullName} />
+                <img src={contact.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={contact.fullName} />
               </div>
             </div>
             <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{contact.fullName}</h4>

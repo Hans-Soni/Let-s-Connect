@@ -148,8 +148,10 @@ export const useChatStore = create((set, get) => ({
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
       if (!isMessageSentFromSelectedUser) return;
 
-      const currentMessages = get().messages;
-      set({ messages: [...currentMessages, newMessage] });
+      set((state) => {
+        if (state.messages.some((m) => m._id === newMessage._id)) return state;
+        return { messages: [...state.messages, newMessage] };
+      });
 
       if (isSoundEnabled) {
         const soundPath = `${import.meta.env.BASE_URL}sounds/notification.mp3`;
