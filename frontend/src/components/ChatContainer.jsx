@@ -16,6 +16,7 @@ function ChatContainer() {
     unsubscribeFromMessages,
   } = useChatStore();
   const { authUser } = useAuthStore();
+  const messagesContainerRef = useRef(null);
   const messageEndRef = useRef(null);
 
   useEffect(() => {
@@ -31,11 +32,26 @@ function ChatContainer() {
     };
   }, [selectedUser, getMessagesByUserId, subscribeToMessages, unsubscribeFromMessages]);
 
-  useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior = "auto") => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior,
+      });
+    } else if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior });
     }
-  }, [messages]);
+  };
+
+  useEffect(() => {
+    scrollToBottom("auto");
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (!isMessagesLoading && messages.length > 0) {
+      scrollToBottom("smooth");
+    }
+  }, [messages, isMessagesLoading]);
 
   if (!selectedUser || !authUser) return null;
 
@@ -43,7 +59,11 @@ function ChatContainer() {
     <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
       <ChatHeader />
 
-      <div className="flex-1 min-h-0 px-3 sm:px-6 overflow-y-auto py-4 md:py-6">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 px-3 sm:px-6 overflow-y-auto overscroll-contain py-4 md:py-6 touch-pan-y"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {messages.length > 0 && !isMessagesLoading ? (
           <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
             {messages.map((msg) => (

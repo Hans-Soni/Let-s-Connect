@@ -39,7 +39,10 @@ function ChatPage() {
           <ProfileHeader />
           <ActiveTabSwitch />
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-2">
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 md:p-4 space-y-2 touch-pan-y"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             {activeTab === "chats" ? <ChatsList /> : <ContactList />}
           </div>
         </div>
