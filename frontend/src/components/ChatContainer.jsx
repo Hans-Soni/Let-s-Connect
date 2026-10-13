@@ -99,15 +99,15 @@ function ChatContainer() {
                       <span
                         className="rounded-full transition-all duration-300"
                         style={{
-                          width: "10px",
-                          height: "10px",
-                          minWidth: "10px",
-                          minHeight: "10px",
+                          width: "12px",
+                          height: "12px",
+                          minWidth: "12px",
+                          minHeight: "12px",
                           borderRadius: "50%",
                           backgroundColor: msg.isSeen ? "#10b981" : "#3b82f6",
                           boxShadow: msg.isSeen
-                            ? "0 0 8px #10b981, 0 0 3px #10b981"
-                            : "0 0 8px #3b82f6, 0 0 3px #3b82f6",
+                            ? "0 0 10px rgba(16, 185, 129, 0.9), 0 0 4px #10b981"
+                            : "0 0 10px rgba(59, 130, 246, 0.9), 0 0 4px #3b82f6",
                           border: msg.isSeen ? "2px solid #a7f3d0" : "2px solid #bfdbfe",
                           display: "inline-block",
                         }}
