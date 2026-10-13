@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { useThemeStore } from "../store/useThemeStore";
 
-const mouseClickSound = new Audio("/sounds/mouse-click.mp3");
+const mouseClickSound = new Audio(`${import.meta.env.BASE_URL}sounds/mouse-click.mp3`);
 
 function ProfileHeader() {
   const { logout, authUser, updateProfile } = useAuthStore();
@@ -27,6 +27,8 @@ function ProfileHeader() {
       await updateProfile({ profilePic: base64Image });
     };
   };
+
+  if (!authUser) return null;
 
   return (
     <div className="p-3.5 sm:p-5 border-b border-base-100/50 shrink-0">

@@ -15,18 +15,20 @@ function ChatPage() {
 
   // Support mobile system back button/swipe gesture
   useEffect(() => {
-    if (selectedUser) {
+    if (!selectedUser) return;
+
+    if (!window.history.state?.inChat) {
       window.history.pushState({ inChat: true }, "");
-
-      const onPopState = () => {
-        setSelectedUser(null);
-      };
-
-      window.addEventListener("popstate", onPopState);
-      return () => {
-        window.removeEventListener("popstate", onPopState);
-      };
     }
+
+    const onPopState = () => {
+      setSelectedUser(null);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+    };
   }, [selectedUser, setSelectedUser]);
 
   return (

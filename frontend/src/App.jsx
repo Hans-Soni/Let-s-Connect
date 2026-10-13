@@ -8,7 +8,7 @@ import PageLoader from "./components/PageLoader";
 import GlobalThemeToggle from "./components/GlobalThemeToggle";
 import { useThemeStore } from "./store/useThemeStore";
 
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 
 function App() {
   const { checkAuth, isCheckingAuth, authUser, logout } = useAuthStore();
@@ -16,24 +16,6 @@ function App() {
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
-
-  // Automatically logout when leaving or closing the website/tab
-  useEffect(() => {
-    if (!authUser) return;
-
-    const handleLeave = () => {
-      sessionStorage.removeItem("jwt");
-      localStorage.removeItem("jwt");
-    };
-
-    window.addEventListener("pagehide", handleLeave);
-    window.addEventListener("beforeunload", handleLeave);
-
-    return () => {
-      window.removeEventListener("pagehide", handleLeave);
-      window.removeEventListener("beforeunload", handleLeave);
-    };
-  }, [authUser]);
 
   // Automatically logout if user leaves device unattended (15 min inactivity)
   useEffect(() => {

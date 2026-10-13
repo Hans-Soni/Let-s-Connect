@@ -29,6 +29,9 @@ function ChatHeader() {
       e.preventDefault();
       e.stopPropagation();
     }
+    if (window.history.state?.inChat) {
+      window.history.back();
+    }
     setSelectedUser(null);
   };
 

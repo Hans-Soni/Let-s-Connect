@@ -107,7 +107,7 @@ function SignUpPage() {
                   </div>
                   
                   <a 
-                    href="/Let-s-Connect/app.zip"
+                    href={`${import.meta.env.BASE_URL}app.zip`}
                     download="chatify-app.zip"
                     className="w-full bg-base-100 border border-primary text-primary rounded-lg py-2.5 font-medium hover:bg-primary/10 focus:ring-2 focus:ring-primary flex items-center justify-center gap-2 transition-colors"
                   >

@@ -15,6 +15,14 @@ function ContactList() {
 
   if (isUsersLoading) return <UsersLoadingSkeleton />;
 
+  if (allContacts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center space-y-2">
+        <p className="text-base-content/60 text-sm">No contacts found</p>
+      </div>
+    );
+  }
+
   return (
     <>
       {allContacts.map((contact) => (

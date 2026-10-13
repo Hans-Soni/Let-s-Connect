@@ -24,7 +24,11 @@ function ChatContainer() {
     subscribeToMessages();
 
     // clean up
-    return () => unsubscribeFromMessages();
+    return () => {
+      if (typeof unsubscribeFromMessages === "function") {
+        unsubscribeFromMessages();
+      }
+    };
   }, [selectedUser, getMessagesByUserId, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
@@ -33,7 +37,7 @@ function ChatContainer() {
     }
   }, [messages]);
 
-  if (!selectedUser) return null;
+  if (!selectedUser || !authUser) return null;
 
   return (
     <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
@@ -59,10 +63,12 @@ function ChatContainer() {
                   )}
                   {msg.text && <p className="leading-relaxed">{msg.text}</p>}
                   <p className="text-[10px] sm:text-xs mt-1 opacity-75 flex items-center justify-end gap-1">
-                    {new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {msg.createdAt
+                      ? new Date(msg.createdAt).toLocaleTimeString(undefined, {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : ""}
                   </p>
                 </div>
               </div>

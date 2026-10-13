@@ -1,9 +1,12 @@
 import { useThemeStore } from "../store/useThemeStore";
+import { useChatStore } from "../store/useChatStore";
 import logoLight from "../assets/logo-light.png";
 import logoDark from "../assets/logo-dark.png";
 
 const NoChatHistoryPlaceholder = ({ name }) => {
   const { theme } = useThemeStore();
+  const { sendMessage } = useChatStore();
+
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-6">
       <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center mb-5">
@@ -19,13 +22,25 @@ const NoChatHistoryPlaceholder = ({ name }) => {
         <div className="h-px w-32 bg-gradient-to-r from-transparent via-primary/30 to-transparent mx-auto"></div>
       </div>
       <div className="flex flex-wrap gap-2 justify-center">
-        <button className="px-4 py-2 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+        <button
+          type="button"
+          onClick={() => sendMessage({ text: "👋 Say Hello" })}
+          className="px-4 py-2 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 active:scale-95 transition-all cursor-pointer"
+        >
           👋 Say Hello
         </button>
-        <button className="px-4 py-2 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+        <button
+          type="button"
+          onClick={() => sendMessage({ text: "🤝 How are you?" })}
+          className="px-4 py-2 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 active:scale-95 transition-all cursor-pointer"
+        >
           🤝 How are you?
         </button>
-        <button className="px-4 py-2 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+        <button
+          type="button"
+          onClick={() => sendMessage({ text: "📅 Meet up soon?" })}
+          className="px-4 py-2 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 active:scale-95 transition-all cursor-pointer"
+        >
           📅 Meet up soon?
         </button>
       </div>
