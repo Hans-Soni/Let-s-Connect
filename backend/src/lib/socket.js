@@ -7,9 +7,30 @@ import { socketAuthMiddleware } from "../middleware/socket.auth.middleware.js";
 const app = express();
 const server = http.createServer(app);
 
+export const isOriginAllowed = (origin, callback) => {
+  // Allow requests with no origin (e.g. mobile apps, curl)
+  if (!origin) return callback(null, true);
+  const allowed = [
+    ENV.CLIENT_URL,
+    "https://hans-soni.github.io",
+    "http://localhost:5173",
+    "http://localhost:5002",
+  ].filter(Boolean);
+
+  if (
+    allowed.includes(origin) ||
+    origin.endsWith(".github.io") ||
+    origin.includes("localhost") ||
+    origin.includes("127.0.0.1")
+  ) {
+    return callback(null, true);
+  }
+  return callback(null, true);
+};
+
 const io = new Server(server, {
   cors: {
-    origin: [ENV.CLIENT_URL],
+    origin: isOriginAllowed,
     credentials: true,
   },
 });

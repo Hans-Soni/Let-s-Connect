@@ -4,5 +4,6 @@ This directory contains the global state management configuration using Zustand.
 
 ## Files
 
-- `UseAuthStore.js`: Manages the authentication state of the application (e.g., current user, login/signup actions, logout, checking auth status).
-- `useChatStore.js`: Manages the state related to the chat functionality (e.g., active chats, selected user, message history, active contacts).
+- `useAuthStore.js`: Manages authentication state (current user, tokens, login/signup/logout, socket connection, online users list).
+- `useChatStore.js`: Manages chat state (active chats, contacts, selected conversation, sound toggles, notifications, message delivery & seen status).
+- `useThemeStore.js`: Manages UI color themes with persistent localStorage backing.

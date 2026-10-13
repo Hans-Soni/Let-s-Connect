@@ -4,5 +4,5 @@ This directory contains Mongoose schemas and models which define the structure o
 
 ## Files
 
-- `User.js` / `user.model.js`: Defines the schema for a user, including fields like full name, email, password, profile picture, and timestamps.
-- `Message.js` / `message.model.js`: Defines the schema for chat messages, containing references to the sender and receiver, and the message content (text/image).
+- `User.js`: Defines the schema for a user, including fields like full name, email (with A-to-Z collation index), password, profile picture, and timestamps.
+- `Message.js`: Defines the schema for chat messages, containing references to sender and receiver, text (AES-256 encrypted), image, isDelivered, isSeen status, and timestamps.

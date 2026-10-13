@@ -19,7 +19,7 @@ import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
 import { ENV } from "./lib/env.js";
-import { app, server } from "./lib/socket.js";
+import { app, server, isOriginAllowed } from "./lib/socket.js";
 
 const __dirname = path.resolve();
 
@@ -38,7 +38,7 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 
 app.use(express.json({ limit: "5mb" })); // req.body
-app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
+app.use(cors({ origin: isOriginAllowed, credentials: true }));
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
