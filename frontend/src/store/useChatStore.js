@@ -302,11 +302,16 @@ export const useChatStore = create((set, get) => ({
       const authUser = useAuthStore.getState().authUser;
       set((state) => ({
         messages: state.messages.map((m) => {
+          const sId = String(m.senderId?._id || m.senderId);
+          const rId = String(m.receiverId?._id || m.receiverId);
+          const aId = String(authUser?._id || "");
+          const pId = String(partnerId);
+
           if (
-            (authUser && m.senderId === authUser._id && m.receiverId === partnerId) ||
-            (authUser && m.receiverId === authUser._id && m.senderId === partnerId) ||
-            m.senderId === partnerId ||
-            m.receiverId === partnerId
+            (aId && sId === aId && rId === pId) ||
+            (aId && rId === aId && sId === pId) ||
+            sId === pId ||
+            rId === pId
           ) {
             return { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() };
           }

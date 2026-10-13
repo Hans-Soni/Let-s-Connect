@@ -25,19 +25,17 @@ export const getMessagesByUserId = async (req, res) => {
     const { id: userToChatId } = req.params;
 
     // Automatically mark all messages from userToChatId to myId as seen
-    const updateResult = await Message.updateMany(
+    await Message.updateMany(
       { senderId: userToChatId, receiverId: myId, isSeen: { $ne: true } },
       { $set: { isSeen: true, seenAt: new Date() } }
-    );
+    ).catch(() => {});
 
-    if (updateResult.modifiedCount > 0) {
-      const senderSocketId = getReceiverSocketId(userToChatId);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("messagesSeen", {
-          chatPartnerId: myId.toString(),
-          seenBy: myId.toString(),
-        });
-      }
+    const senderSocketId = getReceiverSocketId(userToChatId?.toString());
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesSeen", {
+        chatPartnerId: myId.toString(),
+        seenBy: myId.toString(),
+      });
     }
 
     const messages = await Message.find({
@@ -70,19 +68,17 @@ export const markMessagesAsSeen = async (req, res) => {
     const updateResult = await Message.updateMany(
       { senderId, receiverId: myId, isSeen: { $ne: true } },
       { $set: { isSeen: true, seenAt: new Date() } }
-    );
+    ).catch(() => ({ modifiedCount: 0 }));
 
-    if (updateResult.modifiedCount > 0) {
-      const senderSocketId = getReceiverSocketId(senderId);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("messagesSeen", {
-          chatPartnerId: myId.toString(),
-          seenBy: myId.toString(),
-        });
-      }
+    const senderSocketId = getReceiverSocketId(senderId?.toString());
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesSeen", {
+        chatPartnerId: myId.toString(),
+        seenBy: myId.toString(),
+      });
     }
 
-    res.status(200).json({ success: true, count: updateResult.modifiedCount });
+    res.status(200).json({ success: true, count: updateResult?.modifiedCount || 0 });
   } catch (error) {
     console.log("Error in markMessagesAsSeen controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });

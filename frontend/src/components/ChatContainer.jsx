@@ -97,16 +97,18 @@ function ChatContainer() {
                       title={msg.isSeen ? "Seen by receiver" : "Delivered"}
                     >
                       <span
-                        className={`inline-block rounded-full transition-all duration-300 ${
-                          msg.isSeen
-                            ? "bg-emerald-400 ring-2 ring-emerald-300/50 shadow-[0_0_8px_rgba(52,211,153,0.95)]"
-                            : "bg-blue-400 ring-2 ring-blue-300/50 shadow-[0_0_8px_rgba(96,165,250,0.95)]"
-                        }`}
+                        className="rounded-full transition-all duration-300"
                         style={{
-                          width: "9px",
-                          height: "9px",
-                          minWidth: "9px",
-                          minHeight: "9px",
+                          width: "10px",
+                          height: "10px",
+                          minWidth: "10px",
+                          minHeight: "10px",
+                          borderRadius: "50%",
+                          backgroundColor: msg.isSeen ? "#10b981" : "#3b82f6",
+                          boxShadow: msg.isSeen
+                            ? "0 0 8px #10b981, 0 0 3px #10b981"
+                            : "0 0 8px #3b82f6, 0 0 3px #3b82f6",
+                          border: msg.isSeen ? "2px solid #a7f3d0" : "2px solid #bfdbfe",
                           display: "inline-block",
                         }}
                       />
