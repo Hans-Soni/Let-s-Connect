@@ -118,7 +118,17 @@ export const useChatStore = create((set, get) => ({
     set({ isMessagesLoading: true });
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
-      set({ messages: res.data, isMessagesLoading: false });
+      const authUser = useAuthStore.getState().authUser;
+      const normalizedMessages = (res.data || []).map((m) => {
+        // Any message sent by the partner to me is seen because I am viewing the chat right now
+        const isReceivedByMe = m.senderId === userId || (authUser && m.receiverId === authUser._id);
+        return {
+          ...m,
+          isDelivered: true,
+          isSeen: isReceivedByMe ? true : Boolean(m.isSeen),
+        };
+      });
+      set({ messages: normalizedMessages, isMessagesLoading: false });
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong");
       set({ isMessagesLoading: false });
@@ -164,25 +174,36 @@ export const useChatStore = create((set, get) => ({
 
   markMessagesAsSeen: async (userId) => {
     if (!userId) return;
+    // Immediately mark received messages from this user as seen in local state
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.senderId === userId ? { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() } : m
+      ),
+    }));
+
+    const socket = useAuthStore.getState().socket;
+    if (socket) {
+      socket.emit("markMessagesSeen", { senderId: userId });
+    }
+
     try {
       await axiosInstance.put(`/messages/seen/${userId}`);
-      const socket = useAuthStore.getState().socket;
-      if (socket) {
-        socket.emit("markMessagesSeen", { senderId: userId });
-      }
-      set((state) => ({
-        messages: state.messages.map((m) =>
-          m.senderId === userId ? { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() } : m
-        ),
-      }));
     } catch (error) {
-      console.log("Error marking messages as seen:", error);
+      console.log("markMessagesAsSeen status:", error?.message);
     }
   },
 
   subscribeToMessages: () => {
     const socket = useAuthStore.getState().socket;
-    if (!socket) return;
+    if (!socket) {
+      const unsub = useAuthStore.subscribe((state) => {
+        if (state.socket) {
+          unsub();
+          get().subscribeToMessages();
+        }
+      });
+      return;
+    }
 
     socket.off("newMessage");
     socket.on("newMessage", (newMessage) => {

@@ -94,14 +94,21 @@ function ChatContainer() {
                     {/* Bottom Left Corner: Status Dot (Blue = Delivered, Green = Seen) */}
                     <div
                       className="flex items-center gap-1.5 select-none shrink-0"
-                      title={msg.isSeen ? "Seen" : "Delivered"}
+                      title={msg.isSeen ? "Seen by receiver" : "Delivered"}
                     >
                       <span
-                        className={`size-2.5 rounded-full inline-block transition-all duration-300 ${
+                        className={`inline-block rounded-full transition-all duration-300 ${
                           msg.isSeen
-                            ? "bg-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
-                            : "bg-blue-400 ring-2 ring-blue-400/50 shadow-[0_0_8px_rgba(96,165,250,0.9)]"
+                            ? "bg-emerald-400 ring-2 ring-emerald-300/50 shadow-[0_0_8px_rgba(52,211,153,0.95)]"
+                            : "bg-blue-400 ring-2 ring-blue-300/50 shadow-[0_0_8px_rgba(96,165,250,0.95)]"
                         }`}
+                        style={{
+                          width: "9px",
+                          height: "9px",
+                          minWidth: "9px",
+                          minHeight: "9px",
+                          display: "inline-block",
+                        }}
                       />
                     </div>
 
