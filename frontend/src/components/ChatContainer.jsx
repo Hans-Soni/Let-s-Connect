@@ -10,6 +10,7 @@ function ChatContainer() {
   const {
     selectedUser,
     getMessagesByUserId,
+    markMessagesAsSeen,
     messages,
     isMessagesLoading,
     subscribeToMessages,
@@ -21,8 +22,23 @@ function ChatContainer() {
   useEffect(() => {
     if (!selectedUser?._id) return;
     getMessagesByUserId(selectedUser._id);
+    markMessagesAsSeen(selectedUser._id);
     subscribeToMessages();
-  }, [selectedUser, getMessagesByUserId, subscribeToMessages]);
+  }, [selectedUser, getMessagesByUserId, markMessagesAsSeen, subscribeToMessages]);
+
+  useEffect(() => {
+    const handleActive = () => {
+      if (document.visibilityState === "visible" && selectedUser?._id) {
+        markMessagesAsSeen(selectedUser._id);
+      }
+    };
+    window.addEventListener("focus", handleActive);
+    document.addEventListener("visibilitychange", handleActive);
+    return () => {
+      window.removeEventListener("focus", handleActive);
+      document.removeEventListener("visibilitychange", handleActive);
+    };
+  }, [selectedUser, markMessagesAsSeen]);
 
   const scrollToBottom = (behavior = "auto") => {
     if (messagesContainerRef.current) {
@@ -74,14 +90,31 @@ function ChatContainer() {
                     <img src={msg.image} alt="Shared" className="rounded-lg max-h-52 w-auto object-cover mb-1.5" />
                   )}
                   {msg.text && <p className="leading-relaxed">{msg.text}</p>}
-                  <p className="text-[10px] sm:text-xs mt-1 opacity-75 flex items-center justify-end gap-1">
-                    {msg.createdAt
-                      ? new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : ""}
-                  </p>
+                  <div className="flex items-center justify-between mt-1 gap-3 pt-0.5 min-w-[72px]">
+                    {/* Bottom Left Corner: Status Dot (Blue = Delivered, Green = Seen) */}
+                    <div
+                      className="flex items-center gap-1.5 select-none shrink-0"
+                      title={msg.isSeen ? "Seen" : "Delivered"}
+                    >
+                      <span
+                        className={`size-2.5 rounded-full inline-block transition-all duration-300 ${
+                          msg.isSeen
+                            ? "bg-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                            : "bg-blue-400 ring-2 ring-blue-400/50 shadow-[0_0_8px_rgba(96,165,250,0.9)]"
+                        }`}
+                      />
+                    </div>
+
+                    {/* Bottom Right Corner: Timestamp */}
+                    <p className="text-[10px] sm:text-xs opacity-75 whitespace-nowrap ml-auto">
+                      {msg.createdAt
+                        ? new Date(msg.createdAt).toLocaleTimeString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ""}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}

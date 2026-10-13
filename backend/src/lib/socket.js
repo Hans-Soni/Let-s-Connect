@@ -35,6 +35,29 @@ io.on("connection", (socket) => {
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // with socket.on we listen for events from clients
+  socket.on("markMessagesSeen", async ({ senderId }) => {
+    try {
+      if (!senderId) return;
+      const receiverId = socket.userId;
+      const Message = (await import("../models/Message.js")).default;
+      const updateResult = await Message.updateMany(
+        { senderId, receiverId, isSeen: { $ne: true } },
+        { $set: { isSeen: true, seenAt: new Date() } }
+      );
+      if (updateResult.modifiedCount > 0) {
+        const senderSocketId = getReceiverSocketId(senderId);
+        if (senderSocketId) {
+          io.to(senderSocketId).emit("messagesSeen", {
+            chatPartnerId: receiverId.toString(),
+            seenBy: receiverId.toString(),
+          });
+        }
+      }
+    } catch (err) {
+      console.log("Error in markMessagesSeen socket event:", err);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.user.fullName);
     delete userSocketMap[userId];

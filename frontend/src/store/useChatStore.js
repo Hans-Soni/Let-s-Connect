@@ -140,6 +140,8 @@ export const useChatStore = create((set, get) => ({
       image: messageData.image,
       createdAt: new Date().toISOString(),
       isOptimistic: true,
+      isDelivered: false,
+      isSeen: false,
     };
     // immediately update the ui by adding the optimistic message
     set({ messages: [...messages, optimisticMessage] });
@@ -147,7 +149,9 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
       set((state) => ({
-        messages: state.messages.map((m) => (m._id === tempId ? res.data : m)),
+        messages: state.messages.map((m) =>
+          m._id === tempId ? { ...res.data, isDelivered: true, isSeen: Boolean(res.data.isSeen) } : m
+        ),
       }));
     } catch (error) {
       // remove optimistic message on failure
@@ -155,6 +159,24 @@ export const useChatStore = create((set, get) => ({
         messages: state.messages.filter((m) => m._id !== tempId),
       }));
       toast.error(error.response?.data?.message || "Something went wrong");
+    }
+  },
+
+  markMessagesAsSeen: async (userId) => {
+    if (!userId) return;
+    try {
+      await axiosInstance.put(`/messages/seen/${userId}`);
+      const socket = useAuthStore.getState().socket;
+      if (socket) {
+        socket.emit("markMessagesSeen", { senderId: userId });
+      }
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          m.senderId === userId ? { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() } : m
+        ),
+      }));
+    } catch (error) {
+      console.log("Error marking messages as seen:", error);
     }
   },
 
@@ -166,12 +188,24 @@ export const useChatStore = create((set, get) => ({
     socket.on("newMessage", (newMessage) => {
       const { selectedUser, isSoundEnabled, allContacts, chats, getMyChatPartners } = get();
       const isCurrentChat = selectedUser?._id && selectedUser._id === newMessage.senderId;
+      const isDocumentActive = typeof document !== "undefined" && document.visibilityState === "visible";
 
       if (isCurrentChat) {
+        const messageToAdd = {
+          ...newMessage,
+          isDelivered: true,
+          isSeen: isDocumentActive ? true : Boolean(newMessage.isSeen),
+        };
+
         set((state) => {
-          if (state.messages.some((m) => m._id === newMessage._id)) return state;
-          return { messages: [...state.messages, newMessage] };
+          if (state.messages.some((m) => m._id === messageToAdd._id)) return state;
+          return { messages: [...state.messages, messageToAdd] };
         });
+
+        if (isDocumentActive) {
+          socket.emit("markMessagesSeen", { senderId: newMessage.senderId });
+          get().markMessagesAsSeen(newMessage.senderId);
+        }
       }
 
       // Always play notification sound if sound is enabled
@@ -238,12 +272,34 @@ export const useChatStore = create((set, get) => ({
         }
       }
     });
+
+    socket.off("messagesSeen");
+    socket.on("messagesSeen", ({ chatPartnerId, seenBy }) => {
+      const partnerId = chatPartnerId || seenBy;
+      if (!partnerId) return;
+
+      const authUser = useAuthStore.getState().authUser;
+      set((state) => ({
+        messages: state.messages.map((m) => {
+          if (
+            (authUser && m.senderId === authUser._id && m.receiverId === partnerId) ||
+            (authUser && m.receiverId === authUser._id && m.senderId === partnerId) ||
+            m.senderId === partnerId ||
+            m.receiverId === partnerId
+          ) {
+            return { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() };
+          }
+          return m;
+        }),
+      }));
+    });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
     socket.off("newMessage");
+    socket.off("messagesSeen");
   },
 
   subscribeToUsers: () => {
