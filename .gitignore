@@ -22,3 +22,10 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Archives and binaries
+*.msi
+*.exe
+*.zip
+*.tar.gz
+*.rar
