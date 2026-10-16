@@ -18,6 +18,10 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
+    if (password.length > 128) {
+      return res.status(400).json({ message: "Password cannot exceed 128 characters" });
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedFullName = fullName.trim();
 
@@ -131,7 +135,7 @@ export const updateProfile = async (req, res) => {
       userId,
       { profilePic: uploadResponse.secure_url },
       { new: true }
-    );
+    ).select("-password");
 
     res.status(200).json(updatedUser);
   } catch (error) {

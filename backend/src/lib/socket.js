@@ -10,22 +10,25 @@ const server = http.createServer(app);
 export const isOriginAllowed = (origin, callback) => {
   // Allow requests with no origin (e.g. mobile apps, curl)
   if (!origin) return callback(null, true);
-  const allowed = [
+
+  const allowedOrigins = [
     ENV.CLIENT_URL,
     "https://hans-soni.github.io",
     "http://localhost:5173",
     "http://localhost:5002",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5002",
   ].filter(Boolean);
 
   if (
-    allowed.includes(origin) ||
-    origin.endsWith(".github.io") ||
-    origin.includes("localhost") ||
-    origin.includes("127.0.0.1")
+    allowedOrigins.includes(origin) ||
+    (origin.startsWith("http://localhost:") && ENV.NODE_ENV !== "production") ||
+    (origin.startsWith("http://127.0.0.1:") && ENV.NODE_ENV !== "production")
   ) {
     return callback(null, true);
   }
-  return callback(null, true);
+
+  return callback(new Error("CORS origin not allowed"), false);
 };
 
 const io = new Server(server, {

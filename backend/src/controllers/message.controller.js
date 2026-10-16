@@ -1,8 +1,11 @@
+import mongoose from "mongoose";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
 import { encryptText, decryptText } from "../lib/encryption.js";
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 export const getAllContacts = async (req, res) => {
   try {
@@ -40,6 +43,10 @@ export const getMessagesByUserId = async (req, res) => {
   try {
     const myId = req.user._id;
     const { id: userToChatId } = req.params;
+
+    if (!isValidObjectId(userToChatId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
 
     // Automatically mark all messages from userToChatId to myId as seen
     await Message.updateMany(
@@ -82,6 +89,10 @@ export const markMessagesAsSeen = async (req, res) => {
     const myId = req.user._id;
     const { id: senderId } = req.params;
 
+    if (!isValidObjectId(senderId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     const updateResult = await Message.updateMany(
       { senderId, receiverId: myId, isSeen: { $ne: true } },
       { $set: { isSeen: true, seenAt: new Date() } }
@@ -108,9 +119,18 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
+    if (!isValidObjectId(receiverId)) {
+      return res.status(400).json({ message: "Invalid receiver ID" });
+    }
+
     if (!text && !image) {
       return res.status(400).json({ message: "Text or image is required." });
     }
+
+    if (text && typeof text === "string" && text.length > 2000) {
+      return res.status(400).json({ message: "Message cannot exceed 2000 characters." });
+    }
+
     if (senderId.equals(receiverId)) {
       return res.status(400).json({ message: "Cannot send messages to yourself." });
     }
@@ -227,6 +247,11 @@ export const getChatPartners = async (req, res) => {
 export const getUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     const user = await User.findById(id).select("-password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -250,6 +275,7 @@ export const getUserProfile = async (req, res) => {
       (bId) => bId.toString() === id.toString()
     );
     userObj.isBlockedByMe = Boolean(isTargetBlockedByMe);
+    delete userObj.blockedUsers; // Never expose target user's blocked list
 
     res.status(200).json(userObj);
   } catch (error) {
@@ -262,6 +288,10 @@ export const blockUser = async (req, res) => {
   try {
     const myId = req.user._id;
     const { id: userToBlockId } = req.params;
+
+    if (!isValidObjectId(userToBlockId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
 
     if (myId.toString() === userToBlockId.toString()) {
       return res.status(400).json({ message: "You cannot block yourself" });
@@ -294,6 +324,10 @@ export const unblockUser = async (req, res) => {
   try {
     const myId = req.user._id;
     const { id: userToUnblockId } = req.params;
+
+    if (!isValidObjectId(userToUnblockId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       myId,
@@ -333,6 +367,10 @@ export const deleteChatHistory = async (req, res) => {
   try {
     const myId = req.user._id;
     const { id: userToChatId } = req.params;
+
+    if (!isValidObjectId(userToChatId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
 
     const result = await Message.deleteMany({
       $or: [
