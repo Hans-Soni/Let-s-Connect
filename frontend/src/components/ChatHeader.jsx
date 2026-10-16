@@ -1,11 +1,13 @@
 import { XIcon, ArrowLeftIcon, Sun, Moon } from "lucide-react";
+import { useNavigate } from "react-router";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
 
 function ChatHeader() {
-  const { selectedUser, setSelectedUser } = useChatStore();
+  const navigate = useNavigate();
+  const { selectedUser, setSelectedUser, setViewingProfileUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
@@ -35,6 +37,13 @@ function ChatHeader() {
     setSelectedUser(null);
   };
 
+  const handleOpenProfile = () => {
+    if (selectedUser) {
+      setViewingProfileUser(selectedUser);
+      navigate(`/profile/${selectedUser._id}`);
+    }
+  };
+
   return (
     <div className="flex justify-between items-center bg-base-200/80 backdrop-blur-md border-b border-base-100/50 h-16 md:h-20 px-2 sm:px-4 md:px-6 shrink-0 z-20 w-full relative">
       <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
@@ -48,14 +57,23 @@ function ChatHeader() {
           <ArrowLeftIcon className="size-6 stroke-[2.5]" />
         </button>
 
-        <div className={`avatar ${isOnline ? "online" : "offline"} shrink-0`}>
-          <div className="size-10 sm:size-11 rounded-full ring-1 ring-base-content/10">
+        {/* User DP / Avatar - Click to open profile */}
+        <div
+          className={`avatar ${isOnline ? "online" : "offline"} shrink-0 cursor-pointer group/avatar`}
+          onClick={handleOpenProfile}
+          title={`View ${selectedUser.fullName}'s profile`}
+        >
+          <div className="size-10 sm:size-11 rounded-full ring-1 ring-base-content/10 group-hover/avatar:ring-2 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
             <img src={selectedUser.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={selectedUser.fullName} />
           </div>
         </div>
 
-        <div className="min-w-0">
-          <h3 className="text-base-content font-semibold text-sm sm:text-base truncate max-w-[140px] xs:max-w-[190px] sm:max-w-xs">
+        <div
+          className="min-w-0 cursor-pointer select-none"
+          onClick={handleOpenProfile}
+          title={`View ${selectedUser.fullName}'s profile`}
+        >
+          <h3 className="text-base-content font-semibold text-sm sm:text-base truncate max-w-[140px] xs:max-w-[190px] sm:max-w-xs hover:text-primary transition-colors">
             {selectedUser.fullName}
           </h3>
           <p className="text-base-content/60 text-xs flex items-center gap-1.5">

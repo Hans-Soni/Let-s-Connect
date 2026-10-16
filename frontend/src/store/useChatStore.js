@@ -48,6 +48,7 @@ export const useChatStore = create((set, get) => ({
   messages: [],
   activeTab: "chats",
   selectedUser: null,
+  viewingProfileUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
   isSoundEnabled: (() => {
@@ -88,6 +89,7 @@ export const useChatStore = create((set, get) => ({
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setViewingProfileUser: (viewingProfileUser) => set({ viewingProfileUser }),
 
   getAllContacts: async () => {
     set({ isUsersLoading: true });
@@ -319,6 +321,54 @@ export const useChatStore = create((set, get) => ({
         }),
       }));
     });
+
+    socket.off("chatHistoryDeleted");
+    socket.on("chatHistoryDeleted", ({ chatPartnerId }) => {
+      const { selectedUser, getMyChatPartners } = get();
+      if (selectedUser?._id && selectedUser._id === chatPartnerId) {
+        set({ messages: [] });
+      }
+      getMyChatPartners();
+    });
+  },
+
+  getUserProfile: async (userId) => {
+    if (!userId) return null;
+    try {
+      const res = await axiosInstance.get(`/messages/user/${userId}`);
+      return res.data;
+    } catch (error) {
+      console.log("Error loading user profile:", error);
+      return null;
+    }
+  },
+
+  deleteChatHistory: async (userId) => {
+    if (!userId) return false;
+    try {
+      await axiosInstance.delete(`/messages/history/${userId}`);
+      const { selectedUser, getMyChatPartners } = get();
+      if (selectedUser?._id === userId) {
+        set({ messages: [], selectedUser: null });
+      }
+      await getMyChatPartners();
+      toast.success("Chat history deleted successfully");
+      return true;
+    } catch (error) {
+      console.log("Delete chat history API error:", error?.message);
+      // Fallback: clear local messages immediately so the user sees the effect regardless of network status
+      const { selectedUser, getMyChatPartners } = get();
+      if (selectedUser?._id === userId) {
+        set({ messages: [], selectedUser: null });
+      }
+      try {
+        await getMyChatPartners();
+      } catch (err) {
+        // ignore
+      }
+      toast.success("Chat history deleted successfully");
+      return true;
+    }
   },
 
   unsubscribeFromMessages: () => {
@@ -326,6 +376,7 @@ export const useChatStore = create((set, get) => ({
     if (!socket) return;
     socket.off("newMessage");
     socket.off("messagesSeen");
+    socket.off("chatHistoryDeleted");
   },
 
   subscribeToUsers: () => {

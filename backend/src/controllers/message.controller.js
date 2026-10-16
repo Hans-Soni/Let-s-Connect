@@ -174,3 +174,47 @@ export const getChatPartners = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getUserProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error in getUserProfile controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteChatHistory = async (req, res) => {
+  try {
+    const myId = req.user._id;
+    const { id: userToChatId } = req.params;
+
+    const result = await Message.deleteMany({
+      $or: [
+        { senderId: myId, receiverId: userToChatId },
+        { senderId: userToChatId, receiverId: myId },
+      ],
+    });
+
+    const receiverSocketId = getReceiverSocketId(userToChatId?.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("chatHistoryDeleted", {
+        chatPartnerId: myId.toString(),
+      });
+    }
+
+    res.status(200).json({
+      message: "Chat history deleted successfully",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("Error in deleteChatHistory controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+

@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router";
 import { useChatStore } from "../store/useChatStore";
 import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
 function ContactList() {
-  const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, subscribeToUsers, unsubscribeFromUsers, selectedUser } = useChatStore();
+  const navigate = useNavigate();
+  const { getAllContacts, allContacts, setSelectedUser, setViewingProfileUser, isUsersLoading, subscribeToUsers, unsubscribeFromUsers, selectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   useEffect(() => {
@@ -34,8 +36,18 @@ function ContactList() {
           onClick={() => setSelectedUser(contact)}
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`avatar ${onlineUsers.includes(contact._id) ? "online" : "offline"} shrink-0`}>
-              <div className="size-11 sm:size-12 rounded-full ring-1 ring-base-content/10">
+            {/* User DP / Avatar - Click to open profile page */}
+            <div
+              className={`avatar ${onlineUsers.includes(contact._id) ? "online" : "offline"} shrink-0 cursor-pointer group/avatar`}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setViewingProfileUser(contact);
+                navigate(`/profile/${contact._id}`);
+              }}
+              title={`View ${contact.fullName}'s profile`}
+            >
+              <div className="size-11 sm:size-12 rounded-full ring-1 ring-base-content/10 group-hover/avatar:ring-2 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
                 <img src={contact.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={contact.fullName} />
               </div>
             </div>
