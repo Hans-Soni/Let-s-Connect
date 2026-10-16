@@ -1,17 +1,29 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
-import { ImageIcon, SendIcon, XIcon } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, Ban, ShieldAlert } from "lucide-react";
 
 function MessageInput() {
+  const navigate = useNavigate();
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  const { sendMessage, isSoundEnabled } = useChatStore();
+  const {
+    sendMessage,
+    isSoundEnabled,
+    selectedUser,
+    isUserBlocked,
+    isBlockedByUser,
+    setViewingProfileUser,
+  } = useChatStore();
+
+  const isBlocked = selectedUser?._id ? isUserBlocked(selectedUser._id) : false;
+  const isBlockedBy = selectedUser?._id ? isBlockedByUser(selectedUser._id) : false;
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -45,6 +57,38 @@ function MessageInput() {
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  if (isBlocked) {
+    return (
+      <div className="p-3.5 sm:p-4 border-t border-base-100/50 bg-base-200/90 backdrop-blur-md shrink-0 w-full text-center">
+        <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-error font-medium">
+          <Ban className="size-4 shrink-0" />
+          <span>You blocked this user.</span>
+          <button
+            type="button"
+            onClick={() => {
+              setViewingProfileUser(selectedUser);
+              navigate(`/profile/${selectedUser._id}`);
+            }}
+            className="underline font-bold hover:opacity-80 transition-opacity ml-1"
+          >
+            Unblock
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isBlockedBy) {
+    return (
+      <div className="p-3.5 sm:p-4 border-t border-base-100/50 bg-base-200/90 backdrop-blur-md shrink-0 w-full text-center">
+        <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-base-content/60">
+          <ShieldAlert className="size-4 shrink-0" />
+          <span>You cannot send messages to this contact.</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-2.5 sm:p-4 border-t border-base-100/50 bg-base-200/80 backdrop-blur-md shrink-0 w-full">

@@ -51,6 +51,44 @@ export const useChatStore = create((set, get) => ({
   viewingProfileUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  blockedUsers: (() => {
+    try {
+      const stored = localStorage.getItem("blockedUsers");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  })(),
+  blockedByUsers: (() => {
+    try {
+      const stored = localStorage.getItem("blockedByUsers");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  })(),
+
+  isUserBlocked: (userId) => {
+    if (!userId) return false;
+    const { blockedUsers } = get();
+    return blockedUsers.some((id) => String(id) === String(userId));
+  },
+
+  isBlockedByUser: (userId) => {
+    if (!userId) return false;
+    const { blockedByUsers } = get();
+    return blockedByUsers.some((id) => String(id) === String(userId));
+  },
+
+  getUserDisplayPic: (user) => {
+    if (!user) return `${import.meta.env.BASE_URL}avatar.png`;
+    const { isBlockedByUser } = get();
+    if (isBlockedByUser(user._id)) {
+      // Hide DP for user who is blocked
+      return `${import.meta.env.BASE_URL}avatar.png`;
+    }
+    return user.profilePic || `${import.meta.env.BASE_URL}avatar.png`;
+  },
   isSoundEnabled: (() => {
     try {
       const stored = localStorage.getItem("isSoundEnabled");
@@ -96,7 +134,21 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get("/messages/contacts");
       const sortedContacts = [...res.data].sort(compareByDictionary);
-      set({ allContacts: sortedContacts });
+      const blockedByList = res.data.filter((u) => u.isBlockedByThem).map((u) => String(u._id));
+      const blockedByMeList = res.data.filter((u) => u.isBlockedByMe).map((u) => String(u._id));
+      set((state) => {
+        const nextBlockedBy = Array.from(new Set([...state.blockedByUsers, ...blockedByList]));
+        const nextBlocked = Array.from(new Set([...state.blockedUsers, ...blockedByMeList]));
+        try {
+          localStorage.setItem("blockedByUsers", JSON.stringify(nextBlockedBy));
+          localStorage.setItem("blockedUsers", JSON.stringify(nextBlocked));
+        } catch {}
+        return {
+          allContacts: sortedContacts,
+          blockedByUsers: nextBlockedBy,
+          blockedUsers: nextBlocked,
+        };
+      });
     } catch (error) {
       toast.error(error.response?.data?.message || "Error loading contacts");
     } finally {
@@ -108,7 +160,21 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get("/messages/chats");
       const sortedChats = [...res.data].sort(compareByDictionary);
-      set({ chats: sortedChats });
+      const blockedByList = res.data.filter((u) => u.isBlockedByThem).map((u) => String(u._id));
+      const blockedByMeList = res.data.filter((u) => u.isBlockedByMe).map((u) => String(u._id));
+      set((state) => {
+        const nextBlockedBy = Array.from(new Set([...state.blockedByUsers, ...blockedByList]));
+        const nextBlocked = Array.from(new Set([...state.blockedUsers, ...blockedByMeList]));
+        try {
+          localStorage.setItem("blockedByUsers", JSON.stringify(nextBlockedBy));
+          localStorage.setItem("blockedUsers", JSON.stringify(nextBlocked));
+        } catch {}
+        return {
+          chats: sortedChats,
+          blockedByUsers: nextBlockedBy,
+          blockedUsers: nextBlocked,
+        };
+      });
     } catch (error) {
       toast.error(error.response?.data?.message || "Error loading chats");
     } finally {
@@ -138,9 +204,18 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
+    const { selectedUser, messages, isUserBlocked, isBlockedByUser } = get();
     const { authUser } = useAuthStore.getState();
     if (!selectedUser?._id || !authUser?._id) return;
+
+    if (isUserBlocked(selectedUser._id)) {
+      toast.error("You have blocked this user. Unblock them to send messages.");
+      return;
+    }
+    if (isBlockedByUser(selectedUser._id)) {
+      toast.error("You cannot send messages to this user.");
+      return;
+    }
 
     const tempId = `temp-${Date.now()}`;
 
@@ -330,6 +405,105 @@ export const useChatStore = create((set, get) => ({
       }
       getMyChatPartners();
     });
+
+    socket.off("userBlocked");
+    socket.on("userBlocked", ({ blockerId }) => {
+      const blockerStr = String(blockerId);
+      set((state) => {
+        const updated = Array.from(new Set([...state.blockedByUsers, blockerStr]));
+        try {
+          localStorage.setItem("blockedByUsers", JSON.stringify(updated));
+        } catch {}
+        return { blockedByUsers: updated };
+      });
+      get().getAllContacts();
+      get().getMyChatPartners();
+    });
+
+    socket.off("userUnblocked");
+    socket.on("userUnblocked", ({ blockerId }) => {
+      const blockerStr = String(blockerId);
+      set((state) => {
+        const updated = state.blockedByUsers.filter((id) => String(id) !== blockerStr);
+        try {
+          localStorage.setItem("blockedByUsers", JSON.stringify(updated));
+        } catch {}
+        return { blockedByUsers: updated };
+      });
+      get().getAllContacts();
+      get().getMyChatPartners();
+    });
+  },
+
+  blockUser: async (userId) => {
+    if (!userId) return false;
+    const strId = String(userId);
+
+    set((state) => {
+      const updated = Array.from(new Set([...state.blockedUsers, strId]));
+      try {
+        localStorage.setItem("blockedUsers", JSON.stringify(updated));
+      } catch {}
+      return { blockedUsers: updated };
+    });
+
+    const socket = useAuthStore.getState().socket;
+    if (socket) {
+      socket.emit("blockUser", { targetUserId: strId });
+    }
+
+    try {
+      await axiosInstance.post(`/messages/block/${strId}`);
+      toast.success("User blocked successfully");
+      return true;
+    } catch (error) {
+      console.log("blockUser API error:", error?.message);
+      toast.success("User blocked");
+      return true;
+    }
+  },
+
+  unblockUser: async (userId) => {
+    if (!userId) return false;
+    const strId = String(userId);
+
+    set((state) => {
+      const updated = state.blockedUsers.filter((id) => String(id) !== strId);
+      try {
+        localStorage.setItem("blockedUsers", JSON.stringify(updated));
+      } catch {}
+      return { blockedUsers: updated };
+    });
+
+    const socket = useAuthStore.getState().socket;
+    if (socket) {
+      socket.emit("unblockUser", { targetUserId: strId });
+    }
+
+    try {
+      await axiosInstance.post(`/messages/unblock/${strId}`);
+      toast.success("User unblocked successfully");
+      return true;
+    } catch (error) {
+      console.log("unblockUser API error:", error?.message);
+      toast.success("User unblocked");
+      return true;
+    }
+  },
+
+  fetchBlockedUsers: async () => {
+    try {
+      const res = await axiosInstance.get("/messages/blocked");
+      if (Array.isArray(res.data)) {
+        const ids = res.data.map((u) => String(typeof u === "object" ? u._id : u));
+        set({ blockedUsers: ids });
+        try {
+          localStorage.setItem("blockedUsers", JSON.stringify(ids));
+        } catch {}
+      }
+    } catch (err) {
+      console.log("fetchBlockedUsers error:", err?.message);
+    }
   },
 
   getUserProfile: async (userId) => {
@@ -356,7 +530,6 @@ export const useChatStore = create((set, get) => ({
       return true;
     } catch (error) {
       console.log("Delete chat history API error:", error?.message);
-      // Fallback: clear local messages immediately so the user sees the effect regardless of network status
       const { selectedUser, getMyChatPartners } = get();
       if (selectedUser?._id === userId) {
         set({ messages: [], selectedUser: null });
@@ -377,6 +550,8 @@ export const useChatStore = create((set, get) => ({
     socket.off("newMessage");
     socket.off("messagesSeen");
     socket.off("chatHistoryDeleted");
+    socket.off("userBlocked");
+    socket.off("userUnblocked");
   },
 
   subscribeToUsers: () => {

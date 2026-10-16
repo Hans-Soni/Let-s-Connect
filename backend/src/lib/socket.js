@@ -78,6 +78,32 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("blockUser", ({ targetUserId }) => {
+    try {
+      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("userBlocked", {
+          blockerId: socket.userId.toString(),
+        });
+      }
+    } catch (err) {
+      console.log("Error in blockUser socket event:", err);
+    }
+  });
+
+  socket.on("unblockUser", ({ targetUserId }) => {
+    try {
+      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("userUnblocked", {
+          blockerId: socket.userId.toString(),
+        });
+      }
+    } catch (err) {
+      console.log("Error in unblockUser socket event:", err);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.user.fullName);
     delete userSocketMap[userId];

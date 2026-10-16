@@ -7,6 +7,9 @@ import {
   markMessagesAsSeen,
   getUserProfile,
   deleteChatHistory,
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
 } from "../controllers/message.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
@@ -19,7 +22,10 @@ router.use(arcjetProtection, protectRoute);
 
 router.get("/contacts", getAllContacts);
 router.get("/chats", getChatPartners);
+router.get("/blocked", getBlockedUsers);
 router.get("/user/:id", getUserProfile);
+router.post("/block/:id", blockUser);
+router.post("/unblock/:id", unblockUser);
 router.delete("/history/:id", deleteChatHistory);
 router.get("/:id", getMessagesByUserId);
 router.post("/send/:id", sendMessage);

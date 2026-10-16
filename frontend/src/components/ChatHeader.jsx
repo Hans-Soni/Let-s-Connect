@@ -7,7 +7,14 @@ import { useThemeStore } from "../store/useThemeStore";
 
 function ChatHeader() {
   const navigate = useNavigate();
-  const { selectedUser, setSelectedUser, setViewingProfileUser } = useChatStore();
+  const {
+    selectedUser,
+    setSelectedUser,
+    setViewingProfileUser,
+    getUserDisplayPic,
+    isUserBlocked,
+    isBlockedByUser,
+  } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
@@ -25,6 +32,8 @@ function ChatHeader() {
   if (!selectedUser) return null;
 
   const isOnline = selectedUser._id ? onlineUsers.includes(selectedUser._id) : false;
+  const isBlocked = isUserBlocked(selectedUser._id);
+  const isBlockedBy = isBlockedByUser(selectedUser._id);
 
   const handleBack = (e) => {
     if (e) {
@@ -64,7 +73,7 @@ function ChatHeader() {
           title={`View ${selectedUser.fullName}'s profile`}
         >
           <div className="size-10 sm:size-11 rounded-full ring-1 ring-base-content/10 group-hover/avatar:ring-2 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
-            <img src={selectedUser.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={selectedUser.fullName} />
+            <img src={getUserDisplayPic(selectedUser)} alt={selectedUser.fullName} />
           </div>
         </div>
 
@@ -77,8 +86,16 @@ function ChatHeader() {
             {selectedUser.fullName}
           </h3>
           <p className="text-base-content/60 text-xs flex items-center gap-1.5">
-            <span className={`inline-block size-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-base-content/40"}`} />
-            {isOnline ? "Online" : "Offline"}
+            {isBlocked ? (
+              <span className="text-error font-medium">Blocked</span>
+            ) : isBlockedBy ? (
+              <span className="text-base-content/50">Unavailable</span>
+            ) : (
+              <>
+                <span className={`inline-block size-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-base-content/40"}`} />
+                {isOnline ? "Online" : "Offline"}
+              </>
+            )}
           </p>
         </div>
       </div>

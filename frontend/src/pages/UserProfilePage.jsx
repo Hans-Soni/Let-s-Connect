@@ -12,6 +12,8 @@ import {
   Sun,
   Moon,
   ShieldAlert,
+  ShieldCheck,
+  Ban,
   Loader2,
   ZoomIn,
   X,
@@ -32,6 +34,11 @@ function UserProfilePage({ profileUser, onClose }) {
     getMyChatPartners,
     getUserProfile,
     deleteChatHistory,
+    blockUser,
+    unblockUser,
+    isUserBlocked,
+    isBlockedByUser,
+    getUserDisplayPic,
     setSelectedUser,
     setActiveTab,
     setViewingProfileUser,
@@ -52,7 +59,9 @@ function UserProfilePage({ profileUser, onClose }) {
 
   const [isLoading, setIsLoading] = useState(!user);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const [showImageLightbox, setShowImageLightbox] = useState(false);
 
   useEffect(() => {
@@ -100,6 +109,9 @@ function UserProfilePage({ profileUser, onClose }) {
   const isOnline = user?._id ? onlineUsers.includes(user._id) : false;
   const isMe = authUser?._id && user?._id && authUser._id === user._id;
 
+  const isBlockedByMe = user?._id ? (isUserBlocked(user._id) || Boolean(user.isBlockedByMe)) : false;
+  const isBlockedByThem = user?._id ? (isBlockedByUser(user._id) || Boolean(user.isBlockedByThem)) : false;
+
   const handleBackToContacts = () => {
     setActiveTab("contacts");
     setSelectedUser(null);
@@ -114,6 +126,23 @@ function UserProfilePage({ profileUser, onClose }) {
     setViewingProfileUser(null);
     if (onClose) onClose();
     navigate("/");
+  };
+
+  const handleBlockUser = async () => {
+    if (!user?._id) return;
+    setIsBlocking(true);
+    await blockUser(user._id);
+    setIsBlocking(false);
+    setShowBlockModal(false);
+    setUser((prev) => (prev ? { ...prev, isBlockedByMe: true } : prev));
+  };
+
+  const handleUnblockUser = async () => {
+    if (!user?._id) return;
+    setIsBlocking(true);
+    await unblockUser(user._id);
+    setIsBlocking(false);
+    setUser((prev) => (prev ? { ...prev, isBlockedByMe: false } : prev));
   };
 
   const handleDeleteHistory = async () => {
@@ -156,7 +185,9 @@ function UserProfilePage({ profileUser, onClose }) {
     );
   }
 
-  const profileImageUrl = user.profilePic || `${import.meta.env.BASE_URL}avatar.png`;
+  const profileImageUrl = isBlockedByThem
+    ? `${import.meta.env.BASE_URL}avatar.png`
+    : (user.profilePic || `${import.meta.env.BASE_URL}avatar.png`);
 
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden bg-base-200/60 backdrop-blur-md">
@@ -193,9 +224,11 @@ function UserProfilePage({ profileUser, onClose }) {
 
           {/* BIG DP / USER IMAGE (Placed above his name) */}
           <div
-            className="relative group cursor-pointer"
-            onClick={() => setShowImageLightbox(true)}
-            title="Click to zoom / view full picture"
+            className={`relative group ${isBlockedByThem ? "cursor-default" : "cursor-pointer"}`}
+            onClick={() => {
+              if (!isBlockedByThem) setShowImageLightbox(true);
+            }}
+            title={isBlockedByThem ? "Profile picture hidden" : "Click to zoom / view full picture"}
           >
             <div className="w-40 h-40 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-full overflow-hidden ring-4 ring-primary/40 shadow-2xl bg-base-300 transition-all duration-300 group-hover:scale-[1.03] group-hover:ring-primary/80">
               <img
@@ -206,11 +239,13 @@ function UserProfilePage({ profileUser, onClose }) {
             </div>
 
             {/* ZOOM HINT OVERLAY ON HOVER */}
-            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-              <span className="text-white text-xs font-medium flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm shadow-md">
-                <ZoomIn className="size-3.5" /> View Photo
-              </span>
-            </div>
+            {!isBlockedByThem && (
+              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                <span className="text-white text-xs font-medium flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm shadow-md">
+                  <ZoomIn className="size-3.5" /> View Photo
+                </span>
+              </div>
+            )}
 
             {/* ONLINE / OFFLINE BADGE */}
             <span
@@ -234,43 +269,110 @@ function UserProfilePage({ profileUser, onClose }) {
             </p>
           )}
 
+          {/* BLOCKED BADGE IF CURRENT USER BLOCKED THEM */}
+          {isBlockedByMe && (
+            <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error/15 border border-error/30 text-xs font-bold text-error">
+              <Ban className="size-3.5" />
+              <span>Blocked User</span>
+            </div>
+          )}
+
           {/* ACTIVE STATUS BADGE */}
-          <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-base-100/70 border border-base-100/80 text-xs font-medium shadow-sm">
-            <span
-              className={`size-2 rounded-full ${
-                isOnline ? "bg-emerald-500 animate-pulse" : "bg-base-content/40"
-              }`}
-            />
-            <span className="text-base-content/80">
-              {isOnline ? "Active Now" : "Offline"}
-            </span>
-          </div>
+          {!isBlockedByMe && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-base-100/70 border border-base-100/80 text-xs font-medium shadow-sm">
+              <span
+                className={`size-2 rounded-full ${
+                  isOnline ? "bg-emerald-500 animate-pulse" : "bg-base-content/40"
+                }`}
+              />
+              <span className="text-base-content/80">
+                {isOnline ? "Active Now" : "Offline"}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ACTION BUTTONS (Under the user's name) */}
         <div className="w-full max-w-md mt-8 space-y-3.5">
-          {/* PRIMARY OPTION: SEND MESSAGE */}
-          {!isMe && (
-            <button
-              type="button"
-              onClick={handleStartChat}
-              className="btn btn-primary w-full gap-2.5 rounded-xl shadow-md hover:shadow-lg font-semibold text-sm sm:text-base py-3 transition-all"
-            >
-              <MessageSquare className="size-4.5" />
-              <span>Send Message to {user.fullName ? user.fullName.split(" ")[0] : "User"}</span>
-            </button>
+          {!isMe && isBlockedByMe && (
+            <>
+              {/* Informational banner */}
+              <div className="p-4 rounded-2xl bg-error/10 border border-error/20 flex items-center gap-3 text-sm text-error">
+                <ShieldAlert className="size-5 shrink-0" />
+                <div>
+                  <p className="font-semibold">You blocked this user</p>
+                  <p className="text-xs opacity-80">
+                    They cannot message you or see your profile picture.
+                  </p>
+                </div>
+              </div>
+
+              {/* THE ONLY OPTION FOR BLOCKED USER: UNBLOCK */}
+              <button
+                type="button"
+                onClick={handleUnblockUser}
+                disabled={isBlocking}
+                className="btn btn-success w-full gap-2.5 rounded-xl font-semibold text-sm sm:text-base py-3 transition-all shadow-md text-white"
+              >
+                {isBlocking ? (
+                  <>
+                    <Loader2 className="size-4.5 animate-spin" />
+                    <span>Unblocking...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="size-4.5" />
+                    <span>Unblock User</span>
+                  </>
+                )}
+              </button>
+            </>
           )}
 
-          {/* OPTION: DELETE USER'S CHAT HISTORY */}
-          {!isMe && (
-            <button
-              type="button"
-              onClick={() => setShowConfirmModal(true)}
-              className="btn btn-error btn-outline hover:bg-error hover:text-white w-full gap-2.5 rounded-xl font-semibold text-sm sm:text-base py-3 transition-all shadow-sm group"
-            >
-              <Trash2 className="size-4.5 group-hover:scale-110 transition-transform" />
-              <span>Delete Chat History</span>
-            </button>
+          {!isMe && !isBlockedByMe && isBlockedByThem && (
+            <div className="p-4 rounded-2xl bg-base-300/60 border border-base-content/10 flex items-center gap-3 text-sm text-base-content/70">
+              <ShieldAlert className="size-5 shrink-0 text-base-content/50" />
+              <div>
+                <p className="font-semibold">Unavailable</p>
+                <p className="text-xs opacity-80">
+                  You cannot send messages to this contact.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!isMe && !isBlockedByMe && !isBlockedByThem && (
+            <>
+              {/* PRIMARY OPTION: SEND MESSAGE */}
+              <button
+                type="button"
+                onClick={handleStartChat}
+                className="btn btn-primary w-full gap-2.5 rounded-xl shadow-md hover:shadow-lg font-semibold text-sm sm:text-base py-3 transition-all"
+              >
+                <MessageSquare className="size-4.5" />
+                <span>Send Message to {user.fullName ? user.fullName.split(" ")[0] : "User"}</span>
+              </button>
+
+              {/* BLOCK USER BUTTON */}
+              <button
+                type="button"
+                onClick={() => setShowBlockModal(true)}
+                className="btn btn-warning btn-outline hover:bg-warning hover:text-warning-content w-full gap-2.5 rounded-xl font-semibold text-sm sm:text-base py-3 transition-all shadow-sm group"
+              >
+                <Ban className="size-4.5 group-hover:scale-110 transition-transform" />
+                <span>Block User</span>
+              </button>
+
+              {/* OPTION: DELETE USER'S CHAT HISTORY */}
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                className="btn btn-error btn-outline hover:bg-error hover:text-white w-full gap-2.5 rounded-xl font-semibold text-sm sm:text-base py-3 transition-all shadow-sm group"
+              >
+                <Trash2 className="size-4.5 group-hover:scale-110 transition-transform" />
+                <span>Delete Chat History</span>
+              </button>
+            </>
           )}
 
           {/* OPTION: SEND HIM BACK TO CONTACTS LIST */}
@@ -336,6 +438,56 @@ function UserProfilePage({ profileUser, onClose }) {
                   <>
                     <Trash2 className="size-4" />
                     <span>Yes, Delete History</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION MODAL FOR BLOCKING USER */}
+      {showBlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-base-100 border border-base-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-warning">
+              <div className="p-3 bg-warning/10 rounded-xl">
+                <Ban className="size-6" />
+              </div>
+              <h3 className="text-lg font-bold text-base-content">
+                Block {user.fullName}?
+              </h3>
+            </div>
+
+            <p className="text-sm text-base-content/70 leading-relaxed">
+              Are you sure you want to block <strong className="text-base-content">{user.fullName}</strong>?
+              They will not be able to send you messages or view your profile photo.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBlockModal(false)}
+                disabled={isBlocking}
+                className="btn btn-ghost btn-sm rounded-xl px-4"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBlockUser}
+                disabled={isBlocking}
+                className="btn btn-warning btn-sm rounded-xl px-4 gap-2 text-warning-content font-semibold"
+              >
+                {isBlocking ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Blocking...</span>
+                  </>
+                ) : (
+                  <>
+                    <Ban className="size-4" />
+                    <span>Yes, Block User</span>
                   </>
                 )}
               </button>

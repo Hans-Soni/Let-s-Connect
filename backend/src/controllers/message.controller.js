@@ -7,12 +7,29 @@ import { encryptText, decryptText } from "../lib/encryption.js";
 export const getAllContacts = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
+    const me = await User.findById(loggedInUserId).select("blockedUsers");
+    const myBlockedList = (me?.blockedUsers || []).map((id) => id.toString());
+
     const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } })
       .select("-password")
       .collation({ locale: "en", strength: 2 })
       .sort({ email: 1 });
 
-    res.status(200).json(filteredUsers);
+    const sanitizedUsers = filteredUsers.map((u) => {
+      const uObj = u.toObject();
+      const hasBlockedMe = u.blockedUsers?.some(
+        (bId) => bId.toString() === loggedInUserId.toString()
+      );
+      if (hasBlockedMe) {
+        uObj.profilePic = "";
+        uObj.isBlockedByThem = true;
+      }
+      uObj.isBlockedByMe = myBlockedList.includes(u._id.toString());
+      delete uObj.blockedUsers;
+      return uObj;
+    });
+
+    res.status(200).json(sanitizedUsers);
   } catch (error) {
     console.log("Error in getAllContacts:", error);
     res.status(500).json({ message: "Server error" });
@@ -97,9 +114,24 @@ export const sendMessage = async (req, res) => {
     if (senderId.equals(receiverId)) {
       return res.status(400).json({ message: "Cannot send messages to yourself." });
     }
-    const receiverExists = await User.exists({ _id: receiverId });
-    if (!receiverExists) {
+    const sender = await User.findById(senderId).select("blockedUsers");
+    const receiver = await User.findById(receiverId).select("blockedUsers");
+    if (!receiver) {
       return res.status(404).json({ message: "Receiver not found." });
+    }
+
+    const isReceiverBlockedBySender = sender?.blockedUsers?.some(
+      (bId) => bId.toString() === receiverId.toString()
+    );
+    if (isReceiverBlockedBySender) {
+      return res.status(403).json({ message: "You have blocked this user. Unblock them to send messages." });
+    }
+
+    const isSenderBlockedByReceiver = receiver?.blockedUsers?.some(
+      (bId) => bId.toString() === senderId.toString()
+    );
+    if (isSenderBlockedByReceiver) {
+      return res.status(403).json({ message: "You cannot send messages to this user." });
     }
 
     let imageUrl;
@@ -163,12 +195,29 @@ export const getChatPartners = async (req, res) => {
       ),
     ];
 
+    const me = await User.findById(loggedInUserId).select("blockedUsers");
+    const myBlockedList = (me?.blockedUsers || []).map((id) => id.toString());
+
     const chatPartners = await User.find({ _id: { $in: chatPartnerIds } })
       .select("-password")
       .collation({ locale: "en", strength: 2 })
       .sort({ email: 1 });
 
-    res.status(200).json(chatPartners);
+    const sanitizedChatPartners = chatPartners.map((u) => {
+      const uObj = u.toObject();
+      const hasBlockedMe = u.blockedUsers?.some(
+        (bId) => bId.toString() === loggedInUserId.toString()
+      );
+      if (hasBlockedMe) {
+        uObj.profilePic = "";
+        uObj.isBlockedByThem = true;
+      }
+      uObj.isBlockedByMe = myBlockedList.includes(u._id.toString());
+      delete uObj.blockedUsers;
+      return uObj;
+    });
+
+    res.status(200).json(sanitizedChatPartners);
   } catch (error) {
     console.error("Error in getChatPartners: ", error.message);
     res.status(500).json({ error: "Internal server error" });
@@ -182,9 +231,100 @@ export const getUserProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json(user);
+
+    const myId = req.user._id;
+    // Check if the target user has blocked me
+    const isMeBlockedByTarget = user.blockedUsers?.some(
+      (bId) => bId.toString() === myId.toString()
+    );
+
+    const userObj = user.toObject();
+    if (isMeBlockedByTarget) {
+      userObj.profilePic = ""; // Hide DP from blocked user
+      userObj.isBlockedByThem = true;
+    }
+
+    // Also check if I have blocked the target user
+    const me = await User.findById(myId).select("blockedUsers");
+    const isTargetBlockedByMe = me?.blockedUsers?.some(
+      (bId) => bId.toString() === id.toString()
+    );
+    userObj.isBlockedByMe = Boolean(isTargetBlockedByMe);
+
+    res.status(200).json(userObj);
   } catch (error) {
     console.error("Error in getUserProfile controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const blockUser = async (req, res) => {
+  try {
+    const myId = req.user._id;
+    const { id: userToBlockId } = req.params;
+
+    if (myId.toString() === userToBlockId.toString()) {
+      return res.status(400).json({ message: "You cannot block yourself" });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      myId,
+      { $addToSet: { blockedUsers: userToBlockId } },
+      { new: true }
+    ).select("blockedUsers");
+
+    const receiverSocketId = getReceiverSocketId(userToBlockId?.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("userBlocked", {
+        blockerId: myId.toString(),
+      });
+    }
+
+    res.status(200).json({
+      message: "User blocked successfully",
+      blockedUsers: updatedUser.blockedUsers,
+    });
+  } catch (error) {
+    console.error("Error in blockUser controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const unblockUser = async (req, res) => {
+  try {
+    const myId = req.user._id;
+    const { id: userToUnblockId } = req.params;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      myId,
+      { $pull: { blockedUsers: userToUnblockId } },
+      { new: true }
+    ).select("blockedUsers");
+
+    const receiverSocketId = getReceiverSocketId(userToUnblockId?.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("userUnblocked", {
+        blockerId: myId.toString(),
+      });
+    }
+
+    res.status(200).json({
+      message: "User unblocked successfully",
+      blockedUsers: updatedUser.blockedUsers,
+    });
+  } catch (error) {
+    console.error("Error in unblockUser controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getBlockedUsers = async (req, res) => {
+  try {
+    const myId = req.user._id;
+    const user = await User.findById(myId).select("blockedUsers");
+    res.status(200).json(user?.blockedUsers || []);
+  } catch (error) {
+    console.error("Error in getBlockedUsers controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

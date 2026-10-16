@@ -6,7 +6,17 @@ import { useAuthStore } from "../store/useAuthStore";
 
 function ContactList() {
   const navigate = useNavigate();
-  const { getAllContacts, allContacts, setSelectedUser, setViewingProfileUser, isUsersLoading, subscribeToUsers, unsubscribeFromUsers, selectedUser } = useChatStore();
+  const {
+    getAllContacts,
+    allContacts,
+    setSelectedUser,
+    setViewingProfileUser,
+    isUsersLoading,
+    subscribeToUsers,
+    unsubscribeFromUsers,
+    selectedUser,
+    getUserDisplayPic,
+  } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   useEffect(() => {
@@ -48,7 +58,7 @@ function ContactList() {
               title={`View ${contact.fullName}'s profile`}
             >
               <div className="size-11 sm:size-12 rounded-full ring-1 ring-base-content/10 group-hover/avatar:ring-2 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
-                <img src={contact.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={contact.fullName} />
+                <img src={getUserDisplayPic(contact)} alt={contact.fullName} />
               </div>
             </div>
             <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{contact.fullName}</h4>

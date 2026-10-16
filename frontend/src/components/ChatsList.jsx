@@ -7,7 +7,15 @@ import { useAuthStore } from "../store/useAuthStore";
 
 function ChatsList() {
   const navigate = useNavigate();
-  const { getMyChatPartners, chats, isUsersLoading, setSelectedUser, setViewingProfileUser, selectedUser } = useChatStore();
+  const {
+    getMyChatPartners,
+    chats,
+    isUsersLoading,
+    setSelectedUser,
+    setViewingProfileUser,
+    selectedUser,
+    getUserDisplayPic,
+  } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   useEffect(() => {
@@ -40,7 +48,7 @@ function ChatsList() {
               title={`View ${chat.fullName}'s profile`}
             >
               <div className="size-11 sm:size-12 rounded-full ring-1 ring-base-content/10 group-hover/avatar:ring-2 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
-                <img src={chat.profilePic || `${import.meta.env.BASE_URL}avatar.png`} alt={chat.fullName} />
+                <img src={getUserDisplayPic(chat)} alt={chat.fullName} />
               </div>
             </div>
             <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{chat.fullName}</h4>
