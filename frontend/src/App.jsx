@@ -48,7 +48,7 @@ function App() {
   if (isCheckingAuth) return <PageLoader />;
 
   return (
-    <div data-theme={theme} className={`h-[100dvh] md:min-h-screen w-full bg-base-300 relative flex items-center justify-center p-0 md:p-4 ${authUser ? "overflow-hidden" : "overflow-y-auto"}`}>
+    <div data-theme={theme} className={`min-h-[100dvh] w-full bg-base-300 relative flex items-center justify-center p-0 md:p-4 ${authUser ? "h-[100dvh] md:h-auto md:min-h-screen overflow-hidden md:overflow-y-auto" : "overflow-y-auto"}`}>
       {/* DECORATORS - GRID BG & GLOW SHAPES */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
       <div className="absolute top-0 -left-4 size-96 bg-primary opacity-20 blur-[100px] pointer-events-none" />

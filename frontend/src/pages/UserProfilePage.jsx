@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
 import PageLoader from "../components/PageLoader";
+import DeveloperFooter from "../components/DeveloperFooter";
 import {
   ArrowLeft,
   Trash2,
@@ -392,6 +393,11 @@ function UserProfilePage({ profileUser, onClose }) {
             <CircleDot className="size-3.5 text-primary" />
             <span>Messages and media are encrypted end-to-end</span>
           </div>
+        </div>
+
+        {/* DEVELOPER PROFILE & CREATIONS FOOTER */}
+        <div className="mt-8 w-full max-w-xl pb-4">
+          <DeveloperFooter variant="compact" />
         </div>
       </div>
 

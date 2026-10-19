@@ -6,6 +6,7 @@ import { MessageCircleIcon, LockIcon, MailIcon, UserIcon, LoaderIcon } from "luc
 import { Link } from "react-router";
 import logoLight from "../assets/logo-light.png";
 import logoDark from "../assets/logo-dark.png";
+import DeveloperFooter from "../components/DeveloperFooter";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
@@ -18,22 +19,22 @@ function SignUpPage() {
   };
 
   return (
-    <div className="w-full min-h-[100dvh] flex items-center justify-center p-2 sm:p-4 bg-base-300 py-6 md:py-10">
-      <div className="relative w-full max-w-6xl md:h-[800px] min-h-fit">
+    <div className="w-full min-h-[100dvh] flex flex-col items-center justify-between p-2 sm:p-4 bg-base-300 py-3 sm:py-6 gap-2 sm:gap-4">
+      <div className="relative w-full max-w-6xl md:h-[800px] min-h-fit my-auto">
         <BorderAnimatedContainer>
           <div className="w-full flex flex-col md:flex-row min-h-fit">
             {/* FORM COLUMN - LEFT SIDE */}
-            <div className="w-full md:w-1/2 p-4 sm:p-8 flex items-center justify-center md:border-r border-slate-600/30">
+            <div className="w-full md:w-1/2 p-3 sm:p-8 flex items-center justify-center md:border-r border-slate-600/30">
               <div className="w-full max-w-md">
                 {/* HEADING TEXT */}
-                <div className="text-center mb-8">
-                  <img src={theme === "dark" ? logoDark : logoLight} alt="Let's Connect Logo" className="w-24 h-24 mx-auto mb-4" />
-                  <h2 className="text-2xl font-bold text-base-content mb-2">Create Account</h2>
-                  <p className="text-base-content/60">Sign up for a new account</p>
+                <div className="text-center mb-3 sm:mb-8">
+                  <img src={theme === "dark" ? logoDark : logoLight} alt="Let's Connect Logo" className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-4" />
+                  <h2 className="text-xl sm:text-2xl font-bold text-base-content mb-1 sm:mb-2">Create Account</h2>
+                  <p className="text-xs sm:text-sm text-base-content/60">Sign up for a new account</p>
                 </div>
 
                 {/* FORM */}
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-6">
                   {/* FULL NAME */}
                   <div>
                     <label className="auth-input-label">Full Name</label>
@@ -92,7 +93,7 @@ function SignUpPage() {
                   </button>
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-3 sm:mt-6 text-center">
                   <Link to="/login" className="auth-link">
                     Already have an account? Login
                   </Link>
@@ -121,6 +122,11 @@ function SignUpPage() {
             </div>
           </div>
         </BorderAnimatedContainer>
+      </div>
+
+      {/* DEVELOPER DESCRIPTION & PROJECTS FOOTER */}
+      <div className="w-full max-w-6xl shrink-0">
+        <DeveloperFooter />
       </div>
     </div>
   );
