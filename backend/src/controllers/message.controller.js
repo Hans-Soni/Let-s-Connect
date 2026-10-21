@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
-import Message from "../models/Message.js";
+import Message, { MESSAGE_RETENTION_MS } from "../models/Message.js";
 import User from "../models/User.js";
 import { encryptText, decryptText } from "../lib/encryption.js";
 
@@ -43,6 +43,7 @@ export const getMessagesByUserId = async (req, res) => {
   try {
     const myId = req.user._id;
     const { id: userToChatId } = req.params;
+    const retentionCutoff = new Date(Date.now() - MESSAGE_RETENTION_MS);
 
     if (!isValidObjectId(userToChatId)) {
       return res.status(400).json({ message: "Invalid user ID" });
@@ -50,7 +51,12 @@ export const getMessagesByUserId = async (req, res) => {
 
     // Automatically mark all messages from userToChatId to myId as seen
     await Message.updateMany(
-      { senderId: userToChatId, receiverId: myId, isSeen: { $ne: true } },
+      {
+        senderId: userToChatId,
+        receiverId: myId,
+        isSeen: { $ne: true },
+        createdAt: { $gte: retentionCutoff },
+      },
       { $set: { isSeen: true, seenAt: new Date() } }
     ).catch(() => {});
 
@@ -67,6 +73,7 @@ export const getMessagesByUserId = async (req, res) => {
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
+      createdAt: { $gte: retentionCutoff },
     }).sort({ createdAt: 1 });
 
     const decryptedMessages = messages.map((msg) => {
@@ -94,7 +101,12 @@ export const markMessagesAsSeen = async (req, res) => {
     }
 
     const updateResult = await Message.updateMany(
-      { senderId, receiverId: myId, isSeen: { $ne: true } },
+      {
+        senderId,
+        receiverId: myId,
+        isSeen: { $ne: true },
+        createdAt: { $gte: new Date(Date.now() - MESSAGE_RETENTION_MS) },
+      },
       { $set: { isSeen: true, seenAt: new Date() } }
     ).catch(() => ({ modifiedCount: 0 }));
 
@@ -199,10 +211,12 @@ export const sendMessage = async (req, res) => {
 export const getChatPartners = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
+    const retentionCutoff = new Date(Date.now() - MESSAGE_RETENTION_MS);
 
     // find all the messages where the logged-in user is either sender or receiver
     const messages = await Message.find({
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
+      createdAt: { $gte: retentionCutoff },
     });
 
     const chatPartnerIds = [
@@ -395,4 +409,3 @@ export const deleteChatHistory = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
