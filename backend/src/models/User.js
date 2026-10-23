@@ -1,37 +1,5 @@
 import mongoose from "mongoose";
 
-const dataConsentSchema = new mongoose.Schema(
-  {
-    accepted: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-    termsVersion: {
-      type: String,
-      required: true,
-    },
-    acceptedAt: {
-      type: Date,
-      required: true,
-    },
-    ipAddress: {
-      type: String,
-      required: true,
-    },
-    emailId: {
-      type: String,
-      required: true,
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-  },
-  { _id: false }
-);
-
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -55,11 +23,6 @@ const userSchema = new mongoose.Schema(
     profilePic: {
       type: String,
       default: "",
-    },
-    dataConsent: {
-      type: dataConsentSchema,
-      required: true,
-      select: false,
     },
     blockedUsers: [
       {

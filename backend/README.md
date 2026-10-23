@@ -43,6 +43,7 @@ Security and performance are a massive priority here. The backend employs strict
 - **Socket.io:** Handles all real-time messaging, typing indicators, and online status events.
 - **Authentication:** JWT (JSON Web Tokens) stored securely in HTTP-only cookies, combined with `bcryptjs` for password hashing.
 - **Cloudinary:** Cloud storage service for handling profile pictures, image messages, voice notes, and video messages.
+- **Consent records:** Signup consent audits are stored separately from user accounts in the MongoDB `consents` collection, linked by user ID. Existing embedded consent records are migrated during backend startup.
 - **Message retention:** Chat text and attached image/audio/video assets are removed after 24 hours. The backend first deletes associated Cloudinary assets, then removes the MongoDB message; failed Cloudinary deletions are logged and retried.
 - **Top-Tier Security Stack:**
   - `helmet`: Sets secure HTTP headers.

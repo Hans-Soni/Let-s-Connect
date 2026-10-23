@@ -6,7 +6,7 @@ This directory contains external service configurations, database connection fil
 
 - `arcjet.js`: Configuration for Arcjet (used for rate limiting and security rules).
 - `cloudinary.js`: Configuration and connection logic for the Cloudinary image storage service.
-- `db.js`: Contains the MongoDB connection setup using Mongoose.
+- `db.js`: Connects to MongoDB, creates required collections, migrates existing embedded consent records to the separate consent collection, and starts message retention cleanup.
 - `messageRetention.js`: Deletes Cloudinary media and MongoDB chat records after the 24-hour retention period, retrying failed media deletions.
 - `env.js`: Responsible for parsing and validating environment variables used across the application.
 - `resend.js`: Configures the Resend email client using the API key.

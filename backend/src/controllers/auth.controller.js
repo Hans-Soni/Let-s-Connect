@@ -1,5 +1,6 @@
 import { sendWelcomeEmail } from "../emails/emailHandlers.js";
 import { generateToken } from "../lib/utils.js";
+import Consent from "../models/Consent.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { ENV } from "../lib/env.js";
@@ -44,26 +45,33 @@ export const signup = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const acceptedAt = new Date();
     const newUser = new User({
       fullName: normalizedFullName,
       email: normalizedEmail,
       password: hashedPassword,
-      dataConsent: {
-        accepted: true,
-        termsVersion: "1.1",
-        acceptedAt: new Date(),
-        ipAddress: req.ip || req.socket.remoteAddress || "unknown",
-        emailId: normalizedEmail,
-      },
     });
-    newUser.dataConsent.userId = newUser._id;
 
     if (newUser) {
-      // before CR:
-      // generateToken(newUser._id, res);
-      // await newUser.save();
-
       const savedUser = await newUser.save();
+      try {
+        await Consent.create({
+          accepted: true,
+          termsVersion: "1.1",
+          acceptedAt,
+          ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+          emailId: normalizedEmail,
+          userId: savedUser._id,
+        });
+      } catch (error) {
+        try {
+          await User.deleteOne({ _id: savedUser._id });
+        } catch (rollbackError) {
+          console.error("Failed to roll back account after consent record creation failed:", rollbackError);
+        }
+        throw error;
+      }
+
       const token = generateToken(savedUser._id, res);
 
       res.status(201).json({
