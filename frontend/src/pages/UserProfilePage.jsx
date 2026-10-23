@@ -23,7 +23,12 @@ import {
   CircleDot,
   Camera,
   Save,
+  FileText,
+  KeyRound,
+  CheckCircle2,
 } from "lucide-react";
+import TermsContent from "../components/TermsContent";
+import { CURRENT_TERMS_VERSION } from "../lib/terms";
 
 function UserProfilePage({ profileUser, onClose }) {
   const { id: paramId } = useParams();
@@ -45,7 +50,7 @@ function UserProfilePage({ profileUser, onClose }) {
     setViewingProfileUser,
   } = useChatStore();
 
-  const { onlineUsers, authUser, updateProfile } = useAuthStore();
+  const { onlineUsers, authUser, updateProfile, getConsentRecord, changePassword } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
   const [user, setUser] = useState(() => {
@@ -67,7 +72,32 @@ function UserProfilePage({ profileUser, onClose }) {
   const [profileName, setProfileName] = useState(authUser?.fullName || "");
   const [selectedProfileImage, setSelectedProfileImage] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [consentRecord, setConsentRecord] = useState(null);
+  const [isLoadingConsent, setIsLoadingConsent] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const profileImageInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!isMe) return;
+    let isMounted = true;
+    setProfileName(authUser.fullName || "");
+    setIsLoadingConsent(true);
+    getConsentRecord().then((record) => {
+      if (isMounted) setConsentRecord(record);
+    }).finally(() => {
+      if (isMounted) setIsLoadingConsent(false);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [authUser, getConsentRecord, isMe]);
 
   useEffect(() => {
     if (user) {
@@ -211,6 +241,26 @@ function UserProfilePage({ profileUser, onClose }) {
     }
   };
 
+  const handleChangePassword = async (event) => {
+    event.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("The new passwords do not match.");
+      return;
+    }
+    if (passwordForm.newPassword === passwordForm.currentPassword) {
+      toast.error("Choose a new password different from your current one.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const changed = await changePassword(passwordForm);
+    setIsChangingPassword(false);
+    if (changed) {
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setShowPasswordForm(false);
+    }
+  };
+
   if (isLoading) {
     return <PageLoader />;
   }
@@ -348,64 +398,160 @@ function UserProfilePage({ profileUser, onClose }) {
         {/* ACTION BUTTONS (Under the user's name) */}
         <div className="w-full max-w-md mt-8 space-y-3.5">
           {isMe && (
-            <form
-              onSubmit={handleSaveProfile}
-              className="space-y-4 rounded-2xl border border-base-content/10 bg-base-100/70 p-4 shadow-sm sm:p-5"
-            >
-              <h2 className="text-lg font-semibold text-base-content">Edit your profile</h2>
+            <div className="space-y-4 rounded-2xl border border-base-content/10 bg-base-100/70 p-4 shadow-sm sm:p-5">
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <h2 className="text-lg font-semibold text-base-content">Edit your profile</h2>
 
-              <div>
-                <label htmlFor="profile-name" className="mb-1.5 block text-sm font-medium text-base-content">
-                  Display name
-                </label>
-                <input
-                  id="profile-name"
-                  type="text"
-                  value={profileName}
-                  onChange={(event) => setProfileName(event.target.value)}
-                  maxLength={50}
-                  required
-                  className="input input-bordered w-full"
-                  placeholder="Your name"
-                />
-              </div>
+                <div>
+                  <label htmlFor="profile-name" className="mb-1.5 block text-sm font-medium text-base-content">
+                    Display name
+                  </label>
+                  <input
+                    id="profile-name"
+                    type="text"
+                    value={profileName}
+                    onChange={(event) => setProfileName(event.target.value)}
+                    maxLength={50}
+                    required
+                    className="input input-bordered w-full"
+                    placeholder="Your name"
+                  />
+                </div>
 
-              <div>
-                <span className="mb-1.5 block text-sm font-medium text-base-content">Profile photo</span>
-                <input
-                  ref={profileImageInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfileImageChange}
-                  className="hidden"
-                />
+                <div>
+                  <span className="mb-1.5 block text-sm font-medium text-base-content">Profile photo</span>
+                  <input
+                    ref={profileImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImageChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => profileImageInputRef.current?.click()}
+                    className="btn btn-outline w-full gap-2 rounded-xl"
+                    disabled={isSavingProfile}
+                  >
+                    <Camera className="size-4" />
+                    {selectedProfileImage ? "Choose a different photo" : "Choose a new photo"}
+                  </button>
+                  {selectedProfileImage && (
+                    <p className="mt-2 text-xs text-base-content/60">New photo selected. Save to apply it.</p>
+                  )}
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => profileImageInputRef.current?.click()}
-                  className="btn btn-outline w-full gap-2 rounded-xl"
-                  disabled={isSavingProfile}
+                  type="submit"
+                  className="btn btn-primary w-full gap-2 rounded-xl"
+                  disabled={isSavingProfile || (!selectedProfileImage && profileName.trim() === authUser?.fullName)}
                 >
-                  <Camera className="size-4" />
-                  {selectedProfileImage ? "Choose a different photo" : "Choose a new photo"}
+                  {isSavingProfile ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Save className="size-4" />
+                  )}
+                  Save changes
                 </button>
-                {selectedProfileImage && (
-                  <p className="mt-2 text-xs text-base-content/60">New photo selected. Save to apply it.</p>
-                )}
-              </div>
+              </form>
 
-              <button
-                type="submit"
-                className="btn btn-primary w-full gap-2 rounded-xl"
-                disabled={isSavingProfile || (!selectedProfileImage && profileName.trim() === authUser?.fullName)}
-              >
-                {isSavingProfile ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Save className="size-4" />
-                )}
-                Save changes
-              </button>
-            </form>
+              <div className="border-t border-base-content/10 pt-4">
+                <h2 className="mb-3 text-lg font-semibold text-base-content">Account security &amp; consent</h2>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowTerms(true)}
+                    className="btn btn-outline w-full justify-start gap-2 rounded-xl"
+                  >
+                    <FileText className="size-4" />
+                    View terms and consent status
+                  </button>
+
+                  {consentRecord?.accepted && (
+                    <div className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm text-base-content">
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                      <p>
+                        You accepted terms version <strong>{consentRecord.termsVersion}</strong>
+                        {consentRecord.acceptedAt && (
+                          <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
+                        )}.
+                      </p>
+                    </div>
+                  )}
+                  {isLoadingConsent && (
+                    <p className="text-sm text-base-content/60">Loading consent record...</p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordForm((shown) => !shown)}
+                    className="btn btn-outline w-full justify-start gap-2 rounded-xl"
+                    aria-expanded={showPasswordForm}
+                  >
+                    <KeyRound className="size-4" />
+                    {showPasswordForm ? "Cancel password change" : "Change password"}
+                  </button>
+
+                  {showPasswordForm && (
+                    <form onSubmit={handleChangePassword} className="space-y-3 rounded-xl bg-base-200/70 p-3">
+                      <label className="block text-sm font-medium text-base-content">
+                        Current password
+                        <input
+                          type="password"
+                          autoComplete="current-password"
+                          minLength={6}
+                          maxLength={128}
+                          required
+                          value={passwordForm.currentPassword}
+                          onChange={(event) =>
+                            setPasswordForm((form) => ({ ...form, currentPassword: event.target.value }))
+                          }
+                          className="input input-bordered mt-1 w-full"
+                        />
+                      </label>
+                      <label className="block text-sm font-medium text-base-content">
+                        New password
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          minLength={6}
+                          maxLength={128}
+                          required
+                          value={passwordForm.newPassword}
+                          onChange={(event) =>
+                            setPasswordForm((form) => ({ ...form, newPassword: event.target.value }))
+                          }
+                          className="input input-bordered mt-1 w-full"
+                        />
+                      </label>
+                      <label className="block text-sm font-medium text-base-content">
+                        Confirm new password
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          minLength={6}
+                          maxLength={128}
+                          required
+                          value={passwordForm.confirmPassword}
+                          onChange={(event) =>
+                            setPasswordForm((form) => ({ ...form, confirmPassword: event.target.value }))
+                          }
+                          className="input input-bordered mt-1 w-full"
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        className="btn btn-primary w-full gap-2 rounded-xl"
+                        disabled={isChangingPassword}
+                      >
+                        {isChangingPassword && <Loader2 className="size-4 animate-spin" />}
+                        Change password
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {!isMe && isBlockedByMe && (
@@ -612,6 +758,59 @@ function UserProfilePage({ profileUser, onClose }) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {showTerms && isMe && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-6">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-terms-title"
+            className="my-auto max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-base-100 p-5 text-base-content shadow-2xl sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="profile-terms-title" className="text-xl font-bold sm:text-2xl">
+                  Terms &amp; Data Authorization
+                </h2>
+                <p className="mt-1 text-sm text-base-content/70">
+                  Current terms version: {CURRENT_TERMS_VERSION}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTerms(false)}
+                className="btn btn-ghost btn-circle btn-sm"
+                aria-label="Close terms"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="my-4 rounded-xl bg-success/10 p-3 text-sm">
+              {isLoadingConsent ? (
+                <span>Loading your consent record...</span>
+              ) : consentRecord?.accepted ? (
+                <span>
+                  <CheckCircle2 className="mr-1 inline size-4 text-success" />
+                  You accepted version <strong>{consentRecord.termsVersion}</strong>
+                  {consentRecord.acceptedAt && (
+                    <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
+                  )}.
+                </span>
+              ) : (
+                <span>Your saved consent record could not be found.</span>
+              )}
+            </div>
+
+            <TermsContent />
+            <div className="mt-5 flex justify-end">
+              <button type="button" onClick={() => setShowTerms(false)} className="btn btn-primary rounded-xl">
+                Close
+              </button>
+            </div>
+          </section>
         </div>
       )}
 

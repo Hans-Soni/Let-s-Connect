@@ -8,6 +8,7 @@ import { Link } from "react-router";
 import logoLight from "../assets/logo-light.png";
 import logoDark from "../assets/logo-dark.png";
 import DeveloperFooter from "../components/DeveloperFooter";
+import TermsContent from "../components/TermsContent";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
@@ -162,36 +163,7 @@ function SignUpPage() {
                 Please review and accept before creating your account.
               </p>
 
-              <div className="mt-5 space-y-4 text-sm leading-relaxed text-base-content/80">
-                <div>
-                  <h3 className="font-semibold text-base-content">Data use and service providers</h3>
-                  <p>
-                    You authorize Let&apos;s Connect to collect, store, and process your account details,
-                    messages, and any images, audio, or video you share to provide the chat service.
-                    Service providers, including MongoDB, Cloudinary, Arcjet, and Upstash, may process
-                    data as needed for storage, media delivery, and service security.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base-content">Chat retention</h3>
-                  <p>
-                    Chat text and attached media are scheduled for deletion after 24 hours. Cleanup
-                    depends on service availability, and provider logs, backups, or cached copies may
-                    have separate retention periods; exact deletion from every provider or backup
-                    cannot be guaranteed by this app.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base-content">Account and security data</h3>
-                  <p>
-                    Account information is retained while your account is active and is not covered
-                    by the 24-hour chat-message cleanup. For the consent record, we store your signup
-                    IP address, email address, account ID, acceptance time, and terms version with
-                    your account. Security and operational providers may retain request or diagnostic
-                    data according to their own policies.
-                  </p>
-                </div>
-              </div>
+              <TermsContent />
 
               <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-base-content/15 p-3">
                 <input

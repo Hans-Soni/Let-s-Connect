@@ -107,6 +107,27 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  getConsentRecord: async () => {
+    try {
+      const res = await axiosInstance.get("/auth/consent");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Unable to load consent record");
+      return null;
+    }
+  },
+
+  changePassword: async (data) => {
+    try {
+      const res = await axiosInstance.put("/auth/change-password", data);
+      toast.success(res.data.message || "Password changed successfully");
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Unable to change password");
+      return false;
+    }
+  },
+
   connectSocket: () => {
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
