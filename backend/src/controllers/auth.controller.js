@@ -7,11 +7,17 @@ import cloudinary from "../lib/cloudinary.js";
 import { io } from "../lib/socket.js";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, dataConsent } = req.body;
 
   try {
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (dataConsent !== true) {
+      return res.status(400).json({
+        message: "You must accept the terms and authorize data processing to create an account",
+      });
     }
 
     if (password.length < 6) {
@@ -42,6 +48,11 @@ export const signup = async (req, res) => {
       fullName: normalizedFullName,
       email: normalizedEmail,
       password: hashedPassword,
+      dataConsent: {
+        accepted: true,
+        termsVersion: "1.0",
+        acceptedAt: new Date(),
+      },
     });
 
     if (newUser) {

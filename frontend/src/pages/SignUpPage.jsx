@@ -10,12 +10,28 @@ import DeveloperFooter from "../components/DeveloperFooter";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
+  const [isConsentOpen, setIsConsentOpen] = useState(false);
+  const [hasAcceptedConsent, setHasAcceptedConsent] = useState(false);
+  const [consentDeclined, setConsentDeclined] = useState(false);
   const { signup, isSigningUp } = useAuthStore();
   const { theme } = useThemeStore();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    signup(formData);
+    setConsentDeclined(false);
+    setHasAcceptedConsent(false);
+    setIsConsentOpen(true);
+  };
+
+  const handleAcceptConsent = async () => {
+    if (!hasAcceptedConsent || isSigningUp) return;
+    const created = await signup({ ...formData, dataConsent: true });
+    if (created) setIsConsentOpen(false);
+  };
+
+  const handleDeclineConsent = () => {
+    setHasAcceptedConsent(false);
+    setConsentDeclined(true);
   };
 
   return (
@@ -128,6 +144,95 @@ function SignUpPage() {
       <div className="w-full max-w-6xl shrink-0">
         <DeveloperFooter />
       </div>
+
+      {isConsentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="signup-consent-title"
+            className="w-full max-w-2xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-base-100 p-5 shadow-2xl sm:p-7"
+          >
+            <h2 id="signup-consent-title" className="text-xl font-bold text-base-content sm:text-2xl">
+              Terms &amp; Data Authorization
+            </h2>
+            <p className="mt-2 text-sm text-base-content/70">
+              Please review and accept before creating your account.
+            </p>
+
+            <div className="mt-5 space-y-4 text-sm leading-relaxed text-base-content/80">
+              <div>
+                <h3 className="font-semibold text-base-content">Data use and service providers</h3>
+                <p>
+                  You authorize Let&apos;s Connect to collect, store, and process your account details,
+                  messages, and any images, audio, or video you share to provide the chat service.
+                  Service providers, including MongoDB, Cloudinary, Arcjet, and Upstash, may process
+                  data as needed for storage, media delivery, and service security.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-base-content">Chat retention</h3>
+                <p>
+                  Chat text and attached media are scheduled for deletion after 24 hours. Cleanup
+                  depends on service availability, and provider logs, backups, or cached copies may
+                  have separate retention periods; exact deletion from every provider or backup
+                  cannot be guaranteed by this app.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-base-content">Account and security data</h3>
+                <p>
+                  Account information is retained while your account is active and is not covered
+                  by the 24-hour chat-message cleanup. Security and operational providers may retain
+                  request or diagnostic data according to their own policies.
+                </p>
+              </div>
+            </div>
+
+            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-base-content/15 p-3">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary mt-0.5"
+                checked={hasAcceptedConsent}
+                onChange={(event) => {
+                  setHasAcceptedConsent(event.target.checked);
+                  setConsentDeclined(false);
+                }}
+                disabled={isSigningUp}
+              />
+              <span className="text-sm text-base-content">
+                I have read and agree to these terms, and authorize the data use described above.
+              </span>
+            </label>
+
+            {consentDeclined && (
+              <p className="mt-3 text-sm text-warning" role="status">
+                You declined. Your account was not created and your details were not submitted.
+                This consent screen will remain open.
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={handleDeclineConsent}
+                disabled={isSigningUp}
+              >
+                Disagree
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleAcceptConsent}
+                disabled={!hasAcceptedConsent || isSigningUp}
+              >
+                {isSigningUp ? <LoaderIcon className="size-5 animate-spin" /> : "Accept & Create Account"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

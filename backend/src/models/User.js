@@ -24,6 +24,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    dataConsent: {
+      accepted: {
+        type: Boolean,
+        required: true,
+        default: false,
+      },
+      termsVersion: {
+        type: String,
+        required: true,
+      },
+      acceptedAt: {
+        type: Date,
+        required: true,
+      },
+    },
     blockedUsers: [
       {
         type: mongoose.Schema.Types.ObjectId,

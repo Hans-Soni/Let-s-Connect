@@ -50,8 +50,10 @@ export const useAuthStore = create((set, get) => ({
 
       toast.success("Account created successfully!");
       get().connectSocket();
+      return true;
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Signup failed");
+      return false;
     } finally {
       set({ isSigningUp: false });
     }
