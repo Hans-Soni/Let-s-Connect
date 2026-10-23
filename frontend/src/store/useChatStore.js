@@ -226,6 +226,7 @@ export const useChatStore = create((set, get) => ({
       text: messageData.text,
       image: messageData.image,
       audio: messageData.audio,
+      video: messageData.video,
       createdAt: new Date().toISOString(),
       isOptimistic: true,
       isDelivered: false,
@@ -236,6 +237,13 @@ export const useChatStore = create((set, get) => ({
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+      if (messageData.video && !res.data?.video) {
+        set((state) => ({
+          messages: state.messages.filter((m) => m._id !== tempId),
+        }));
+        toast.error("Video sharing is not enabled on the server yet. Please try again after the backend is updated.");
+        return false;
+      }
       if (messageData.audio && !res.data?.audio) {
         set((state) => ({
           messages: state.messages.filter((m) => m._id !== tempId),

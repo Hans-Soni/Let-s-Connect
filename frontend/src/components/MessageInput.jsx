@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { ImageIcon, SendIcon, XIcon, Ban, ShieldAlert, Mic, Square } from "lucide-react";
 
 const MAX_AUDIO_BYTES = 3 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
 const MAX_RECORDING_SECONDS = 60;
 const RECORDING_MIME_TYPES = [
   "audio/webm;codecs=opus",
@@ -19,9 +20,9 @@ const blobToDataUrl = (blob) =>
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") resolve(reader.result);
-      else reject(new Error("Unable to read the audio recording."));
+      else reject(new Error("Unable to read the selected media."));
     };
-    reader.onerror = () => reject(new Error("Unable to read the audio recording."));
+    reader.onerror = () => reject(new Error("Unable to read the selected media."));
     reader.readAsDataURL(blob);
   });
 
@@ -30,6 +31,8 @@ function MessageInput() {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -72,6 +75,9 @@ function MessageInput() {
     mediaStreamRef.current = null;
     setIsRecording(false);
     setRecordingSeconds(0);
+    setImagePreview(null);
+    setVideoFile(null);
+    setVideoPreviewUrl(null);
     setAudioBlob(null);
     setAudioPreviewUrl((url) => {
       if (url) URL.revokeObjectURL(url);
@@ -82,6 +88,10 @@ function MessageInput() {
   useEffect(() => {
     if (previousRecipientIdRef.current !== selectedUser?._id) {
       previousRecipientIdRef.current = selectedUser?._id;
+      setImagePreview(null);
+      setVideoFile(null);
+      setVideoPreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       setAudioBlob(null);
       setAudioPreviewUrl((url) => {
         if (url) URL.revokeObjectURL(url);
@@ -107,6 +117,12 @@ function MessageInput() {
       if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
     };
   }, [audioPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+    };
+  }, [videoPreviewUrl]);
 
   useEffect(() => {
     if (!isRecording) return undefined;
@@ -227,25 +243,29 @@ function MessageInput() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (isRecording || isSending || (!text.trim() && !imagePreview && !audioBlob)) return;
+    if (isRecording || isSending || (!text.trim() && !imagePreview && !videoFile && !audioBlob)) return;
     if (isSoundEnabled) playRandomKeyStrokeSound();
 
     setIsSending(true);
     try {
       const audio = audioBlob ? await blobToDataUrl(audioBlob) : undefined;
+      const video = videoFile ? await blobToDataUrl(videoFile) : undefined;
       const sent = await sendMessage({
         text: text.trim(),
         image: imagePreview,
         audio,
+        video,
       });
       if (sent) {
         setText("");
         setImagePreview(null);
+        setVideoFile(null);
+        setVideoPreviewUrl(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         discardAudio();
       }
     } catch {
-      toast.error("Could not prepare the audio recording. Please try again.");
+      toast.error("Could not prepare the attachment. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -255,18 +275,48 @@ function MessageInput() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+    if (file.type.startsWith("video/")) {
+      if (!["video/mp4", "video/webm", "video/quicktime"].includes(file.type)) {
+        toast.error("Please choose an MP4, WebM, or MOV video.");
+        e.target.value = "";
+        return;
+      }
+      if (file.size > MAX_VIDEO_BYTES) {
+        toast.error("Video must be 3 MB or smaller.");
+        e.target.value = "";
+        return;
+      }
+      setImagePreview(null);
+      setVideoFile(file);
+      setVideoPreviewUrl(URL.createObjectURL(file));
       return;
     }
 
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image or video file.");
+      e.target.value = "";
+      return;
+    }
+
+    setVideoFile(null);
+    setVideoPreviewUrl(null);
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") setImagePreview(reader.result);
+      else toast.error("Could not preview this image. Please try another file.");
+    };
+    reader.onerror = () => toast.error("Could not read this image. Please try another file.");
     reader.readAsDataURL(file);
   };
 
   const removeImage = () => {
     setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeVideo = () => {
+    setVideoFile(null);
+    setVideoPreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -304,18 +354,33 @@ function MessageInput() {
 
   return (
     <div className="p-2.5 sm:p-4 border-t border-base-100/50 bg-base-200/80 backdrop-blur-md shrink-0 w-full">
-      {imagePreview && (
+      {(imagePreview || videoPreviewUrl) && (
         <div className="max-w-3xl mx-auto mb-2 sm:mb-3 flex items-center">
-          <div className="relative">
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="size-16 sm:size-20 object-cover rounded-xl border border-base-100 shadow-sm"
-            />
+          <div className="relative max-w-full">
+            {videoPreviewUrl ? (
+              <video
+                src={videoPreviewUrl}
+                controls
+                preload="metadata"
+                aria-label="Video attachment preview"
+                className="max-h-40 max-w-full rounded-xl border border-base-100 shadow-sm"
+                onError={() => {
+                  toast.error("This video cannot be previewed. Please choose another file.");
+                }}
+              />
+            ) : (
+              <img
+                src={imagePreview}
+                alt="Image attachment preview"
+                className="size-16 sm:size-20 object-cover rounded-xl border border-base-100 shadow-sm"
+              />
+            )}
             <button
-              onClick={removeImage}
+              onClick={videoPreviewUrl ? removeVideo : removeImage}
               className="absolute -top-2 -right-2 size-6 rounded-full bg-base-300 border border-base-content/20 flex items-center justify-center text-base-content hover:bg-base-100 shadow-sm"
               type="button"
+              aria-label="Remove attachment"
+              title="Remove attachment"
             >
               <XIcon className="size-3.5" />
             </button>
@@ -362,7 +427,7 @@ function MessageInput() {
       <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex items-center gap-1.5 sm:gap-2">
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,video/mp4,video/webm,video/quicktime"
           ref={fileInputRef}
           onChange={handleImageChange}
           className="hidden"
@@ -375,7 +440,8 @@ function MessageInput() {
           className={`btn btn-ghost btn-circle btn-sm sm:btn-md shrink-0 text-base-content/70 hover:text-base-content ${
             imagePreview ? "text-primary" : ""
           } disabled:opacity-40`}
-          title="Attach image"
+          title="Attach image or video"
+          aria-label="Attach image or video"
         >
           <ImageIcon className="size-5" />
         </button>
@@ -383,7 +449,7 @@ function MessageInput() {
         <button
           type="button"
           onClick={isRecording ? stopRecording : handleStartRecording}
-          disabled={Boolean(audioBlob || imagePreview) || isSending}
+          disabled={Boolean(audioBlob || imagePreview || videoFile) || isSending}
           className={`btn btn-ghost btn-circle btn-sm sm:btn-md shrink-0 text-base-content/70 hover:text-base-content disabled:opacity-40 ${
             isRecording ? "text-error" : ""
           }`}
@@ -406,7 +472,7 @@ function MessageInput() {
 
         <button
           type="submit"
-          disabled={isRecording || isSending || (!text.trim() && !imagePreview && !audioBlob)}
+          disabled={isRecording || isSending || (!text.trim() && !imagePreview && !videoFile && !audioBlob)}
           className="btn btn-primary btn-circle btn-sm sm:btn-md shrink-0 text-white shadow-md disabled:opacity-40 transition-transform active:scale-95"
           title="Send message"
         >

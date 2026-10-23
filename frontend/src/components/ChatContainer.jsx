@@ -89,6 +89,20 @@ function ChatContainer() {
                   {msg.image && (
                     <img src={msg.image} alt="Shared" className="rounded-lg max-h-52 w-auto object-cover mb-1.5" />
                   )}
+                  {msg.video && (
+                    <video
+                      controls
+                      preload="metadata"
+                      src={msg.video}
+                      className="block max-w-full max-h-72 rounded-lg mb-1.5"
+                      aria-label="Shared video"
+                      onError={() => {
+                        toast.error("This video could not be played.");
+                      }}
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  )}
                   {msg.audio && (
                     <audio
                       controls
