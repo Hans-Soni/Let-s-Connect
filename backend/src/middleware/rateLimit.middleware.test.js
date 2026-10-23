@@ -22,8 +22,8 @@ const createLogger = () => ({
 });
 
 const createRequest = () => ({
-  ip: "203.0.113.8",
-  socket: { remoteAddress: "203.0.113.8" },
+  ip: "test-client",
+  socket: { remoteAddress: "test-client" },
 });
 
 test("uses Upstash and continues when the primary limit allows the request", async () => {
