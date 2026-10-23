@@ -146,18 +146,44 @@ export const logout = (_, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { profilePic } = req.body;
-    if (!profilePic) return res.status(400).json({ message: "Profile pic is required" });
+    const { fullName, profilePic } = req.body;
+    const updates = {};
 
-    const userId = req.user._id;
+    if (fullName !== undefined) {
+      if (typeof fullName !== "string" || !fullName.trim() || fullName.trim().length > 50) {
+        return res.status(400).json({ message: "Name must be between 1 and 50 characters" });
+      }
+      updates.fullName = fullName.trim();
+    }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    if (profilePic !== undefined) {
+      if (typeof profilePic !== "string" || !profilePic.startsWith("data:image/")) {
+        return res.status(400).json({ message: "A valid profile image is required" });
+      }
+      const uploadResponse = await cloudinary.uploader.upload(profilePic, {
+        resource_type: "image",
+        folder: "profile_pictures",
+      });
+      updates.profilePic = uploadResponse.secure_url;
+    }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { profilePic: uploadResponse.secure_url },
-      { new: true }
-    ).select("-password");
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "Provide a name or profile image to update" });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    const publicProfile = {
+      _id: updatedUser._id,
+      fullName: updatedUser.fullName,
+      profilePic: updatedUser.profilePic,
+    };
+    io.emit("profileUpdated", publicProfile);
 
     res.status(200).json(updatedUser);
   } catch (error) {

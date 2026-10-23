@@ -445,6 +445,28 @@ export const useChatStore = create((set, get) => ({
       }));
     });
 
+    socket.off("profileUpdated");
+    socket.on("profileUpdated", (updatedProfile) => {
+      if (!updatedProfile?._id) return;
+      const profileId = String(updatedProfile._id);
+      set((state) => ({
+        allContacts: state.allContacts.map((contact) =>
+          String(contact._id) === profileId ? { ...contact, ...updatedProfile } : contact
+        ),
+        chats: state.chats.map((chat) =>
+          String(chat._id) === profileId ? { ...chat, ...updatedProfile } : chat
+        ),
+        selectedUser:
+          state.selectedUser && String(state.selectedUser._id) === profileId
+            ? { ...state.selectedUser, ...updatedProfile }
+            : state.selectedUser,
+        viewingProfileUser:
+          state.viewingProfileUser && String(state.viewingProfileUser._id) === profileId
+            ? { ...state.viewingProfileUser, ...updatedProfile }
+            : state.viewingProfileUser,
+      }));
+    });
+
     socket.off("chatHistoryDeleted");
     socket.on("chatHistoryDeleted", ({ chatPartnerId }) => {
       const { selectedUser, getMyChatPartners } = get();
@@ -597,6 +619,7 @@ export const useChatStore = create((set, get) => ({
     if (!socket) return;
     socket.off("newMessage");
     socket.off("messagesSeen");
+    socket.off("profileUpdated");
     socket.off("chatHistoryDeleted");
     socket.off("userBlocked");
     socket.off("userUnblocked");

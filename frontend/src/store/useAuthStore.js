@@ -99,9 +99,11 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.put("/auth/update-profile", data);
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
+      return res.data;
     } catch (error) {
       console.log("Error in update profile:", error);
       toast.error(error.response?.data?.message || error.message || "Update profile failed");
+      return null;
     }
   },
 

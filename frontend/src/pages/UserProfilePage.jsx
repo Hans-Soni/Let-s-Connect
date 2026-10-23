@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
+import toast from "react-hot-toast";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
 import PageLoader from "../components/PageLoader";
 import DeveloperFooter from "../components/DeveloperFooter";
@@ -20,6 +21,8 @@ import {
   X,
   Mail,
   CircleDot,
+  Camera,
+  Save,
 } from "lucide-react";
 
 function UserProfilePage({ profileUser, onClose }) {
@@ -31,21 +34,18 @@ function UserProfilePage({ profileUser, onClose }) {
     allContacts,
     chats,
     selectedUser,
-    getAllContacts,
-    getMyChatPartners,
     getUserProfile,
     deleteChatHistory,
     blockUser,
     unblockUser,
     isUserBlocked,
     isBlockedByUser,
-    getUserDisplayPic,
     setSelectedUser,
     setActiveTab,
     setViewingProfileUser,
   } = useChatStore();
 
-  const { onlineUsers, authUser } = useAuthStore();
+  const { onlineUsers, authUser, updateProfile } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
   const [user, setUser] = useState(() => {
@@ -64,6 +64,10 @@ function UserProfilePage({ profileUser, onClose }) {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showImageLightbox, setShowImageLightbox] = useState(false);
+  const [profileName, setProfileName] = useState(authUser?.fullName || "");
+  const [selectedProfileImage, setSelectedProfileImage] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const profileImageInputRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -108,13 +112,15 @@ function UserProfilePage({ profileUser, onClose }) {
   }, [id, user, allContacts, chats, getUserProfile]);
 
   const isOnline = user?._id ? onlineUsers.includes(user._id) : false;
-  const isMe = authUser?._id && user?._id && authUser._id === user._id;
+  const isMe = Boolean(
+    authUser?._id && user?._id && String(authUser._id) === String(user._id)
+  );
 
   const isBlockedByMe = user?._id ? (isUserBlocked(user._id) || Boolean(user.isBlockedByMe)) : false;
   const isBlockedByThem = user?._id ? (isBlockedByUser(user._id) || Boolean(user.isBlockedByThem)) : false;
 
   const handleBackToContacts = () => {
-    setActiveTab("contacts");
+    if (!isMe) setActiveTab("contacts");
     setSelectedUser(null);
     setViewingProfileUser(null);
     if (onClose) onClose();
@@ -161,6 +167,50 @@ function UserProfilePage({ profileUser, onClose }) {
     navigate("/");
   };
 
+  const handleProfileImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose a valid image file.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Profile images must be 3 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setSelectedProfileImage(reader.result);
+      else toast.error("Unable to read the selected image.");
+    };
+    reader.onerror = () => toast.error("Unable to read the selected image.");
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async (event) => {
+    event.preventDefault();
+    const normalizedName = profileName.trim();
+    if (!normalizedName) {
+      toast.error("Your name cannot be empty.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    const updatedProfile = await updateProfile({
+      fullName: normalizedName,
+      ...(selectedProfileImage ? { profilePic: selectedProfileImage } : {}),
+    });
+    setIsSavingProfile(false);
+
+    if (updatedProfile) {
+      setUser((currentUser) => ({ ...currentUser, ...updatedProfile }));
+      setSelectedProfileImage("");
+    }
+  };
+
   if (isLoading) {
     return <PageLoader />;
   }
@@ -188,7 +238,9 @@ function UserProfilePage({ profileUser, onClose }) {
 
   const profileImageUrl = isBlockedByThem
     ? `${import.meta.env.BASE_URL}avatar.png`
-    : (user.profilePic || `${import.meta.env.BASE_URL}avatar.png`);
+    : (isMe && selectedProfileImage
+      ? selectedProfileImage
+      : user.profilePic || `${import.meta.env.BASE_URL}avatar.png`);
 
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden bg-base-200/60 backdrop-blur-md">
@@ -204,7 +256,7 @@ function UserProfilePage({ profileUser, onClose }) {
         </button>
 
         <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-base-content/60">
-          User Profile
+          {isMe ? "Profile Settings" : "User Profile"}
         </span>
 
         <button
@@ -295,6 +347,67 @@ function UserProfilePage({ profileUser, onClose }) {
 
         {/* ACTION BUTTONS (Under the user's name) */}
         <div className="w-full max-w-md mt-8 space-y-3.5">
+          {isMe && (
+            <form
+              onSubmit={handleSaveProfile}
+              className="space-y-4 rounded-2xl border border-base-content/10 bg-base-100/70 p-4 shadow-sm sm:p-5"
+            >
+              <h2 className="text-lg font-semibold text-base-content">Edit your profile</h2>
+
+              <div>
+                <label htmlFor="profile-name" className="mb-1.5 block text-sm font-medium text-base-content">
+                  Display name
+                </label>
+                <input
+                  id="profile-name"
+                  type="text"
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  maxLength={50}
+                  required
+                  className="input input-bordered w-full"
+                  placeholder="Your name"
+                />
+              </div>
+
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-base-content">Profile photo</span>
+                <input
+                  ref={profileImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfileImageChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => profileImageInputRef.current?.click()}
+                  className="btn btn-outline w-full gap-2 rounded-xl"
+                  disabled={isSavingProfile}
+                >
+                  <Camera className="size-4" />
+                  {selectedProfileImage ? "Choose a different photo" : "Choose a new photo"}
+                </button>
+                {selectedProfileImage && (
+                  <p className="mt-2 text-xs text-base-content/60">New photo selected. Save to apply it.</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary w-full gap-2 rounded-xl"
+                disabled={isSavingProfile || (!selectedProfileImage && profileName.trim() === authUser?.fullName)}
+              >
+                {isSavingProfile ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Save className="size-4" />
+                )}
+                Save changes
+              </button>
+            </form>
+          )}
+
           {!isMe && isBlockedByMe && (
             <>
               {/* Informational banner */}
@@ -383,7 +496,7 @@ function UserProfilePage({ profileUser, onClose }) {
             className="btn btn-ghost w-full gap-2 rounded-xl text-base-content/70 hover:text-base-content text-sm sm:text-base py-3 transition-colors"
           >
             <ArrowLeft className="size-4.5" />
-            <span>Back to Contacts List</span>
+            <span>{isMe ? "Back to chats" : "Back to Contacts List"}</span>
           </button>
         </div>
 

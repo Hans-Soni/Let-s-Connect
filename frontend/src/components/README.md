@@ -14,7 +14,7 @@ Here is a detailed breakdown of every component in this folder:
 
 ### User Elements
 - **`ContactList.jsx`**: Renders the full list of all available contacts/users in the application in the sidebar, allowing you to start a new chat.
-- **`ProfileHeader.jsx`**: The header displayed at the top of the sidebar. It shows your own profile information, allows you to change your avatar, and contains buttons for toggling sound and logging out.
+- **`ProfileHeader.jsx`**: The header displayed at the top of the sidebar. Clicking your avatar or name opens profile settings for changing your display name and photo; the header also contains buttons for toggling sound and logging out.
 
 ### UI States (Loaders & Empty States)
 - **`MessagesLoadingSkeleton.jsx`**: A skeleton loading animation (shimmer effect) that is displayed in the chat container while messages are being fetched from the server.

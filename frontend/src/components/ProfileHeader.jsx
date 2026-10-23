@@ -1,4 +1,3 @@
-import { useState, useRef } from "react";
 import { LogOutIcon, VolumeOffIcon, Volume2Icon, Sun, Moon, BellIcon, BellOffIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
@@ -7,26 +6,15 @@ import { useThemeStore } from "../store/useThemeStore";
 const mouseClickSound = new Audio(`${import.meta.env.BASE_URL}sounds/mouse-click.mp3`);
 
 function ProfileHeader() {
-  const { logout, authUser, updateProfile } = useAuthStore();
-  const { isSoundEnabled, toggleSound, notificationPermission, requestNotificationPermission } = useChatStore();
+  const { logout, authUser } = useAuthStore();
+  const {
+    isSoundEnabled,
+    toggleSound,
+    notificationPermission,
+    requestNotificationPermission,
+    setViewingProfileUser,
+  } = useChatStore();
   const { theme, setTheme } = useThemeStore();
-  const [selectedImg, setSelectedImg] = useState(null);
-
-  const fileInputRef = useRef(null);
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-
-    reader.onloadend = async () => {
-      const base64Image = reader.result;
-      setSelectedImg(base64Image);
-      await updateProfile({ profilePic: base64Image });
-    };
-  };
 
   if (!authUser) return null;
 
@@ -37,36 +25,36 @@ function ProfileHeader() {
           {/* AVATAR */}
           <div className="avatar online">
             <button
+              type="button"
               className="size-14 rounded-full overflow-hidden relative group"
-              onClick={() => fileInputRef.current.click()}
+              onClick={() => setViewingProfileUser(authUser)}
+              aria-label="Open your profile settings"
+              title="Profile settings"
             >
               <img
-                src={selectedImg || authUser.profilePic || `${import.meta.env.BASE_URL}avatar.png`}
+                src={authUser.profilePic || `${import.meta.env.BASE_URL}avatar.png`}
                 alt="User image"
                 className="size-full object-cover"
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <span className="text-white text-xs">Change</span>
+                <span className="text-white text-xs">Settings</span>
               </div>
             </button>
-
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              className="hidden"
-            />
           </div>
 
           {/* USERNAME & ONLINE TEXT */}
-          <div>
+          <button
+            type="button"
+            className="text-left min-w-0"
+            onClick={() => setViewingProfileUser(authUser)}
+            title="Open your profile settings"
+          >
             <h3 className="text-base-content font-medium text-base max-w-[180px] truncate">
               {authUser.fullName}
             </h3>
 
             <p className="text-base-content/60 text-xs">Online</p>
-          </div>
+          </button>
         </div>
 
         {/* BUTTONS */}
