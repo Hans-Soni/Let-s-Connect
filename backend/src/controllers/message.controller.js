@@ -4,6 +4,7 @@ import { getReceiverSocketId, io } from "../lib/socket.js";
 import Message, { MESSAGE_RETENTION_MS } from "../models/Message.js";
 import User from "../models/User.js";
 import { encryptText, decryptText } from "../lib/encryption.js";
+import { deleteMessageMedia } from "../lib/messageRetention.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const MAX_AUDIO_BYTES = 3 * 1024 * 1024;
@@ -101,6 +102,10 @@ export const getMessagesByUserId = async (req, res) => {
 
     const decryptedMessages = messages.map((msg) => {
       const msgObj = msg.toObject();
+      delete msgObj.imagePublicId;
+      delete msgObj.audioPublicId;
+      delete msgObj.videoPublicId;
+      delete msgObj.mediaCleanupRetryAt;
       if (msgObj.text) {
         msgObj.text = decryptText(msgObj.text);
       }
@@ -228,22 +233,28 @@ export const sendMessage = async (req, res) => {
     }
 
     let imageUrl;
+    let imagePublicId;
     if (image) {
       // upload base64 image to cloudinary
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
+      imagePublicId = uploadResponse.public_id;
     }
 
     let audioUrl;
+    let audioPublicId;
     if (audioBuffer) {
       const uploadResponse = await uploadMediaBuffer(audioBuffer, "voice-messages");
       audioUrl = uploadResponse.secure_url;
+      audioPublicId = uploadResponse.public_id;
     }
 
     let videoUrl;
+    let videoPublicId;
     if (videoBuffer) {
       const uploadResponse = await uploadMediaBuffer(videoBuffer, "video-messages");
       videoUrl = uploadResponse.secure_url;
+      videoPublicId = uploadResponse.public_id;
     }
 
     const newMessage = new Message({
@@ -251,16 +262,24 @@ export const sendMessage = async (req, res) => {
       receiverId,
       text: encryptText(text),
       image: imageUrl,
+      imagePublicId,
       audio: audioUrl,
+      audioPublicId,
       video: videoUrl,
+      videoPublicId,
       isDelivered: true,
       isSeen: false,
     });
 
     await newMessage.save();
 
+    const messageData = newMessage.toObject();
+    delete messageData.imagePublicId;
+    delete messageData.audioPublicId;
+    delete messageData.videoPublicId;
+    delete messageData.mediaCleanupRetryAt;
     const messageResponse = {
-      ...newMessage.toObject(),
+      ...messageData,
       text, // deliver plaintext to connected clients
       audio: audioUrl,
       video: videoUrl,
@@ -467,11 +486,17 @@ export const deleteChatHistory = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    const result = await Message.deleteMany({
+    const conversationMessages = await Message.find({
       $or: [
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
+    });
+    for (const message of conversationMessages) {
+      await deleteMessageMedia(message);
+    }
+    const result = await Message.deleteMany({
+      _id: { $in: conversationMessages.map((message) => message._id) },
     });
 
     const receiverSocketId = getReceiverSocketId(userToChatId?.toString());

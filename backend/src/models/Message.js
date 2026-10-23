@@ -22,11 +22,24 @@ const messageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    imagePublicId: {
+      type: String,
+    },
     audio: {
+      type: String,
+    },
+    audioPublicId: {
       type: String,
     },
     video: {
       type: String,
+    },
+    videoPublicId: {
+      type: String,
+    },
+    mediaCleanupRetryAt: {
+      type: Date,
+      default: null,
     },
     isDelivered: {
       type: Boolean,
@@ -41,13 +54,13 @@ const messageSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true, autoIndex: false }
 );
 
-// Compound indexes for fast conversation lookups and preventing full collection scans
+// Compound indexes for fast conversation lookups and createdAt for scheduled retention cleanup.
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: 1 });
 messageSchema.index({ receiverId: 1, senderId: 1, createdAt: 1 });
-messageSchema.index({ createdAt: 1 }, { expireAfterSeconds: MESSAGE_RETENTION_MS / 1000 });
+messageSchema.index({ createdAt: 1 }, { name: "createdAt_cleanup_1" });
 
 const Message = mongoose.model("Message", messageSchema);
 

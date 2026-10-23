@@ -43,12 +43,15 @@ Security and performance are a massive priority here. The backend employs strict
 - **Socket.io:** Handles all real-time messaging, typing indicators, and online status events.
 - **Authentication:** JWT (JSON Web Tokens) stored securely in HTTP-only cookies, combined with `bcryptjs` for password hashing.
 - **Cloudinary:** Cloud storage service for handling profile pictures, image messages, voice notes, and video messages.
+- **Message retention:** Chat text and attached image/audio/video assets are removed after 24 hours. The backend first deletes associated Cloudinary assets, then removes the MongoDB message; failed Cloudinary deletions are logged and retried.
 - **Top-Tier Security Stack:**
   - `helmet`: Sets secure HTTP headers.
   - `cors`: Protects API from unauthorized cross-origin requests.
   - `express-mongo-sanitize`: Prevents NoSQL injection attacks.
   - `xss-clean`: Sanitizes user input to prevent Cross-Site Scripting.
   - `express-rate-limit` & `@arcjet/node`: Protects against brute-force and DDoS attacks.
+
+Arcjet is used for request security decisions, not as the message/media store. This app has no API to purge Arcjet provider-side security telemetry or control MongoDB/Cloudinary backups; manage provider telemetry and backup retention in their respective dashboards.
 
 ---
 

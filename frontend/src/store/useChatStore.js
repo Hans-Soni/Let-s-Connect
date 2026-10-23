@@ -421,6 +421,14 @@ export const useChatStore = create((set, get) => ({
       }));
     });
 
+    socket.off("messageExpired");
+    socket.on("messageExpired", ({ messageId }) => {
+      if (!messageId) return;
+      set((state) => ({
+        messages: state.messages.filter((message) => String(message._id) !== String(messageId)),
+      }));
+    });
+
     socket.off("chatHistoryDeleted");
     socket.on("chatHistoryDeleted", ({ chatPartnerId }) => {
       const { selectedUser, getMyChatPartners } = get();
