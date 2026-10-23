@@ -241,7 +241,7 @@ export const useChatStore = create((set, get) => ({
         set((state) => ({
           messages: state.messages.filter((m) => m._id !== tempId),
         }));
-        toast.error("Video sharing is not enabled on the server yet. Please try again after the backend is updated.");
+        toast.error("The server did not save this video. Please check that the backend is updated and try again.");
         return false;
       }
       if (messageData.audio && !res.data?.audio) {
@@ -357,7 +357,9 @@ export const useChatStore = create((set, get) => ({
           ? "📷 Sent an image"
           : newMessage.audio
             ? "🎤 Sent a voice message"
-            : "Sent you a message");
+            : newMessage.video
+              ? "🎬 Sent a video"
+              : "Sent you a message");
       const senderPic = sender.profilePic || `${import.meta.env.BASE_URL}avatar.png`;
 
       // 1. In-App Notification Toast (if receiver is not currently in this chat)

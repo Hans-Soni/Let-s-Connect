@@ -25,6 +25,9 @@ const messageSchema = new mongoose.Schema(
     audio: {
       type: String,
     },
+    video: {
+      type: String,
+    },
     isDelivered: {
       type: Boolean,
       default: true,

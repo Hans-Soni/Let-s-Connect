@@ -42,7 +42,7 @@ Security and performance are a massive priority here. The backend employs strict
 - **MongoDB & Mongoose:** NoSQL database storage and object data modeling.
 - **Socket.io:** Handles all real-time messaging, typing indicators, and online status events.
 - **Authentication:** JWT (JSON Web Tokens) stored securely in HTTP-only cookies, combined with `bcryptjs` for password hashing.
-- **Cloudinary:** Cloud storage service for handling profile pictures and image messages.
+- **Cloudinary:** Cloud storage service for handling profile pictures, image messages, voice notes, and video messages.
 - **Top-Tier Security Stack:**
   - `helmet`: Sets secure HTTP headers.
   - `cors`: Protects API from unauthorized cross-origin requests.

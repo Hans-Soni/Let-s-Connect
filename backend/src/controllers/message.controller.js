@@ -7,18 +7,21 @@ import { encryptText, decryptText } from "../lib/encryption.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const MAX_AUDIO_BYTES = 3 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
 const AUDIO_DATA_URI_PATTERN =
   /^data:(audio\/(?:webm|mp4|ogg|wav|mpeg))(?:;codecs=[a-z0-9._-]+)?;base64,([A-Za-z0-9+/]+={0,2})$/i;
+const VIDEO_DATA_URI_PATTERN =
+  /^data:(video\/(?:mp4|webm|quicktime));base64,([A-Za-z0-9+/]+={0,2})$/i;
 
-const uploadAudioBuffer = (buffer) =>
+const uploadMediaBuffer = (buffer, folder) =>
   new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: "video", folder: "voice-messages" },
+      { resource_type: "video", folder },
       (error, result) => {
         if (error) {
           reject(error);
         } else if (!result?.secure_url) {
-          reject(new Error("Cloudinary audio upload returned no secure URL."));
+          reject(new Error("Cloudinary media upload returned no secure URL."));
         } else {
           resolve(result);
         }
@@ -147,7 +150,7 @@ export const markMessagesAsSeen = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image, audio } = req.body;
+    const { text, image, audio, video } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -155,8 +158,8 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ message: "Invalid receiver ID" });
     }
 
-    if (!text && !image && !audio) {
-      return res.status(400).json({ message: "Text, image, or audio is required." });
+    if (!text && !image && !audio && !video) {
+      return res.status(400).json({ message: "Text, image, audio, or video is required." });
     }
 
     if (text && typeof text === "string" && text.length > 2000) {
@@ -178,6 +181,25 @@ export const sendMessage = async (req, res) => {
       ) {
         return res.status(400).json({
           message: "Audio must be a supported recording no larger than 3 MB.",
+        });
+      }
+    }
+
+    let videoBuffer;
+    if (video !== undefined) {
+      const videoMatch = typeof video === "string" ? video.match(VIDEO_DATA_URI_PATTERN) : null;
+      const videoBase64 = videoMatch?.[2];
+      videoBuffer = videoBase64 ? Buffer.from(videoBase64, "base64") : null;
+      if (
+        !videoMatch ||
+        !videoBase64 ||
+        videoBase64.length % 4 !== 0 ||
+        !videoBuffer?.length ||
+        videoBuffer.length > MAX_VIDEO_BYTES ||
+        videoBuffer.toString("base64") !== videoBase64
+      ) {
+        return res.status(400).json({
+          message: "Video must be an MP4, WebM, or MOV recording no larger than 3 MB.",
         });
       }
     }
@@ -214,8 +236,14 @@ export const sendMessage = async (req, res) => {
 
     let audioUrl;
     if (audioBuffer) {
-      const uploadResponse = await uploadAudioBuffer(audioBuffer);
+      const uploadResponse = await uploadMediaBuffer(audioBuffer, "voice-messages");
       audioUrl = uploadResponse.secure_url;
+    }
+
+    let videoUrl;
+    if (videoBuffer) {
+      const uploadResponse = await uploadMediaBuffer(videoBuffer, "video-messages");
+      videoUrl = uploadResponse.secure_url;
     }
 
     const newMessage = new Message({
@@ -224,6 +252,7 @@ export const sendMessage = async (req, res) => {
       text: encryptText(text),
       image: imageUrl,
       audio: audioUrl,
+      video: videoUrl,
       isDelivered: true,
       isSeen: false,
     });
@@ -234,6 +263,7 @@ export const sendMessage = async (req, res) => {
       ...newMessage.toObject(),
       text, // deliver plaintext to connected clients
       audio: audioUrl,
+      video: videoUrl,
       isDelivered: true,
       isSeen: false,
       sender: {
@@ -250,7 +280,11 @@ export const sendMessage = async (req, res) => {
 
     res.status(201).json(messageResponse);
   } catch (error) {
-    console.log("Error in sendMessage controller: ", error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const safeErrorMessage = errorMessage
+      .replace(/data:[^\s]+/gi, "[media data omitted]")
+      .slice(0, 500);
+    console.log("Error in sendMessage controller:", safeErrorMessage);
     res.status(500).json({ error: "Internal server error" });
   }
 };
