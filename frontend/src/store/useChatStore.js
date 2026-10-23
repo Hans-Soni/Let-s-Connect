@@ -126,7 +126,16 @@ export const useChatStore = create((set, get) => ({
   },
 
   setActiveTab: (tab) => set({ activeTab: tab }),
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => {
+    set((state) => ({
+      selectedUser,
+      chats: selectedUser?._id
+        ? state.chats.map((chat) =>
+            String(chat._id) === String(selectedUser._id) ? { ...chat, unreadCount: 0 } : chat
+          )
+        : state.chats,
+    }));
+  },
   setViewingProfileUser: (viewingProfileUser) => set({ viewingProfileUser }),
 
   getAllContacts: async () => {
@@ -170,7 +179,11 @@ export const useChatStore = create((set, get) => ({
           localStorage.setItem("blockedUsers", JSON.stringify(nextBlocked));
         } catch {}
         return {
-          chats: sortedChats,
+          chats: sortedChats.map((chat) =>
+            String(chat._id) === String(state.selectedUser?._id)
+              ? { ...chat, unreadCount: 0 }
+              : chat
+          ),
           blockedByUsers: nextBlockedBy,
           blockedUsers: nextBlocked,
         };
@@ -273,6 +286,9 @@ export const useChatStore = create((set, get) => ({
     set((state) => ({
       messages: state.messages.map((m) =>
         m.senderId === userId ? { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() } : m
+      ),
+      chats: state.chats.map((chat) =>
+        String(chat._id) === String(userId) ? { ...chat, unreadCount: 0 } : chat
       ),
     }));
 

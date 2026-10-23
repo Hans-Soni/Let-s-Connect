@@ -328,6 +328,13 @@ export const getChatPartners = async (req, res) => {
         )
       ),
     ];
+    const unreadCounts = messages.reduce((counts, msg) => {
+      if (msg.receiverId.toString() === loggedInUserId.toString() && !msg.isSeen) {
+        const senderId = msg.senderId.toString();
+        counts.set(senderId, (counts.get(senderId) || 0) + 1);
+      }
+      return counts;
+    }, new Map());
 
     const me = await User.findById(loggedInUserId).select("blockedUsers");
     const myBlockedList = (me?.blockedUsers || []).map((id) => id.toString());
@@ -347,6 +354,7 @@ export const getChatPartners = async (req, res) => {
         uObj.isBlockedByThem = true;
       }
       uObj.isBlockedByMe = myBlockedList.includes(u._id.toString());
+      uObj.unreadCount = unreadCounts.get(u._id.toString()) || 0;
       delete uObj.blockedUsers;
       return uObj;
     });

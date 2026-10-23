@@ -51,7 +51,19 @@ function ChatsList() {
                 <img src={getUserDisplayPic(chat)} alt={chat.fullName} />
               </div>
             </div>
-            <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{chat.fullName}</h4>
+            <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
+              <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{chat.fullName}</h4>
+              {Number(chat.unreadCount) > 0 && String(selectedUser?._id) !== String(chat._id) && (
+                <span
+                  className="shrink-0 text-lg leading-none"
+                  role="img"
+                  aria-label={`${chat.unreadCount} unread message${chat.unreadCount === 1 ? "" : "s"}`}
+                  title={`${chat.unreadCount} unread message${chat.unreadCount === 1 ? "" : "s"}`}
+                >
+                  {chat.unreadCount > 5 ? "😠" : "😊"}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       ))}

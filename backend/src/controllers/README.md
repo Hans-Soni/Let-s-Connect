@@ -5,4 +5,4 @@ This directory contains the controller logic for the application's API endpoints
 ## Files
 
 - `auth.controller.js`: Handles user authentication workflows, including signup, login, logout, and profile updates.
-- `message.controller.js`: Handles logic related to messaging, including fetching chat histories, fetching active users, and sending/receiving messages.
+- `message.controller.js`: Handles logic related to messaging, including fetching chat histories, returning per-chat unread message counts, fetching active users, and sending/receiving messages.

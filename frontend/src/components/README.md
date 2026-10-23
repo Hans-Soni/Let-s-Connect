@@ -9,7 +9,7 @@ Here is a detailed breakdown of every component in this folder:
 ### Chat Elements
 - **`ChatContainer.jsx`**: The main container for an active chat session. It displays the chat header, the scrollable list of messages, and the message input field at the bottom.
 - **`ChatHeader.jsx`**: The top bar of an active chat. It displays the selected user's profile picture, name, and their online status, along with a button to close the active chat.
-- **`ChatsList.jsx`**: Renders the list of users you have previously chatted with in the sidebar. It displays their avatars, names, and whether they are online.
+- **`ChatsList.jsx`**: Renders previous chat partners and their online status. Unread messages show a friendly emoji up to five messages and an angry emoji above five; the indicator clears when that chat is opened.
 - **`MessageInput.jsx`**: The chat composer supports text and image messages, image/video attachment previews with remove controls, and voice messages that can be recorded, previewed, deleted, or explicitly sent (up to 60 seconds and 3 MB).
 
 ### User Elements
