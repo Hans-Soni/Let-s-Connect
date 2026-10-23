@@ -10,6 +10,23 @@ const MAX_AUDIO_BYTES = 3 * 1024 * 1024;
 const AUDIO_DATA_URI_PATTERN =
   /^data:(audio\/(?:webm|mp4|ogg|wav|mpeg))(?:;codecs=[a-z0-9._-]+)?;base64,([A-Za-z0-9+/]+={0,2})$/i;
 
+const uploadAudioBuffer = (buffer) =>
+  new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { resource_type: "video", folder: "voice-messages" },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else if (!result?.secure_url) {
+          reject(new Error("Cloudinary audio upload returned no secure URL."));
+        } else {
+          resolve(result);
+        }
+      }
+    );
+    uploadStream.end(buffer);
+  });
+
 export const getAllContacts = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
@@ -146,24 +163,23 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ message: "Message cannot exceed 2000 characters." });
     }
 
-    let audioDataUri;
+    let audioBuffer;
     if (audio !== undefined) {
       const audioMatch = typeof audio === "string" ? audio.match(AUDIO_DATA_URI_PATTERN) : null;
       const audioBase64 = audioMatch?.[2];
-      const audioBytes = audioBase64 ? Buffer.from(audioBase64, "base64") : null;
+      audioBuffer = audioBase64 ? Buffer.from(audioBase64, "base64") : null;
       if (
         !audioMatch ||
         !audioBase64 ||
         audioBase64.length % 4 !== 0 ||
-        !audioBytes?.length ||
-        audioBytes.length > MAX_AUDIO_BYTES ||
-        audioBytes.toString("base64") !== audioBase64
+        !audioBuffer?.length ||
+        audioBuffer.length > MAX_AUDIO_BYTES ||
+        audioBuffer.toString("base64") !== audioBase64
       ) {
         return res.status(400).json({
           message: "Audio must be a supported recording no larger than 3 MB.",
         });
       }
-      audioDataUri = audio;
     }
 
     if (senderId.equals(receiverId)) {
@@ -197,11 +213,8 @@ export const sendMessage = async (req, res) => {
     }
 
     let audioUrl;
-    if (audioDataUri) {
-      const uploadResponse = await cloudinary.uploader.upload(audioDataUri, {
-        resource_type: "video",
-        folder: "voice-messages",
-      });
+    if (audioBuffer) {
+      const uploadResponse = await uploadAudioBuffer(audioBuffer);
       audioUrl = uploadResponse.secure_url;
     }
 
