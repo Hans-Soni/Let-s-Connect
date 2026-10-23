@@ -49,7 +49,7 @@ Security and performance are a massive priority here. The backend employs strict
   - `cors`: Protects API from unauthorized cross-origin requests.
   - `express-mongo-sanitize`: Prevents NoSQL injection attacks.
   - `xss-clean`: Sanitizes user input to prevent Cross-Site Scripting.
-  - `express-rate-limit` & `@arcjet/node`: Protects against brute-force and DDoS attacks.
+  - Upstash Redis is the primary shared API rate limiter (100 requests per IP per 15 minutes). If it denies a request or is unavailable, Arcjet's rate limiter is used as the fallback. Arcjet shield and bot checks remain enabled on protected routes. Requests denied by both providers receive HTTP 429; if both providers are unavailable, the API returns HTTP 503.
 
 Arcjet is used for request security decisions, not as the message/media store. This app has no API to purge Arcjet provider-side security telemetry or control MongoDB/Cloudinary backups; manage provider telemetry and backup retention in their respective dashboards.
 
@@ -66,7 +66,8 @@ Arcjet is used for request security decisions, not as the message/media store. T
    npm install
    ```
 3. **Configure Environment Variables:**
-   - Create a `.env` file based on `.env.example` (if provided) and fill in your MongoDB URI, JWT secret, and Cloudinary credentials.
+   - Create a `.env` file based on `.env.example` and fill in your MongoDB URI, JWT secret, Cloudinary credentials, Arcjet key, and `UPSTASH_REDIS_URL`.
+   - Set `UPSTASH_REDIS_URL` to your Upstash Redis connection URL. Keep the credential private, configure it in your deployment provider's secret/environment settings, and rotate it if it has been exposed.
 4. **Start the development server:**
    ```bash
    npm run dev

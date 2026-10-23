@@ -19,6 +19,12 @@ const aj = arcjet({
         //"CATEGORY:PREVIEW", // Link previews e.g. Slack, Discord
       ],
     }),
+  ],
+});
+
+export const arcjetRateLimitFallback = arcjet({
+  key: ENV.ARCJET_KEY,
+  rules: [
     // Create a token bucket rate limit. Other algorithms are supported.
     slidingWindow({
       mode: "LIVE", // Blocks requests. Use "DRY_RUN" to log only

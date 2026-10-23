@@ -11,7 +11,6 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
 import xss from "xss-clean";
 
@@ -20,6 +19,7 @@ import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
 import { ENV } from "./lib/env.js";
 import { app, server, isOriginAllowed } from "./lib/socket.js";
+import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
 const __dirname = path.resolve();
 
@@ -30,12 +30,7 @@ app.use(helmet());
 app.use(mongoSanitize());
 app.use(xss());
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again after 15 minutes",
-});
-app.use("/api", limiter);
+app.use("/api", rateLimitMiddleware);
 
 app.use(express.json({ limit: "5mb" })); // req.body
 app.use(cors({ origin: isOriginAllowed, credentials: true }));

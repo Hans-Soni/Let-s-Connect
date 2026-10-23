@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "node --test src/middleware/rateLimit.middleware.test.js"
   },
   "keywords": [],
   "type": "module",
@@ -21,8 +22,8 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-mongo-sanitize": "^2.2.0",
-    "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
+    "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.1",
     "resend": "^6.0.2",
