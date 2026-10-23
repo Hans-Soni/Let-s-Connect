@@ -50,10 +50,13 @@ export const signup = async (req, res) => {
       password: hashedPassword,
       dataConsent: {
         accepted: true,
-        termsVersion: "1.0",
+        termsVersion: "1.1",
         acceptedAt: new Date(),
+        ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+        emailId: normalizedEmail,
       },
     });
+    newUser.dataConsent.userId = newUser._id;
 
     if (newUser) {
       // before CR:

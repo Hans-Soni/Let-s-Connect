@@ -185,8 +185,10 @@ function SignUpPage() {
                   <h3 className="font-semibold text-base-content">Account and security data</h3>
                   <p>
                     Account information is retained while your account is active and is not covered
-                    by the 24-hour chat-message cleanup. Security and operational providers may retain
-                    request or diagnostic data according to their own policies.
+                    by the 24-hour chat-message cleanup. For the consent record, we store your signup
+                    IP address, email address, account ID, acceptance time, and terms version with
+                    your account. Security and operational providers may retain request or diagnostic
+                    data according to their own policies.
                   </p>
                 </div>
               </div>
