@@ -5,6 +5,7 @@ import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
+import toast from "react-hot-toast";
 
 function ChatContainer() {
   const {
@@ -87,6 +88,20 @@ function ChatContainer() {
                 >
                   {msg.image && (
                     <img src={msg.image} alt="Shared" className="rounded-lg max-h-52 w-auto object-cover mb-1.5" />
+                  )}
+                  {msg.audio && (
+                    <audio
+                      controls
+                      preload="metadata"
+                      src={msg.audio}
+                      className="block w-64 max-w-full h-10 mb-1.5"
+                      aria-label="Voice message"
+                      onError={() => {
+                        toast.error("This voice message could not be played.");
+                      }}
+                    >
+                      Your browser does not support audio playback.
+                    </audio>
                   )}
                   {msg.text && <p className="leading-relaxed">{msg.text}</p>}
                   <div className="flex items-center justify-between mt-1 gap-3 pt-0.5 min-w-[72px]">

@@ -206,15 +206,15 @@ export const useChatStore = create((set, get) => ({
   sendMessage: async (messageData) => {
     const { selectedUser, messages, isUserBlocked, isBlockedByUser } = get();
     const { authUser } = useAuthStore.getState();
-    if (!selectedUser?._id || !authUser?._id) return;
+    if (!selectedUser?._id || !authUser?._id) return false;
 
     if (isUserBlocked(selectedUser._id)) {
       toast.error("You have blocked this user. Unblock them to send messages.");
-      return;
+      return false;
     }
     if (isBlockedByUser(selectedUser._id)) {
       toast.error("You cannot send messages to this user.");
-      return;
+      return false;
     }
 
     const tempId = `temp-${Date.now()}`;
@@ -225,6 +225,7 @@ export const useChatStore = create((set, get) => ({
       receiverId: selectedUser._id,
       text: messageData.text,
       image: messageData.image,
+      audio: messageData.audio,
       createdAt: new Date().toISOString(),
       isOptimistic: true,
       isDelivered: false,
@@ -235,17 +236,26 @@ export const useChatStore = create((set, get) => ({
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+      if (messageData.audio && !res.data?.audio) {
+        set((state) => ({
+          messages: state.messages.filter((m) => m._id !== tempId),
+        }));
+        toast.error("The server did not save the voice message. Please restart or update the backend.");
+        return false;
+      }
       set((state) => ({
         messages: state.messages.map((m) =>
           m._id === tempId ? { ...res.data, isDelivered: true, isSeen: Boolean(res.data.isSeen) } : m
         ),
       }));
+      return true;
     } catch (error) {
       // remove optimistic message on failure
       set((state) => ({
         messages: state.messages.filter((m) => m._id !== tempId),
       }));
       toast.error(error.response?.data?.message || "Something went wrong");
+      return false;
     }
   },
 
@@ -335,7 +345,11 @@ export const useChatStore = create((set, get) => ({
       const senderName = sender.fullName || "Someone";
       const messageSnippet = newMessage.text
         ? (newMessage.text.length > 50 ? `${newMessage.text.substring(0, 50)}...` : newMessage.text)
-        : (newMessage.image ? "📷 Sent an image" : "Sent you a message");
+        : (newMessage.image
+          ? "📷 Sent an image"
+          : newMessage.audio
+            ? "🎤 Sent a voice message"
+            : "Sent you a message");
       const senderPic = sender.profilePic || `${import.meta.env.BASE_URL}avatar.png`;
 
       // 1. In-App Notification Toast (if receiver is not currently in this chat)

@@ -10,7 +10,7 @@ Here is a detailed breakdown of every component in this folder:
 - **`ChatContainer.jsx`**: The main container for an active chat session. It displays the chat header, the scrollable list of messages, and the message input field at the bottom.
 - **`ChatHeader.jsx`**: The top bar of an active chat. It displays the selected user's profile picture, name, and their online status, along with a button to close the active chat.
 - **`ChatsList.jsx`**: Renders the list of users you have previously chatted with in the sidebar. It displays their avatars, names, and whether they are online.
-- **`MessageInput.jsx`**: The input area at the bottom of the chat container. It handles typing text, attaching images, and sending the message to the server.
+- **`MessageInput.jsx`**: The input area at the bottom of the chat container. It handles text and image messages, and lets users record, preview, delete, or explicitly send a voice message (up to 60 seconds and 3 MB).
 
 ### User Elements
 - **`ContactList.jsx`**: Renders the full list of all available contacts/users in the application in the sidebar, allowing you to start a new chat.
