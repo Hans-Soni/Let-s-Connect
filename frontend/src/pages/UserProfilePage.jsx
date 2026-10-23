@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -299,10 +300,10 @@ function UserProfilePage({ profileUser, onClose }) {
         <button
           onClick={handleBackToContacts}
           className="btn btn-ghost btn-sm gap-2 text-base-content/80 hover:text-base-content rounded-xl"
-          title="Return to Contacts List"
+          title={isMe ? "Return to chats" : "Return to Contacts List"}
         >
           <ArrowLeft className="size-4" />
-          <span className="font-medium text-xs sm:text-sm">Back to Contacts</span>
+          <span className="font-medium text-xs sm:text-sm">{isMe ? "Back to chats" : "Back to Contacts"}</span>
         </button>
 
         <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-base-content/60">
@@ -762,56 +763,59 @@ function UserProfilePage({ profileUser, onClose }) {
       )}
 
       {showTerms && isMe && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-6">
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="profile-terms-title"
-            className="my-auto max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-base-100 p-5 text-base-content shadow-2xl sm:p-7"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="profile-terms-title" className="text-xl font-bold sm:text-2xl">
-                  Terms &amp; Data Authorization
-                </h2>
-                <p className="mt-1 text-sm text-base-content/70">
-                  Current terms version: {CURRENT_TERMS_VERSION}
-                </p>
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-6">
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="profile-terms-title"
+              className="my-auto max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-base-100 p-5 text-base-content shadow-2xl sm:p-7"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 id="profile-terms-title" className="text-xl font-bold sm:text-2xl">
+                    Terms &amp; Data Authorization
+                  </h2>
+                  <p className="mt-1 text-sm text-base-content/70">
+                    Current terms version: {CURRENT_TERMS_VERSION}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTerms(false)}
+                  className="btn btn-ghost btn-circle btn-sm"
+                  aria-label="Close terms"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowTerms(false)}
-                className="btn btn-ghost btn-circle btn-sm"
-                aria-label="Close terms"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
 
-            <div className="my-4 rounded-xl bg-success/10 p-3 text-sm">
-              {isLoadingConsent ? (
-                <span>Loading your consent record...</span>
-              ) : consentRecord?.accepted ? (
-                <span>
-                  <CheckCircle2 className="mr-1 inline size-4 text-success" />
-                  You accepted version <strong>{consentRecord.termsVersion}</strong>
-                  {consentRecord.acceptedAt && (
-                    <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
-                  )}.
-                </span>
-              ) : (
-                <span>Your saved consent record could not be found.</span>
-              )}
-            </div>
+              <div className="my-4 rounded-xl bg-success/10 p-3 text-sm">
+                {isLoadingConsent ? (
+                  <span>Loading your consent record...</span>
+                ) : consentRecord?.accepted ? (
+                  <span>
+                    <CheckCircle2 className="mr-1 inline size-4 text-success" />
+                    You accepted version <strong>{consentRecord.termsVersion}</strong>
+                    {consentRecord.acceptedAt && (
+                      <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
+                    )}.
+                  </span>
+                ) : (
+                  <span>Your saved consent record could not be found.</span>
+                )}
+              </div>
 
-            <TermsContent />
-            <div className="mt-5 flex justify-end">
-              <button type="button" onClick={() => setShowTerms(false)} className="btn btn-primary rounded-xl">
-                Close
-              </button>
-            </div>
-          </section>
-        </div>
+              <TermsContent />
+              <div className="mt-5 flex justify-end">
+                <button type="button" onClick={() => setShowTerms(false)} className="btn btn-primary rounded-xl">
+                  Close
+                </button>
+              </div>
+            </section>
+          </div>,
+          document.body
+        )
       )}
 
       {/* LIGHTBOX MODAL FOR BIG PROFILE PICTURE */}
