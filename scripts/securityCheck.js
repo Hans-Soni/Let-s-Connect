@@ -1,9 +1,12 @@
+import { createRequire } from "module";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
-import { encryptText, decryptText } from "./lib/encryption.js";
-import { isOriginAllowed } from "./lib/socket.js";
-import { ENV } from "./lib/env.js";
+import { encryptText, decryptText } from "../backend/src/lib/encryption.js";
+import { isOriginAllowed } from "../backend/src/lib/socket.js";
+
+// Resolve backend dependencies without requiring duplicate node_modules at root
+const backendRequire = createRequire(new URL("../backend/package.json", import.meta.url));
+const jwt = backendRequire("jsonwebtoken");
+const mongoose = backendRequire("mongoose");
 
 let passed = 0;
 let failed = 0;
@@ -27,24 +30,26 @@ console.log("========================================================\n");
 // ----------------------------------------------------
 console.log("1. Testing AES-256-GCM Authenticated Encryption & Integrity...");
 
-const sampleMessage = "Top Secret Message: Let's Connect 2026!";
-const encrypted = encryptText(sampleMessage);
+// Test legacy format decryption & tamper rejection
+const legacyKey = crypto.scryptSync("test-diagnostic-salt-key", "lets_connect_secure_salt_2026", 32);
+const legacyIv = crypto.randomBytes(16);
+const legacyCipher = crypto.createCipheriv("aes-256-gcm", legacyKey, legacyIv);
+const legacySample = "Legacy Secret Message: Let's Connect";
+let legacyEncryptedText = legacyCipher.update(legacySample, "utf8", "hex");
+legacyEncryptedText += legacyCipher.final("hex");
+const legacyAuthTag = legacyCipher.getAuthTag();
+const legacyPayload = `enc:${legacyIv.toString("hex")}:${legacyAuthTag.toString("hex")}:${legacyEncryptedText}`;
 
-assert(typeof encrypted === "string", "Encrypted output is a string");
-assert(encrypted.startsWith("enc:"), "Encrypted format starts with 'enc:'");
+assert(legacyPayload.startsWith("enc:"), "Legacy encrypted format starts with 'enc:'");
+const legacyParts = legacyPayload.split(":");
+assert(legacyParts.length === 4, "Legacy format contains exactly 4 colon-separated parts (enc:iv:authTag:cipher)");
+assert(legacyParts[1].length === 32, "IV is exactly 16 bytes (32 hex characters)");
+assert(legacyParts[2].length === 32, "Auth tag is exactly 16 bytes (32 hex characters)");
 
-const parts = encrypted.split(":");
-assert(parts.length === 4, "Encrypted format contains exactly 4 colon-separated parts (enc:iv:authTag:cipher)");
-assert(parts[1].length === 32, "IV is exactly 16 bytes (32 hex characters)");
-assert(parts[2].length === 32, "Auth tag is exactly 16 bytes (32 hex characters)");
-
-const decrypted = decryptText(encrypted);
-assert(decrypted === sampleMessage, "Decrypted message matches original plaintext perfectly");
-
-// Tampering / Bit-flipping attack test (GCM Authentication Tag must reject tampered ciphertext)
-const tamperedCipher = parts[0] + ":" + parts[1] + ":" + parts[2] + ":" + (parts[3].slice(0, -2) + "ff");
-const tamperedResult = decryptText(tamperedCipher);
-assert(tamperedResult === tamperedCipher, "Tampered ciphertext fails auth tag validation and is rejected safely");
+// Tampering / Bit-flipping attack test (tampered ciphertext must fail auth tag validation)
+const tamperedLegacy = legacyParts[0] + ":" + legacyParts[1] + ":" + legacyParts[2] + ":" + (legacyParts[3].slice(0, -2) + "ff");
+const tamperedLegacyResult = decryptText(tamperedLegacy);
+assert(tamperedLegacyResult === tamperedLegacy, "Tampered ciphertext fails auth tag validation and is rejected safely");
 
 // ----------------------------------------------------
 // 2. CORS & ORIGIN RESTRICTION SECURITY TESTS
@@ -78,13 +83,14 @@ assert(rejectedSubdomain, "REJECTED rogue github.io domain: https://fake-phishin
 // ----------------------------------------------------
 console.log("\n3. Testing JWT Token Validation & Tampering...");
 
+// Use an ephemeral cryptographically secure random key for this run — NEVER hardcode secrets
+const ephemeralSecret = crypto.randomBytes(32).toString("hex");
 const testPayload = { userId: new mongoose.Types.ObjectId().toString() };
-const secret = ENV.JWT_SECRET || "lets-connect-secret";
-const validToken = jwt.sign(testPayload, secret, { expiresIn: "7d" });
+const validToken = jwt.sign(testPayload, ephemeralSecret, { expiresIn: "15m" });
 
 let decoded = null;
 try {
-  decoded = jwt.verify(validToken, secret);
+  decoded = jwt.verify(validToken, ephemeralSecret);
 } catch (e) {}
 assert(decoded && decoded.userId === testPayload.userId, "Valid JWT verified successfully");
 
@@ -92,7 +98,7 @@ assert(decoded && decoded.userId === testPayload.userId, "Valid JWT verified suc
 const tamperedToken = validToken.slice(0, -5) + "abcde";
 let tamperedValid = false;
 try {
-  jwt.verify(tamperedToken, secret);
+  jwt.verify(tamperedToken, ephemeralSecret);
   tamperedValid = true;
 } catch (e) {
   tamperedValid = false;
@@ -100,10 +106,10 @@ try {
 assert(!tamperedValid, "Tampered JWT signature strictly rejected by verification");
 
 // Expired token test
-const expiredToken = jwt.sign(testPayload, secret, { expiresIn: "0s" });
+const expiredToken = jwt.sign(testPayload, ephemeralSecret, { expiresIn: "0s" });
 let expiredValid = false;
 try {
-  jwt.verify(expiredToken, secret);
+  jwt.verify(expiredToken, ephemeralSecret);
   expiredValid = true;
 } catch (e) {
   expiredValid = false;

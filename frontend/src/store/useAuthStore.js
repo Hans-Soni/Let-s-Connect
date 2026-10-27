@@ -94,6 +94,15 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  /** Called by the axios interceptor when a token refresh attempt fails. */
+  handleSessionExpired: () => {
+    sessionStorage.removeItem("jwt");
+    localStorage.removeItem("jwt");
+    set({ authUser: null });
+    get().disconnectSocket();
+    toast.error("Your session has expired. Please log in again.", { duration: 5000 });
+  },
+
   updateProfile: async (data) => {
     try {
       const res = await axiosInstance.put("/auth/update-profile", data);
@@ -152,3 +161,12 @@ export const useAuthStore = create((set, get) => ({
     set({ socket: null, onlineUsers: [] });
   },
 }));
+
+// Listen for the custom event dispatched by the axios interceptor when
+// a silent token refresh fails, so users are never silently left broken.
+if (typeof window !== "undefined") {
+  window.addEventListener("auth:session-expired", () => {
+    useAuthStore.getState().handleSessionExpired();
+  });
+}
+

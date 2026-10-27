@@ -1,34 +1,33 @@
-import jwt from "jsonwebtoken";
-import User from "../models/User.js";
-import { ENV } from "../lib/env.js";
+import * as keys from '../lib/keyRotation.js';
+import User from '../models/User.js';
 
 export const socketAuthMiddleware = async (socket, next) => {
   try {
     let token = socket.handshake.query.token;
     if (!token) {
       token = socket.handshake.headers.cookie
-        ?.split("; ")
-        .find((row) => row.startsWith("jwt="))
-        ?.split("=")[1];
+        ?.split('; ')
+        .find((row) => row.startsWith('jwt='))
+        ?.split('=')[1];
     }
 
     if (!token) {
-      console.log("Socket connection rejected: No token provided");
-      return next(new Error("Unauthorized - No Token Provided"));
+      console.log('Socket connection rejected: No token provided');
+      return next(new Error('Unauthorized - No Token Provided'));
     }
 
-    // verify the token
-    const decoded = jwt.verify(token, ENV.JWT_SECRET);
+    // verify the token against the rotating key ring
+    const decoded = keys.verifyJwt(token);
     if (!decoded) {
-      console.log("Socket connection rejected: Invalid token");
-      return next(new Error("Unauthorized - Invalid Token"));
+      console.log('Socket connection rejected: Invalid token');
+      return next(new Error('Unauthorized - Invalid Token'));
     }
 
-    // find the user fromdb
-    const user = await User.findById(decoded.userId).select("-password");
+    // find the user from db
+    const user = await User.findById(decoded.userId).select('-password');
     if (!user) {
-      console.log("Socket connection rejected: User not found");
-      return next(new Error("User not found"));
+      console.log('Socket connection rejected: User not found');
+      return next(new Error('User not found'));
     }
 
     // attach user info to socket
@@ -39,7 +38,7 @@ export const socketAuthMiddleware = async (socket, next) => {
 
     next();
   } catch (error) {
-    console.log("Error in socket authentication:", error.message);
-    next(new Error("Unauthorized - Authentication failed"));
+    console.log('Error in socket authentication:', error.message);
+    next(new Error('Unauthorized - Authentication failed'));
   }
 };

@@ -55,11 +55,14 @@ function UserProfilePage({ profileUser, onClose }) {
   const { theme, setTheme } = useThemeStore();
 
   const [user, setUser] = useState(() => {
-    if (profileUser) return profileUser;
-    if (selectedUser && (!id || selectedUser._id === id)) return selectedUser;
+    const matchesId = (candidate) =>
+      candidate && (!id || String(candidate._id) === String(id));
+    if (matchesId(authUser)) return authUser;
+    if (matchesId(profileUser)) return profileUser;
+    if (matchesId(selectedUser)) return selectedUser;
     return (
-      allContacts.find((u) => u._id === id) ||
-      chats.find((u) => u._id === id) ||
+      allContacts.find((contact) => String(contact._id) === String(id)) ||
+      chats.find((chat) => String(chat._id) === String(id)) ||
       null
     );
   });
@@ -86,26 +89,41 @@ function UserProfilePage({ profileUser, onClose }) {
   const profileImageInputRef = useRef(null);
 
   useEffect(() => {
-    if (!isMe) return;
-    let isMounted = true;
-    setProfileName(authUser.fullName || "");
-    setIsLoadingConsent(true);
-    getConsentRecord().then((record) => {
-      if (isMounted) setConsentRecord(record);
-    }).finally(() => {
-      if (isMounted) setIsLoadingConsent(false);
+    setSelectedProfileImage("");
+    setConsentRecord(null);
+    setShowTerms(false);
+    setShowPasswordForm(false);
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     });
-    return () => {
-      isMounted = false;
-    };
-  }, [authUser, getConsentRecord, isMe]);
+    if (profileImageInputRef.current) profileImageInputRef.current.value = "";
+  }, [id]);
 
   useEffect(() => {
-    if (user) {
+    setProfileName(authUser?.fullName || "");
+  }, [id, authUser?.fullName]);
+
+  useEffect(() => {
+    const matchesProfileId = (candidate) =>
+      candidate && (!id || String(candidate._id) === String(id));
+    const knownUser = [
+      matchesProfileId(authUser) ? authUser : null,
+      matchesProfileId(profileUser) ? profileUser : null,
+      matchesProfileId(selectedUser) ? selectedUser : null,
+      allContacts.find((contact) => String(contact._id) === String(id)),
+      chats.find((chat) => String(chat._id) === String(id)),
+    ].find(Boolean);
+
+    if (knownUser) {
+      setUser(knownUser);
       setIsLoading(false);
       return;
     }
 
+    setUser(null);
+    setIsLoading(true);
     let isMounted = true;
     const fetchUser = async () => {
       if (!id) {
@@ -114,16 +132,6 @@ function UserProfilePage({ profileUser, onClose }) {
       }
 
       // First check in-memory stores
-      const foundInContacts = allContacts.find((u) => u._id === id);
-      const foundInChats = chats.find((u) => u._id === id);
-      if (foundInContacts || foundInChats) {
-        if (isMounted) {
-          setUser(foundInContacts || foundInChats);
-          setIsLoading(false);
-        }
-        return;
-      }
-
       // Try fetching profile from API
       try {
         const data = await getUserProfile(id);
@@ -140,7 +148,7 @@ function UserProfilePage({ profileUser, onClose }) {
     return () => {
       isMounted = false;
     };
-  }, [id, user, allContacts, chats, getUserProfile]);
+  }, [id, profileUser, authUser, selectedUser, allContacts, chats, getUserProfile]);
 
   const isOnline = user?._id ? onlineUsers.includes(user._id) : false;
   const isMe = Boolean(
@@ -230,15 +238,20 @@ function UserProfilePage({ profileUser, onClose }) {
     }
 
     setIsSavingProfile(true);
-    const updatedProfile = await updateProfile({
-      fullName: normalizedName,
-      ...(selectedProfileImage ? { profilePic: selectedProfileImage } : {}),
-    });
-    setIsSavingProfile(false);
+    let updatedProfile;
+    try {
+      updatedProfile = await updateProfile({
+        fullName: normalizedName,
+        ...(selectedProfileImage ? { profilePic: selectedProfileImage } : {}),
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
 
     if (updatedProfile) {
       setUser((currentUser) => ({ ...currentUser, ...updatedProfile }));
       setSelectedProfileImage("");
+      if (profileImageInputRef.current) profileImageInputRef.current.value = "";
     }
   };
 
@@ -259,6 +272,19 @@ function UserProfilePage({ profileUser, onClose }) {
     if (changed) {
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       setShowPasswordForm(false);
+    }
+  };
+
+  const handleOpenTerms = async () => {
+    setShowTerms(true);
+    if (consentRecord || isLoadingConsent) return;
+
+    setIsLoadingConsent(true);
+    try {
+      const record = await getConsentRecord();
+      setConsentRecord(record);
+    } finally {
+      setIsLoadingConsent(false);
     }
   };
 
@@ -461,7 +487,7 @@ function UserProfilePage({ profileUser, onClose }) {
                 <div className="space-y-3">
                   <button
                     type="button"
-                    onClick={() => setShowTerms(true)}
+                    onClick={handleOpenTerms}
                     className="btn btn-outline w-full justify-start gap-2 rounded-xl"
                   >
                     <FileText className="size-4" />
@@ -479,10 +505,6 @@ function UserProfilePage({ profileUser, onClose }) {
                       </p>
                     </div>
                   )}
-                  {isLoadingConsent && (
-                    <p className="text-sm text-base-content/60">Loading consent record...</p>
-                  )}
-
                   <button
                     type="button"
                     onClick={() => setShowPasswordForm((shown) => !shown)}

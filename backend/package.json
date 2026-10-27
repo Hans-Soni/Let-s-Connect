@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "node --test src/middleware/rateLimit.middleware.test.js"
+    "test": "node --test src/middleware/rateLimit.middleware.test.js",
+    "test:keys": "node --test src/lib/secretGenerator.test.js",
+    "test:all": "node --test src/middleware/rateLimit.middleware.test.js src/lib/secretGenerator.test.js"
   },
   "keywords": [],
   "type": "module",
@@ -26,6 +28,7 @@
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.1",
+    "node-cron": "^4.6.0",
     "resend": "^6.0.2",
     "socket.io": "^4.8.1",
     "xss-clean": "^0.1.4"

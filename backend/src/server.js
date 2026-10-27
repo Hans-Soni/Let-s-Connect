@@ -48,7 +48,22 @@ if (ENV.NODE_ENV === "production") {
   });
 }
 
-server.listen(PORT, () => {
-  console.log("Server running on port: " + PORT);
-  connectDB();
-});
+// Connect to DB first, then initialise key rotation, then start listening.
+// Key rotation needs Mongoose to be connected (it reads/writes the KeySet collection).
+(async () => {
+  try {
+    await connectDB();
+
+    // Import here (after connectDB) to avoid a circular import during module evaluation.
+    const keys = await import("./lib/keyRotation.js");
+    await keys.initKeyRotation();
+    console.log("[keys] Key rotation initialised successfully.");
+
+    server.listen(PORT, () => {
+      console.log("Server running on port: " + PORT);
+    });
+  } catch (err) {
+    console.error("Startup error:", err);
+    process.exit(1);
+  }
+})();
