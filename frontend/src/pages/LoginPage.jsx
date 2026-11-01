@@ -28,7 +28,9 @@ function LoginPage() {
               <div className="w-full max-w-md">
                 {/* HEADING TEXT */}
                 <div className="text-center mb-3 sm:mb-8">
-                  <img src={theme === "dark" ? logoDark : logoLight} alt="Let's Connect Logo" className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-4" />
+                  <Link to="/" title="Back to Welcome Page" className="inline-block hover:scale-105 transition-transform">
+                    <img src={theme === "dark" ? logoDark : logoLight} alt="Let's Connect Logo" className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-4" />
+                  </Link>
                   <h2 className="text-xl sm:text-2xl font-bold text-base-content mb-1 sm:mb-2">Welcome Back</h2>
                   <p className="text-xs sm:text-sm text-base-content/60">Login to access to your account</p>
                 </div>
