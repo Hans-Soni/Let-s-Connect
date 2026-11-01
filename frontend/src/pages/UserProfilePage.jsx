@@ -232,7 +232,7 @@ function UserProfilePage({ profileUser, onClose }) {
   };
 
   const handleSaveProfile = async (event) => {
-    event.preventDefault();
+    if (event) event.preventDefault();
     const normalizedName = profileName.trim();
     if (!normalizedName) {
       toast.error("Your name cannot be empty.");
@@ -254,6 +254,7 @@ function UserProfilePage({ profileUser, onClose }) {
 
     if (updatedProfile) {
       setUser((currentUser) => ({ ...currentUser, ...updatedProfile }));
+      setViewingProfileUser(updatedProfile);
       setSelectedProfileImage("");
       if (profileImageInputRef.current) profileImageInputRef.current.value = "";
     }
@@ -396,17 +397,28 @@ function UserProfilePage({ profileUser, onClose }) {
           </h1>
 
           {/* USER'S DESIGNATION (Replaces email ID) */}
-          {user.designation ? (
-            <p className="mt-1.5 text-sm sm:text-base text-base-content/75 flex items-center justify-center gap-1.5 text-center font-medium">
-              <Briefcase className="size-4 opacity-80 text-primary shrink-0" />
-              <span>{user.designation}</span>
-            </p>
-          ) : isMe ? (
-            <p className="mt-1 text-xs text-base-content/50 italic flex items-center justify-center gap-1 text-center">
-              <Briefcase className="size-3.5 opacity-50 shrink-0" />
-              <span>No designation set. Add one below.</span>
-            </p>
-          ) : null}
+          <div className="mt-1.5 flex items-center justify-center gap-2">
+            <Briefcase className="size-4 text-primary shrink-0 opacity-80" />
+            <span className="text-sm sm:text-base font-medium text-base-content/85 text-center">
+              {user.designation || (isMe ? "No designation set" : "No designation")}
+            </span>
+            {isMe && (
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById("profile-designation");
+                  if (el) {
+                    el.focus();
+                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }
+                }}
+                className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 px-2 py-0.5 rounded-lg text-xs font-semibold underline"
+                title="Edit designation"
+              >
+                Edit
+              </button>
+            )}
+          </div>
 
           {/* BLOCKED BADGE IF CURRENT USER BLOCKED THEM */}
           {isBlockedByMe && (
@@ -455,8 +467,12 @@ function UserProfilePage({ profileUser, onClose }) {
                 </div>
 
                 <div>
-                  <label htmlFor="profile-designation" className="mb-1.5 block text-sm font-medium text-base-content">
-                    Designation
+                  <label htmlFor="profile-designation" className="mb-1.5 flex items-center justify-between text-sm font-medium text-base-content">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <Briefcase className="size-4 text-primary" />
+                      Designation / Role
+                    </span>
+                    <span className="text-[11px] text-primary font-normal">Replaces email ID publicly</span>
                   </label>
                   <div className="relative">
                     <input
@@ -466,10 +482,13 @@ function UserProfilePage({ profileUser, onClose }) {
                       onChange={(event) => setProfileDesignation(event.target.value)}
                       maxLength={100}
                       className="input input-bordered w-full pl-10"
-                      placeholder="e.g. Software Engineer, Doctor, Designer"
+                      placeholder="e.g. Software Engineer, Doctor, Designer, Student"
                     />
                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-base-content/50 pointer-events-none" />
                   </div>
+                  <p className="mt-1 text-[11px] text-base-content/60">
+                    Your designation will be shown to other users across chat, contacts, and your profile instead of your email.
+                  </p>
                 </div>
 
                 <div>
@@ -497,20 +516,20 @@ function UserProfilePage({ profileUser, onClose }) {
 
                 <button
                   type="submit"
-                  className="btn btn-primary w-full gap-2 rounded-xl"
-                  disabled={
-                    isSavingProfile ||
-                    (!selectedProfileImage &&
-                      profileName.trim() === (authUser?.fullName || "") &&
-                      profileDesignation.trim() === (authUser?.designation || ""))
-                  }
+                  className="btn btn-primary w-full gap-2 rounded-xl shadow-md hover:shadow-lg transition-all"
+                  disabled={isSavingProfile}
                 >
                   {isSavingProfile ? (
-                    <Loader2 className="size-4 animate-spin" />
+                    <>
+                      <Loader2 className="size-4.5 animate-spin" />
+                      <span>Saving changes...</span>
+                    </>
                   ) : (
-                    <Save className="size-4" />
+                    <>
+                      <Save className="size-4.5" />
+                      <span>Save Changes</span>
+                    </>
                   )}
-                  Save changes
                 </button>
               </form>
 
