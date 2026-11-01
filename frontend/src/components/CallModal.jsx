@@ -54,15 +54,24 @@ export default function CallModal() {
     }
   }, [localStream, callState]);
 
-  // Attach remoteStream to remote video and audio
+  // Attach remoteStream cleanly without duplicate audio playback
   useEffect(() => {
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream || null;
+    if (callType === "video") {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream || null;
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null;
+      }
+    } else {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream || null;
+      }
     }
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = remoteStream || null;
-    }
-  }, [remoteStream, callState]);
+  }, [remoteStream, callState, callType]);
 
   if (callState === "idle" || !callPartner) return null;
 

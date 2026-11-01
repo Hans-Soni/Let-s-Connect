@@ -114,9 +114,19 @@ io.on("connection", (socket) => {
 
   socket.on("call:initiate", ({ receiverId, callType, caller }) => {
     try {
-      const targetSocketId = getReceiverSocketId(receiverId?.toString());
+      const targetUserId = receiverId?.toString();
+      if (!targetUserId) return;
+
+      const targetSocketId = getReceiverSocketId(targetUserId);
+
+      // Fast check: If receiver is already in a call, inform caller immediately
+      if (userActiveCallMap[targetUserId]) {
+        socket.emit("call:busy", { receiverId: targetUserId, message: "User is currently on another call" });
+        return;
+      }
+
       if (targetSocketId) {
-        userActiveCallMap[socket.userId.toString()] = receiverId.toString();
+        userActiveCallMap[socket.userId.toString()] = targetUserId;
         io.to(targetSocketId).emit("call:incoming", {
           callerId: socket.userId.toString(),
           caller: caller || {
@@ -128,7 +138,7 @@ io.on("connection", (socket) => {
         });
       } else {
         socket.emit("call:user-offline", {
-          receiverId,
+          receiverId: targetUserId,
           message: "User is currently offline",
         });
       }

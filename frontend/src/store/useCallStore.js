@@ -15,9 +15,9 @@ const ICE_SERVERS = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 let peerConnection = null;
@@ -126,8 +126,15 @@ export const useCallStore = create((set, get) => ({
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 48000,
         },
-        video: type === "video" ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
+        video: type === "video" ? {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+          facingMode: "user",
+        } : false,
       });
 
       set({
@@ -203,8 +210,15 @@ export const useCallStore = create((set, get) => ({
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 48000,
         },
-        video: callType === "video" ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
+        video: callType === "video" ? {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+          facingMode: "user",
+        } : false,
       });
 
       set({
@@ -322,10 +336,27 @@ export const useCallStore = create((set, get) => ({
     peerConnection = pc;
     pendingCandidates = [];
 
-    // Add local audio and video tracks to the peer connection
+    // Add local audio and video tracks to the peer connection with bitrate tuning
     if (localStream) {
       localStream.getTracks().forEach((track) => {
-        pc.addTrack(track, localStream);
+        const sender = pc.addTrack(track, localStream);
+        try {
+          if (track.kind === "video" && sender) {
+            const params = sender.getParameters();
+            if (params.encodings && params.encodings.length > 0) {
+              params.encodings[0].maxBitrate = 1500000; // 1.5 Mbps target
+              params.encodings[0].maxFramerate = 30;
+              params.degradationPreference = "maintain-framerate";
+              sender.setParameters(params).catch(() => {});
+            }
+          } else if (track.kind === "audio" && sender) {
+            const params = sender.getParameters();
+            if (params.encodings && params.encodings.length > 0) {
+              params.encodings[0].maxBitrate = 64000; // 64 kbps Opus target
+              sender.setParameters(params).catch(() => {});
+            }
+          }
+        } catch (e) {}
       });
     }
 
