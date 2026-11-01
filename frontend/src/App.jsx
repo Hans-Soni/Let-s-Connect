@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import PageLoader from "./components/PageLoader";
 import GlobalThemeToggle from "./components/GlobalThemeToggle";
 import { useThemeStore } from "./store/useThemeStore";
+import CallModal from "./components/CallModal";
 
 import toast, { Toaster } from "react-hot-toast";
 
@@ -67,6 +68,7 @@ function App() {
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
       </Routes>
 
+      <CallModal />
       <Toaster position="top-right" containerClassName="z-[99999]" toastOptions={{ duration: 4000 }} />
     </div>
   );

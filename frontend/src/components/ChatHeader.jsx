@@ -1,9 +1,10 @@
-import { XIcon, ArrowLeftIcon, Sun, Moon } from "lucide-react";
+import { XIcon, ArrowLeftIcon, Sun, Moon, Phone, Video } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
+import { useCallStore } from "../store/useCallStore";
 
 function ChatHeader() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ function ChatHeader() {
   } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
+  const { startOutgoingCall, callState } = useCallStore();
 
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -101,6 +103,30 @@ function ChatHeader() {
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Voice call button */}
+        <button
+          type="button"
+          onClick={() => startOutgoingCall(selectedUser, "audio")}
+          disabled={isBlocked || isBlockedBy || callState !== "idle"}
+          className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          title="Start voice call"
+          aria-label="Start voice call"
+        >
+          <Phone className="size-4" />
+        </button>
+
+        {/* Video call button */}
+        <button
+          type="button"
+          onClick={() => startOutgoingCall(selectedUser, "video")}
+          disabled={isBlocked || isBlockedBy || callState !== "idle"}
+          className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          title="Start video call"
+          aria-label="Start video call"
+        >
+          <Video className="size-4" />
+        </button>
+
         {/* Theme toggle directly inside header */}
         <button
           type="button"
