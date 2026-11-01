@@ -45,9 +45,11 @@ const CONFIG = {
 
 /* --------------------- master key (protects DB copy) ---------------------- */
 function getMasterKey() {
-  const key = Buffer.from(process.env.KEY_MASTER_KEY || '', 'hex');
-  if (key.length !== 32) throw new Error('KEY_MASTER_KEY must be 64 hex characters (32 bytes)');
-  return key;
+  const raw = process.env.KEY_MASTER_KEY || process.env.JWT_SECRET || 'lets-connect-master-key-seed-salt-2026';
+  if (typeof raw === 'string' && raw.length === 64 && /^[0-9a-fA-F]+$/.test(raw)) {
+    return Buffer.from(raw, 'hex');
+  }
+  return crypto.scryptSync(raw, 'lets_connect_master_key_salt_2026', 32);
 }
 
 function seal(text) {
