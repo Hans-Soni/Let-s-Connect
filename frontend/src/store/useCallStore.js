@@ -15,7 +15,25 @@ const ICE_SERVERS = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
     { urls: "stun:stun.cloudflare.com:3478" },
+    { urls: "stun:openrelay.metered.ca:80" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
   iceCandidatePoolSize: 10,
 };
@@ -25,6 +43,23 @@ let pendingCandidates = [];
 let callTimerInterval = null;
 let callRingingTimeout = null;
 let boundSocket = null;
+
+const safelyAddCandidate = async (pc, candidateData) => {
+  if (!pc || !candidateData) return;
+  // If candidate is empty string or null, it's an end-of-candidate signal
+  if (candidateData.candidate === "" || candidateData.candidate === null) {
+    return;
+  }
+  try {
+    const candidateObj =
+      candidateData instanceof RTCIceCandidate
+        ? candidateData
+        : new RTCIceCandidate(candidateData);
+    await pc.addIceCandidate(candidateObj);
+  } catch (err) {
+    console.warn("[Call] Error adding ICE candidate:", err);
+  }
+};
 
 export const useCallStore = create((set, get) => ({
   callState: "idle", // 'idle' | 'outgoing' | 'incoming' | 'connected'
@@ -143,16 +178,22 @@ export const useCallStore = create((set, get) => ({
             noiseSuppression: true,
             autoGainControl: true,
           },
-          video: type === "video" ? {
-            width: { ideal: 1280, max: 1920 },
-            height: { ideal: 720, max: 1080 },
-            frameRate: { ideal: 30, max: 30 },
-            facingMode: "user",
-          } : false,
+          video:
+            type === "video"
+              ? {
+                  width: { ideal: 1280, max: 1920 },
+                  height: { ideal: 720, max: 1080 },
+                  frameRate: { ideal: 30, max: 30 },
+                  facingMode: "user",
+                }
+              : false,
         });
       } catch (mediaErr) {
         // Graceful fallback to voice if camera is busy or not found
-        if (type === "video" && (mediaErr.name === "NotFoundError" || mediaErr.name === "NotReadableError")) {
+        if (
+          type === "video" &&
+          (mediaErr.name === "NotFoundError" || mediaErr.name === "NotReadableError")
+        ) {
           console.warn("[Call] Camera not accessible, falling back to voice only");
           toast("Camera not accessible. Starting voice call instead.", { icon: "🎙️" });
           type = "audio";
@@ -263,16 +304,22 @@ export const useCallStore = create((set, get) => ({
             noiseSuppression: true,
             autoGainControl: true,
           },
-          video: callType === "video" ? {
-            width: { ideal: 1280, max: 1920 },
-            height: { ideal: 720, max: 1080 },
-            frameRate: { ideal: 30, max: 30 },
-            facingMode: "user",
-          } : false,
+          video:
+            callType === "video"
+              ? {
+                  width: { ideal: 1280, max: 1920 },
+                  height: { ideal: 720, max: 1080 },
+                  frameRate: { ideal: 30, max: 30 },
+                  facingMode: "user",
+                }
+              : false,
         });
       } catch (mediaErr) {
         // Fallback to voice if camera cannot be opened
-        if (callType === "video" && (mediaErr.name === "NotFoundError" || mediaErr.name === "NotReadableError")) {
+        if (
+          callType === "video" &&
+          (mediaErr.name === "NotFoundError" || mediaErr.name === "NotReadableError")
+        ) {
           console.warn("[Call] Receiver camera not accessible, accepting as voice only");
           toast("Camera not accessible. Connecting with audio only.", { icon: "🎙️" });
           callType = "audio";
@@ -406,13 +453,15 @@ export const useCallStore = create((set, get) => ({
     console.log("[Call] Creating RTCPeerConnection for target:", targetUserId);
     const pc = new RTCPeerConnection(ICE_SERVERS);
     peerConnection = pc;
-    pendingCandidates = [];
 
     // Add local tracks to the connection
     if (localStream) {
       localStream.getTracks().forEach((track) => {
+        console.log(`[Call] Attaching local track (${track.kind}) to PC, enabled: ${track.enabled}`);
         pc.addTrack(track, localStream);
       });
+    } else {
+      console.warn("[Call] Local stream was not present when creating peer connection!");
     }
 
     // ICE Candidate generation -> send to peer via Socket.io
@@ -430,21 +479,53 @@ export const useCallStore = create((set, get) => ({
 
     // Remote Track received -> display in UI
     pc.ontrack = (event) => {
-      console.log("[Call] Remote track received:", event.track.kind);
-      let stream = event.streams && event.streams[0];
-      if (!stream) {
-        stream = get().remoteStream || new MediaStream();
-        stream.addTrack(event.track);
+      console.log(
+        `[Call] Remote track received: kind=${event.track.kind}, id=${event.track.id}, readyState=${event.track.readyState}, enabled=${event.track.enabled}`
+      );
+
+      let incomingStream = event.streams && event.streams[0];
+      let newStream;
+      if (incomingStream) {
+        newStream = new MediaStream(incomingStream.getTracks());
+      } else {
+        const existing = get().remoteStream;
+        newStream = existing ? new MediaStream(existing.getTracks()) : new MediaStream();
+        newStream.addTrack(event.track);
       }
-      set({ remoteStream: stream });
+
+      // Explicitly verify track enabled state
+      newStream.getAudioTracks().forEach((t) => {
+        t.enabled = true;
+      });
+
+      set({ remoteStream: newStream });
     };
 
-    // Connection state monitor
+    // ICE Connection state monitor
+    pc.oniceconnectionstatechange = () => {
+      console.log("[Call] ICE connection state:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "failed") {
+        console.warn("[Call] ICE connection failed, attempting ICE restart...");
+        if (typeof pc.restartIce === "function") {
+          pc.restartIce();
+        }
+      }
+    };
+
+    // Overall WebRTC connection state monitor
     pc.onconnectionstatechange = () => {
-      console.log("[Call] WebRTC connection state changed:", pc.connectionState);
+      console.log("[Call] WebRTC connection state:", pc.connectionState);
       if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
         console.warn("[Call] WebRTC connection dropped or failed");
       }
+    };
+
+    pc.onsignalingstatechange = () => {
+      console.log("[Call] WebRTC signaling state:", pc.signalingState);
+    };
+
+    pc.onicegatheringstatechange = () => {
+      console.log("[Call] WebRTC ICE gathering state:", pc.iceGatheringState);
     };
 
     return pc;
@@ -461,23 +542,24 @@ export const useCallStore = create((set, get) => ({
         const pc = get().createPeerConnection(senderId);
 
         const sdpString = typeof signalData.sdp === "string" ? signalData.sdp : signalData.sdp?.sdp;
-        await pc.setRemoteDescription(new RTCSessionDescription({
-          type: "offer",
-          sdp: sdpString,
-        }));
+        await pc.setRemoteDescription(
+          new RTCSessionDescription({
+            type: "offer",
+            sdp: sdpString,
+          })
+        );
         console.log("[Call] Remote description set for offer successfully");
 
-        // Drain any pending ICE candidates
+        // Drain any pending ICE candidates buffered before the offer
         while (pendingCandidates.length > 0) {
           const cand = pendingCandidates.shift();
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(cand));
-          } catch (e) {
-            console.warn("[Call] Error adding queued ICE candidate:", e);
-          }
+          await safelyAddCandidate(pc, cand);
         }
 
-        const answer = await pc.createAnswer();
+        const answer = await pc.createAnswer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: get().callType === "video",
+        });
         await pc.setLocalDescription(answer);
         console.log("[Call] Local SDP answer set, sending to caller:", senderId);
 
@@ -496,33 +578,32 @@ export const useCallStore = create((set, get) => ({
       else if (signalData.type === "answer") {
         console.log("[Call] Caller handling SDP answer from receiver:", senderId);
         if (peerConnection) {
-          const sdpString = typeof signalData.sdp === "string" ? signalData.sdp : signalData.sdp?.sdp;
-          await peerConnection.setRemoteDescription(new RTCSessionDescription({
-            type: "answer",
-            sdp: sdpString,
-          }));
+          const sdpString =
+            typeof signalData.sdp === "string" ? signalData.sdp : signalData.sdp?.sdp;
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription({
+              type: "answer",
+              sdp: sdpString,
+            })
+          );
           console.log("[Call] Remote description set for answer successfully");
 
-          // Drain any pending ICE candidates
+          // Drain any pending ICE candidates buffered before the answer
           while (pendingCandidates.length > 0) {
             const cand = pendingCandidates.shift();
-            try {
-              await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
-            } catch (e) {
-              console.warn("[Call] Error adding queued ICE candidate:", e);
-            }
+            await safelyAddCandidate(peerConnection, cand);
           }
         }
       }
 
       // 3. Either peer receives ICE candidate
       else if (signalData.type === "candidate" && signalData.candidate) {
-        if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
-          try {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(signalData.candidate));
-          } catch (err) {
-            console.warn("[Call] Error adding ICE candidate:", err);
-          }
+        if (
+          peerConnection &&
+          peerConnection.remoteDescription &&
+          peerConnection.remoteDescription.type
+        ) {
+          await safelyAddCandidate(peerConnection, signalData.candidate);
         } else {
           // Buffer candidate until setRemoteDescription completes
           pendingCandidates.push(signalData.candidate);
