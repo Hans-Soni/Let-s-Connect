@@ -61,7 +61,12 @@ function ContactList() {
                 <img src={getUserDisplayPic(contact)} alt={contact.fullName} />
               </div>
             </div>
-            <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{contact.fullName}</h4>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-base-content font-medium truncate text-sm sm:text-base">{contact.fullName}</h4>
+              {contact.designation && (
+                <p className="text-base-content/60 text-xs truncate max-w-[200px]">{contact.designation}</p>
+              )}
+            </div>
           </div>
         </div>
       ))}

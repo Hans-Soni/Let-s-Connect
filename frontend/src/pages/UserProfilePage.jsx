@@ -20,7 +20,7 @@ import {
   Loader2,
   ZoomIn,
   X,
-  Mail,
+  Briefcase,
   CircleDot,
   Camera,
   Save,
@@ -74,6 +74,7 @@ function UserProfilePage({ profileUser, onClose }) {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showImageLightbox, setShowImageLightbox] = useState(false);
   const [profileName, setProfileName] = useState(authUser?.fullName || "");
+  const [profileDesignation, setProfileDesignation] = useState(authUser?.designation || "");
   const [selectedProfileImage, setSelectedProfileImage] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [consentRecord, setConsentRecord] = useState(null);
@@ -103,7 +104,8 @@ function UserProfilePage({ profileUser, onClose }) {
 
   useEffect(() => {
     setProfileName(authUser?.fullName || "");
-  }, [id, authUser?.fullName]);
+    setProfileDesignation(authUser?.designation || "");
+  }, [id, authUser?.fullName, authUser?.designation]);
 
   useEffect(() => {
     const matchesProfileId = (candidate) =>
@@ -236,12 +238,14 @@ function UserProfilePage({ profileUser, onClose }) {
       toast.error("Your name cannot be empty.");
       return;
     }
+    const normalizedDesignation = profileDesignation.trim();
 
     setIsSavingProfile(true);
     let updatedProfile;
     try {
       updatedProfile = await updateProfile({
         fullName: normalizedName,
+        designation: normalizedDesignation,
         ...(selectedProfileImage ? { profilePic: selectedProfileImage } : {}),
       });
     } finally {
@@ -391,13 +395,18 @@ function UserProfilePage({ profileUser, onClose }) {
             {user.fullName || "User"}
           </h1>
 
-          {/* USER'S EMAIL */}
-          {user.email && (
-            <p className="mt-1 text-sm sm:text-base text-base-content/60 flex items-center justify-center gap-1.5 text-center">
-              <Mail className="size-3.5 opacity-70" />
-              <span>{user.email}</span>
+          {/* USER'S DESIGNATION (Replaces email ID) */}
+          {user.designation ? (
+            <p className="mt-1.5 text-sm sm:text-base text-base-content/75 flex items-center justify-center gap-1.5 text-center font-medium">
+              <Briefcase className="size-4 opacity-80 text-primary shrink-0" />
+              <span>{user.designation}</span>
             </p>
-          )}
+          ) : isMe ? (
+            <p className="mt-1 text-xs text-base-content/50 italic flex items-center justify-center gap-1 text-center">
+              <Briefcase className="size-3.5 opacity-50 shrink-0" />
+              <span>No designation set. Add one below.</span>
+            </p>
+          ) : null}
 
           {/* BLOCKED BADGE IF CURRENT USER BLOCKED THEM */}
           {isBlockedByMe && (
@@ -446,6 +455,24 @@ function UserProfilePage({ profileUser, onClose }) {
                 </div>
 
                 <div>
+                  <label htmlFor="profile-designation" className="mb-1.5 block text-sm font-medium text-base-content">
+                    Designation
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="profile-designation"
+                      type="text"
+                      value={profileDesignation}
+                      onChange={(event) => setProfileDesignation(event.target.value)}
+                      maxLength={100}
+                      className="input input-bordered w-full pl-10"
+                      placeholder="e.g. Software Engineer, Doctor, Designer"
+                    />
+                    <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-base-content/50 pointer-events-none" />
+                  </div>
+                </div>
+
+                <div>
                   <span className="mb-1.5 block text-sm font-medium text-base-content">Profile photo</span>
                   <input
                     ref={profileImageInputRef}
@@ -471,7 +498,12 @@ function UserProfilePage({ profileUser, onClose }) {
                 <button
                   type="submit"
                   className="btn btn-primary w-full gap-2 rounded-xl"
-                  disabled={isSavingProfile || (!selectedProfileImage && profileName.trim() === authUser?.fullName)}
+                  disabled={
+                    isSavingProfile ||
+                    (!selectedProfileImage &&
+                      profileName.trim() === (authUser?.fullName || "") &&
+                      profileDesignation.trim() === (authUser?.designation || ""))
+                  }
                 >
                   {isSavingProfile ? (
                     <Loader2 className="size-4 animate-spin" />

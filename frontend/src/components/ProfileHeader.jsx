@@ -42,7 +42,7 @@ function ProfileHeader() {
             </button>
           </div>
 
-          {/* USERNAME & ONLINE TEXT */}
+          {/* USERNAME & DESIGNATION / ONLINE TEXT */}
           <button
             type="button"
             className="text-left min-w-0"
@@ -53,7 +53,9 @@ function ProfileHeader() {
               {authUser.fullName}
             </h3>
 
-            <p className="text-base-content/60 text-xs">Online</p>
+            <p className="text-base-content/60 text-xs truncate max-w-[180px]">
+              {authUser.designation || "Online"}
+            </p>
           </button>
         </div>
 

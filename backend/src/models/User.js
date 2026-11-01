@@ -8,12 +8,17 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-
     },
     fullName: {
       type: String,
       required: true,
       trim: true,
+    },
+    designation: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 100,
     },
     password: {
       type: String,

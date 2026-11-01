@@ -32,7 +32,7 @@ export const signup = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedFullName = fullName.trim();
 
-    // check if emailis valid: regex
+    // check if email is valid: regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
@@ -49,6 +49,7 @@ export const signup = async (req, res) => {
     const newUser = new User({
       fullName: normalizedFullName,
       email: normalizedEmail,
+      designation: "",
       password: hashedPassword,
     });
 
@@ -78,6 +79,7 @@ export const signup = async (req, res) => {
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
+        designation: newUser.designation || "",
         profilePic: newUser.profilePic,
         token: token,
       });
@@ -88,6 +90,7 @@ export const signup = async (req, res) => {
           _id: savedUser._id,
           fullName: savedUser.fullName,
           email: savedUser.email,
+          designation: savedUser.designation || "",
           profilePic: savedUser.profilePic,
         });
       } catch (socketErr) {
@@ -130,6 +133,7 @@ export const login = async (req, res) => {
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
+      designation: user.designation || "",
       profilePic: user.profilePic,
       token: token,
     });
@@ -146,7 +150,7 @@ export const logout = (_, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { fullName, profilePic } = req.body;
+    const { fullName, profilePic, designation } = req.body;
     const updates = {};
 
     if (fullName !== undefined) {
@@ -154,6 +158,13 @@ export const updateProfile = async (req, res) => {
         return res.status(400).json({ message: "Name must be between 1 and 50 characters" });
       }
       updates.fullName = fullName.trim();
+    }
+
+    if (designation !== undefined) {
+      if (typeof designation !== "string" || designation.trim().length > 100) {
+        return res.status(400).json({ message: "Designation cannot exceed 100 characters" });
+      }
+      updates.designation = designation.trim();
     }
 
     if (profilePic !== undefined) {
@@ -168,7 +179,7 @@ export const updateProfile = async (req, res) => {
     }
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ message: "Provide a name or profile image to update" });
+      return res.status(400).json({ message: "Provide a name, designation, or profile image to update" });
     }
 
     const updatedUser = await User.findByIdAndUpdate(req.user._id, updates, {
@@ -182,6 +193,7 @@ export const updateProfile = async (req, res) => {
       _id: updatedUser._id,
       fullName: updatedUser.fullName,
       profilePic: updatedUser.profilePic,
+      designation: updatedUser.designation || "",
     };
     io.emit("profileUpdated", publicProfile);
 

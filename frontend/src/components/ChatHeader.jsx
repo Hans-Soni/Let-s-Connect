@@ -87,15 +87,18 @@ function ChatHeader() {
           <h3 className="text-base-content font-semibold text-sm sm:text-base truncate max-w-[140px] xs:max-w-[190px] sm:max-w-xs hover:text-primary transition-colors">
             {selectedUser.fullName}
           </h3>
-          <p className="text-base-content/60 text-xs flex items-center gap-1.5">
+          <p className="text-base-content/60 text-xs flex items-center gap-1.5 truncate">
             {isBlocked ? (
               <span className="text-error font-medium">Blocked</span>
             ) : isBlockedBy ? (
               <span className="text-base-content/50">Unavailable</span>
             ) : (
               <>
-                <span className={`inline-block size-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-base-content/40"}`} />
-                {isOnline ? "Online" : "Offline"}
+                <span className={`inline-block size-1.5 rounded-full shrink-0 ${isOnline ? "bg-emerald-500" : "bg-base-content/40"}`} />
+                {selectedUser.designation && (
+                  <span className="text-primary font-medium truncate max-w-[120px]">{selectedUser.designation} • </span>
+                )}
+                <span>{isOnline ? "Online" : "Offline"}</span>
               </>
             )}
           </p>
