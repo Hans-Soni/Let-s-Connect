@@ -23,6 +23,7 @@ const ICE_SERVERS = {
 let peerConnection = null;
 let pendingCandidates = [];
 let callTimerInterval = null;
+let callRingingTimeout = null;
 let boundSocket = null;
 
 export const useCallStore = create((set, get) => ({
@@ -45,42 +46,51 @@ export const useCallStore = create((set, get) => ({
     if (boundSocket === socket) return;
     boundSocket = socket;
 
+    console.log("[Call] Attaching WebRTC call signaling listeners to socket:", socket.id);
+
     // Incoming call from a peer
     socket.on("call:incoming", (data) => {
+      console.log("[Call] Received call:incoming event:", data);
       get().handleIncomingCall(data);
     });
 
     // Remote peer accepted our call
     socket.on("call:accepted", (data) => {
+      console.log("[Call] Received call:accepted event:", data);
       get().handleCallAccepted(data);
     });
 
     // Remote peer rejected or cancelled
     socket.on("call:rejected", ({ reason }) => {
+      console.log("[Call] Received call:rejected event:", reason);
       toast(reason === "declined" ? "Call was declined" : "Call cancelled", { icon: "📵" });
       get().endCall(false);
     });
 
     // Call was ended by remote peer
     socket.on("call:ended", () => {
+      console.log("[Call] Received call:ended event");
       toast("Call ended", { icon: "📞" });
       get().endCall(false);
     });
 
     // Remote peer is on another call
     socket.on("call:busy", () => {
-      toast.error("User is on another call");
+      console.log("[Call] Received call:busy event");
+      toast.error("User is currently on another call");
       get().endCall(false);
     });
 
     // Target user is offline
     socket.on("call:user-offline", ({ message }) => {
+      console.log("[Call] Received call:user-offline event:", message);
       toast.error(message || "User is currently offline");
       get().endCall(false);
     });
 
     // WebRTC P2P signaling message (offer, answer, candidate)
     socket.on("webrtc:signal", async ({ senderId, signalData }) => {
+      console.log("[Call] Received webrtc:signal event from:", senderId, signalData?.type);
       await get().handleWebRTCSignal(senderId, signalData);
     });
   },
@@ -88,6 +98,7 @@ export const useCallStore = create((set, get) => ({
   cleanupSocketListeners: (socket) => {
     const s = socket || boundSocket;
     if (s) {
+      console.log("[Call] Detaching WebRTC call signaling listeners");
       s.off("call:incoming");
       s.off("call:accepted");
       s.off("call:rejected");
@@ -116,26 +127,43 @@ export const useCallStore = create((set, get) => ({
     }
 
     if (!socket || !socket.connected) {
-      toast.error("Real-time network connection is unavailable. Please wait a moment.");
+      toast.error("Real-time network connection is unavailable. Please refresh the page.");
       return;
     }
 
+    const partnerId = String(partner._id);
+    console.log(`[Call] Initiating outgoing ${type} call to:`, partner.fullName, partnerId);
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-          sampleRate: 48000,
-        },
-        video: type === "video" ? {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 30 },
-          facingMode: "user",
-        } : false,
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: type === "video" ? {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 30 },
+            facingMode: "user",
+          } : false,
+        });
+      } catch (mediaErr) {
+        // Graceful fallback to voice if camera is busy or not found
+        if (type === "video" && (mediaErr.name === "NotFoundError" || mediaErr.name === "NotReadableError")) {
+          console.warn("[Call] Camera not accessible, falling back to voice only");
+          toast("Camera not accessible. Starting voice call instead.", { icon: "🎙️" });
+          type = "audio";
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false,
+          });
+        } else {
+          throw mediaErr;
+        }
+      }
 
       set({
         callState: "outgoing",
@@ -151,22 +179,31 @@ export const useCallStore = create((set, get) => ({
 
       playOutgoingRingtone();
 
+      // 45s ringing timeout if no answer
+      if (callRingingTimeout) clearTimeout(callRingingTimeout);
+      callRingingTimeout = setTimeout(() => {
+        if (get().callState === "outgoing") {
+          toast("No answer", { icon: "⏳" });
+          get().endCall(true);
+        }
+      }, 45000);
+
       socket.emit("call:initiate", {
-        receiverId: partner._id,
+        receiverId: partnerId,
         callType: type,
         caller: {
-          _id: authUser._id,
+          _id: String(authUser._id),
           fullName: authUser.fullName,
           profilePic: authUser.profilePic,
         },
       });
     } catch (err) {
-      console.error("Error accessing media devices for call:", err);
+      console.error("[Call] Error accessing media devices:", err);
       let errorMsg = "Unable to access microphone/camera";
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        errorMsg = "Microphone/Camera permission denied. Please allow permissions in your browser settings.";
+        errorMsg = "Microphone/Camera permission denied. Please allow permissions in browser settings.";
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        errorMsg = "No microphone or camera device found on this system.";
+        errorMsg = "No microphone device found on this computer.";
       }
       toast.error(errorMsg);
       get().resetCallState();
@@ -178,11 +215,14 @@ export const useCallStore = create((set, get) => ({
 
     // If currently busy in a call, reject with busy signal
     if (get().callState !== "idle") {
+      console.log("[Call] Already busy, rejecting incoming call from:", data?.callerId);
       if (socket && socket.connected && data?.callerId) {
-        socket.emit("call:busy", { callerId: data.callerId });
+        socket.emit("call:busy", { callerId: String(data.callerId) });
       }
       return;
     }
+
+    console.log("[Call] Presenting incoming call UI from:", data?.caller?.fullName);
 
     set({
       callState: "incoming",
@@ -197,32 +237,57 @@ export const useCallStore = create((set, get) => ({
     });
 
     playIncomingRingtone();
+
+    // 45s auto timeout on incoming call
+    if (callRingingTimeout) clearTimeout(callRingingTimeout);
+    callRingingTimeout = setTimeout(() => {
+      if (get().callState === "incoming") {
+        get().rejectCall();
+      }
+    }, 45000);
   },
 
   acceptCall: async () => {
+    if (callRingingTimeout) clearTimeout(callRingingTimeout);
     stopIncomingRingtone();
-    const { callType, callPartner } = get();
+
+    let { callType, callPartner } = get();
     const { socket, authUser } = useAuthStore.getState();
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-          sampleRate: 48000,
-        },
-        video: callType === "video" ? {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 30 },
-          facingMode: "user",
-        } : false,
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: callType === "video" ? {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 30 },
+            facingMode: "user",
+          } : false,
+        });
+      } catch (mediaErr) {
+        // Fallback to voice if camera cannot be opened
+        if (callType === "video" && (mediaErr.name === "NotFoundError" || mediaErr.name === "NotReadableError")) {
+          console.warn("[Call] Receiver camera not accessible, accepting as voice only");
+          toast("Camera not accessible. Connecting with audio only.", { icon: "🎙️" });
+          callType = "audio";
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false,
+          });
+        } else {
+          throw mediaErr;
+        }
+      }
 
       set({
         callState: "connected",
+        callType,
         localStream: stream,
       });
 
@@ -230,23 +295,25 @@ export const useCallStore = create((set, get) => ({
       get().startCallTimer();
 
       if (socket && socket.connected && callPartner?._id) {
+        console.log("[Call] Emitting call:accept to caller:", callPartner._id);
         socket.emit("call:accept", {
-          callerId: callPartner._id,
+          callerId: String(callPartner._id),
           receiver: {
-            _id: authUser._id,
+            _id: String(authUser._id),
             fullName: authUser.fullName,
             profilePic: authUser.profilePic,
           },
         });
       }
     } catch (err) {
-      console.error("Error accessing media devices on accept:", err);
+      console.error("[Call] Error accessing media devices on accept:", err);
       toast.error("Unable to access microphone/camera to accept the call.");
       get().rejectCall();
     }
   },
 
   handleCallAccepted: async (data) => {
+    if (callRingingTimeout) clearTimeout(callRingingTimeout);
     stopOutgoingRingtone();
     stopIncomingRingtone();
     playCallConnectedSound();
@@ -254,14 +321,15 @@ export const useCallStore = create((set, get) => ({
     set({ callState: "connected" });
     get().startCallTimer();
 
-    const { callPartner, localStream, callType } = get();
+    const { callPartner, callType } = get();
     const { socket } = useAuthStore.getState();
 
     if (!callPartner || !socket) return;
+    const partnerId = String(callPartner._id);
 
     try {
-      // Caller initiates the WebRTC offer
-      const pc = get().createPeerConnection(callPartner._id);
+      console.log("[Call] Initializing WebRTC Peer Connection and creating offer for:", partnerId);
+      const pc = get().createPeerConnection(partnerId);
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
@@ -269,22 +337,24 @@ export const useCallStore = create((set, get) => ({
       });
 
       await pc.setLocalDescription(offer);
+      console.log("[Call] Local SDP offer set successfully. Dispatching to partner...");
 
       socket.emit("webrtc:signal", {
-        targetUserId: callPartner._id,
+        targetUserId: partnerId,
         signalData: {
           type: "offer",
-          sdp: pc.localDescription,
+          sdp: pc.localDescription.sdp,
         },
       });
     } catch (err) {
-      console.error("Error creating WebRTC offer:", err);
+      console.error("[Call] Error creating WebRTC offer:", err);
       toast.error("Failed to establish peer media connection");
       get().endCall(true);
     }
   },
 
   rejectCall: () => {
+    if (callRingingTimeout) clearTimeout(callRingingTimeout);
     const { callPartner, callState } = get();
     const { socket } = useAuthStore.getState();
 
@@ -294,7 +364,7 @@ export const useCallStore = create((set, get) => ({
 
     if (socket && socket.connected && callPartner?._id) {
       socket.emit("call:reject", {
-        targetUserId: callPartner._id,
+        targetUserId: String(callPartner._id),
         reason: callState === "incoming" ? "declined" : "cancelled",
       });
     }
@@ -303,6 +373,7 @@ export const useCallStore = create((set, get) => ({
   },
 
   endCall: (notifyRemote = true) => {
+    if (callRingingTimeout) clearTimeout(callRingingTimeout);
     const { callPartner } = get();
     const { socket } = useAuthStore.getState();
 
@@ -311,7 +382,7 @@ export const useCallStore = create((set, get) => ({
     playCallEndedSound();
 
     if (notifyRemote && socket && socket.connected && callPartner?._id) {
-      socket.emit("call:end", { targetUserId: callPartner._id });
+      socket.emit("call:end", { targetUserId: String(callPartner._id) });
     }
 
     get().resetCallState();
@@ -332,31 +403,15 @@ export const useCallStore = create((set, get) => ({
     const { localStream } = get();
     const { socket } = useAuthStore.getState();
 
+    console.log("[Call] Creating RTCPeerConnection for target:", targetUserId);
     const pc = new RTCPeerConnection(ICE_SERVERS);
     peerConnection = pc;
     pendingCandidates = [];
 
-    // Add local audio and video tracks to the peer connection with bitrate tuning
+    // Add local tracks to the connection
     if (localStream) {
       localStream.getTracks().forEach((track) => {
-        const sender = pc.addTrack(track, localStream);
-        try {
-          if (track.kind === "video" && sender) {
-            const params = sender.getParameters();
-            if (params.encodings && params.encodings.length > 0) {
-              params.encodings[0].maxBitrate = 1500000; // 1.5 Mbps target
-              params.encodings[0].maxFramerate = 30;
-              params.degradationPreference = "maintain-framerate";
-              sender.setParameters(params).catch(() => {});
-            }
-          } else if (track.kind === "audio" && sender) {
-            const params = sender.getParameters();
-            if (params.encodings && params.encodings.length > 0) {
-              params.encodings[0].maxBitrate = 64000; // 64 kbps Opus target
-              sender.setParameters(params).catch(() => {});
-            }
-          }
-        } catch (e) {}
+        pc.addTrack(track, localStream);
       });
     }
 
@@ -364,10 +419,10 @@ export const useCallStore = create((set, get) => ({
     pc.onicecandidate = (event) => {
       if (event.candidate && socket && socket.connected) {
         socket.emit("webrtc:signal", {
-          targetUserId,
+          targetUserId: String(targetUserId),
           signalData: {
             type: "candidate",
-            candidate: event.candidate,
+            candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate,
           },
         });
       }
@@ -375,16 +430,20 @@ export const useCallStore = create((set, get) => ({
 
     // Remote Track received -> display in UI
     pc.ontrack = (event) => {
-      const [remoteMediaStream] = event.streams;
-      if (remoteMediaStream) {
-        set({ remoteStream: remoteMediaStream });
+      console.log("[Call] Remote track received:", event.track.kind);
+      let stream = event.streams && event.streams[0];
+      if (!stream) {
+        stream = get().remoteStream || new MediaStream();
+        stream.addTrack(event.track);
       }
+      set({ remoteStream: stream });
     };
 
     // Connection state monitor
     pc.onconnectionstatechange = () => {
+      console.log("[Call] WebRTC connection state changed:", pc.connectionState);
       if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
-        console.warn("WebRTC connection state:", pc.connectionState);
+        console.warn("[Call] WebRTC connection dropped or failed");
       }
     };
 
@@ -398,29 +457,36 @@ export const useCallStore = create((set, get) => ({
     try {
       // 1. RECEIVER receives OFFER from caller
       if (signalData.type === "offer") {
+        console.log("[Call] Receiver handling SDP offer from caller:", senderId);
         const pc = get().createPeerConnection(senderId);
 
-        await pc.setRemoteDescription(new RTCSessionDescription(signalData.sdp));
+        const sdpString = typeof signalData.sdp === "string" ? signalData.sdp : signalData.sdp?.sdp;
+        await pc.setRemoteDescription(new RTCSessionDescription({
+          type: "offer",
+          sdp: sdpString,
+        }));
+        console.log("[Call] Remote description set for offer successfully");
 
-        // Drain any pending ICE candidates that arrived before the remote description was set
+        // Drain any pending ICE candidates
         while (pendingCandidates.length > 0) {
           const cand = pendingCandidates.shift();
           try {
             await pc.addIceCandidate(new RTCIceCandidate(cand));
           } catch (e) {
-            console.warn("Error adding queued ICE candidate:", e);
+            console.warn("[Call] Error adding queued ICE candidate:", e);
           }
         }
 
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        console.log("[Call] Local SDP answer set, sending to caller:", senderId);
 
         if (socket && socket.connected) {
           socket.emit("webrtc:signal", {
-            targetUserId: senderId,
+            targetUserId: String(senderId),
             signalData: {
               type: "answer",
-              sdp: pc.localDescription,
+              sdp: pc.localDescription.sdp,
             },
           });
         }
@@ -428,8 +494,14 @@ export const useCallStore = create((set, get) => ({
 
       // 2. CALLER receives ANSWER from receiver
       else if (signalData.type === "answer") {
+        console.log("[Call] Caller handling SDP answer from receiver:", senderId);
         if (peerConnection) {
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(signalData.sdp));
+          const sdpString = typeof signalData.sdp === "string" ? signalData.sdp : signalData.sdp?.sdp;
+          await peerConnection.setRemoteDescription(new RTCSessionDescription({
+            type: "answer",
+            sdp: sdpString,
+          }));
+          console.log("[Call] Remote description set for answer successfully");
 
           // Drain any pending ICE candidates
           while (pendingCandidates.length > 0) {
@@ -437,7 +509,7 @@ export const useCallStore = create((set, get) => ({
             try {
               await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
             } catch (e) {
-              console.warn("Error adding queued ICE candidate:", e);
+              console.warn("[Call] Error adding queued ICE candidate:", e);
             }
           }
         }
@@ -449,7 +521,7 @@ export const useCallStore = create((set, get) => ({
           try {
             await peerConnection.addIceCandidate(new RTCIceCandidate(signalData.candidate));
           } catch (err) {
-            console.warn("Error adding ICE candidate:", err);
+            console.warn("[Call] Error adding ICE candidate:", err);
           }
         } else {
           // Buffer candidate until setRemoteDescription completes
@@ -457,7 +529,7 @@ export const useCallStore = create((set, get) => ({
         }
       }
     } catch (err) {
-      console.error("Error processing WebRTC signal:", err);
+      console.error("[Call] Error processing WebRTC signal:", err);
     }
   },
 
@@ -529,7 +601,6 @@ export const useCallStore = create((set, get) => ({
         });
         const screenTrack = screenStream.getVideoTracks()[0];
 
-        // Browser built-in "Stop sharing" bar listener
         screenTrack.onended = () => {
           get().toggleScreenShare();
         };
@@ -543,7 +614,6 @@ export const useCallStore = create((set, get) => ({
           localStream.addTrack(screenTrack);
         }
 
-        // Live replace track on the peer connection sender
         if (peerConnection) {
           const sender = peerConnection.getSenders().find((s) => s.track && s.track.kind === "video");
           if (sender) {
@@ -582,6 +652,10 @@ export const useCallStore = create((set, get) => ({
   },
 
   resetCallState: () => {
+    if (callRingingTimeout) {
+      clearTimeout(callRingingTimeout);
+      callRingingTimeout = null;
+    }
     get().stopCallTimer();
     stopIncomingRingtone();
     stopOutgoingRingtone();
@@ -595,7 +669,7 @@ export const useCallStore = create((set, get) => ({
     }
     pendingCandidates = [];
 
-    // Stop all local tracks (turns off camera indicator light & mic)
+    // Stop all local tracks (turns off hardware indicator light & mic)
     const { localStream } = get();
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());

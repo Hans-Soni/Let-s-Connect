@@ -126,7 +126,6 @@ io.on("connection", (socket) => {
       }
 
       if (targetSocketId) {
-        userActiveCallMap[socket.userId.toString()] = targetUserId;
         io.to(targetSocketId).emit("call:incoming", {
           callerId: socket.userId.toString(),
           caller: caller || {

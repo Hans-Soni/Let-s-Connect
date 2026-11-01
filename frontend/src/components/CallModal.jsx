@@ -49,16 +49,18 @@ export default function CallModal() {
 
   // Attach localStream to local video preview
   useEffect(() => {
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = localStream || null;
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => {});
     }
-  }, [localStream, callState]);
+  }, [localStream, callState, isCameraOff, isScreenSharing]);
 
   // Attach remoteStream cleanly without duplicate audio playback
   useEffect(() => {
     if (callType === "video") {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream || null;
+      if (remoteVideoRef.current && remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
       }
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = null;
@@ -67,8 +69,9 @@ export default function CallModal() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = null;
       }
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = remoteStream || null;
+      if (remoteAudioRef.current && remoteStream) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(() => {});
       }
     }
   }, [remoteStream, callState, callType]);
@@ -264,16 +267,16 @@ export default function CallModal() {
       <div className="relative flex-1 size-full flex items-center justify-center bg-neutral-950 overflow-hidden">
         {callType === "video" ? (
           <>
-            {/* Remote Video Stream (Main Screen) */}
-            {remoteStream ? (
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="size-full object-cover"
-              />
-            ) : (
-              // Fallback / Remote Avatar when remote video hasn't attached yet
+            {/* Remote Video Stream (Main Screen) - Always rendered to ensure immediate ref attachment */}
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className={`size-full object-cover ${remoteStream ? "block" : "hidden"}`}
+            />
+
+            {/* Fallback / Remote Avatar when remote video hasn't attached yet */}
+            {!remoteStream && (
               <div className="flex flex-col items-center justify-center gap-4 text-center p-6">
                 <div className="relative size-32 sm:size-40">
                   <span className="absolute -inset-2 rounded-full bg-primary/20 animate-pulse" />
