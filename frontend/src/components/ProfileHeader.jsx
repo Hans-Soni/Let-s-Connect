@@ -19,14 +19,14 @@ function ProfileHeader() {
   if (!authUser) return null;
 
   return (
-    <div className="p-3.5 sm:p-5 border-b border-base-100/50 shrink-0">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="px-3 sm:px-4 py-3 border-b border-base-100/50 shrink-0 w-full overflow-hidden">
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* AVATAR */}
-          <div className="avatar online">
+          <div className="avatar online shrink-0">
             <button
               type="button"
-              className="size-14 rounded-full overflow-hidden relative group"
+              className="size-11 sm:size-12 rounded-full overflow-hidden relative group ring-2 ring-primary/20 hover:ring-primary/60 transition-all cursor-pointer"
               onClick={() => setViewingProfileUser(authUser)}
               aria-label="Open your profile settings"
               title="Profile settings"
@@ -37,7 +37,7 @@ function ProfileHeader() {
                 className="size-full object-cover"
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <span className="text-white text-xs">Settings</span>
+                <span className="text-white text-[10px] font-semibold">Edit</span>
               </div>
             </button>
           </div>
@@ -45,33 +45,36 @@ function ProfileHeader() {
           {/* USERNAME & DESIGNATION / ONLINE TEXT */}
           <button
             type="button"
-            className="text-left min-w-0"
+            className="text-left min-w-0 flex-1 truncate cursor-pointer hover:opacity-85 transition-opacity"
             onClick={() => setViewingProfileUser(authUser)}
             title="Open your profile settings"
           >
-            <h3 className="text-base-content font-medium text-base max-w-[180px] truncate">
+            <h3 className="text-base-content font-semibold text-sm truncate">
               {authUser.fullName}
             </h3>
 
-            <p className="text-base-content/60 text-xs truncate max-w-[180px]">
+            <p className="text-base-content/60 text-xs truncate">
               {authUser.designation || "Online"}
             </p>
           </button>
         </div>
 
-        {/* BUTTONS */}
-        <div className="flex gap-2.5 sm:gap-3 items-center">
+        {/* BUTTONS BAR - shrink-0 ensures buttons NEVER get pushed out or hidden */}
+        <div className="flex gap-1 items-center shrink-0">
           {/* THEME TOGGLE BTN */}
           <button
+            type="button"
             className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             title="Toggle theme"
+            aria-label="Toggle theme"
           >
-            {theme === "dark" ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </button>
 
           {/* SOUND TOGGLE BTN */}
           <button
+            type="button"
             className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
             onClick={() => {
               mouseClickSound.currentTime = 0;
@@ -79,16 +82,18 @@ function ProfileHeader() {
               toggleSound();
             }}
             title={isSoundEnabled ? "Mute sounds" : "Enable sounds"}
+            aria-label={isSoundEnabled ? "Mute sounds" : "Enable sounds"}
           >
             {isSoundEnabled ? (
-              <Volume2Icon className="size-4.5" />
+              <Volume2Icon className="size-4" />
             ) : (
-              <VolumeOffIcon className="size-4.5" />
+              <VolumeOffIcon className="size-4" />
             )}
           </button>
 
           {/* NOTIFICATION PERMISSION BTN */}
           <button
+            type="button"
             className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
             onClick={requestNotificationPermission}
             title={
@@ -96,21 +101,24 @@ function ProfileHeader() {
                 ? "Device notifications enabled"
                 : "Enable device notifications"
             }
+            aria-label="Toggle notifications"
           >
             {notificationPermission === "granted" ? (
-              <BellIcon className="size-4.5 text-primary" />
+              <BellIcon className="size-4 text-primary" />
             ) : (
-              <BellOffIcon className="size-4.5 opacity-60" />
+              <BellOffIcon className="size-4 opacity-60" />
             )}
           </button>
 
-          {/* LOGOUT BTN */}
+          {/* LOGOUT / SIGNOUT BTN - Clearly styled and always visible */}
           <button
-            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-error transition-colors"
+            type="button"
+            className="btn btn-ghost btn-circle btn-sm text-error/80 hover:text-error hover:bg-error/10 transition-colors shrink-0"
             onClick={logout}
-            title="Log out"
+            title="Sign out"
+            aria-label="Sign out"
           >
-            <LogOutIcon className="size-4.5" />
+            <LogOutIcon className="size-4" />
           </button>
         </div>
       </div>

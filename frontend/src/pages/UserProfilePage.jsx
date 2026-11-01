@@ -27,6 +27,7 @@ import {
   FileText,
   KeyRound,
   CheckCircle2,
+  LogOut,
 } from "lucide-react";
 import TermsContent from "../components/TermsContent";
 import { CURRENT_TERMS_VERSION } from "../lib/terms";
@@ -51,7 +52,7 @@ function UserProfilePage({ profileUser, onClose }) {
     setViewingProfileUser,
   } = useChatStore();
 
-  const { onlineUsers, authUser, updateProfile, getConsentRecord, changePassword } = useAuthStore();
+  const { onlineUsers, authUser, updateProfile, getConsentRecord, changePassword, logout } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
   const [user, setUser] = useState(() => {
@@ -341,14 +342,28 @@ function UserProfilePage({ profileUser, onClose }) {
           {isMe ? "Profile Settings" : "User Profile"}
         </span>
 
-        <button
-          type="button"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
-          title="Toggle theme"
-        >
-          {theme === "dark" ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
+            title="Toggle theme"
+          >
+            {theme === "dark" ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
+          </button>
+
+          {isMe && (
+            <button
+              type="button"
+              onClick={logout}
+              className="btn btn-ghost btn-sm gap-1.5 text-error hover:bg-error/10 rounded-xl"
+              title="Sign out"
+            >
+              <LogOut className="size-4" />
+              <span className="hidden xs:inline text-xs font-semibold">Sign Out</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* MAIN SCROLLABLE CONTENT */}
@@ -624,6 +639,17 @@ function UserProfilePage({ profileUser, onClose }) {
                     </form>
                   )}
                 </div>
+              </div>
+
+              <div className="border-t border-base-content/10 pt-4">
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="btn btn-outline btn-error w-full gap-2 rounded-xl font-semibold shadow-sm hover:shadow-error/20"
+                >
+                  <LogOut className="size-4" />
+                  Sign out of Let's Connect
+                </button>
               </div>
             </div>
           )}
