@@ -10,7 +10,20 @@ import {
 } from "../lib/callSounds";
 import { useAuthStore } from "./useAuthStore";
 
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+  ],
+};
+
+let peerConnection = null;
+let pendingCandidates = [];
 let callTimerInterval = null;
+let boundSocket = null;
 
 export const useCallStore = create((set, get) => ({
   callState: "idle", // 'idle' | 'outgoing' | 'incoming' | 'connected'
@@ -24,6 +37,72 @@ export const useCallStore = create((set, get) => ({
   callDuration: 0,
   isFullscreen: false,
 
+  // =========================================================================
+  // SOCKET.IO SIGNALING LISTENERS REGISTRATION
+  // =========================================================================
+  initSocketListeners: (socket) => {
+    if (!socket) return;
+    if (boundSocket === socket) return;
+    boundSocket = socket;
+
+    // Incoming call from a peer
+    socket.on("call:incoming", (data) => {
+      get().handleIncomingCall(data);
+    });
+
+    // Remote peer accepted our call
+    socket.on("call:accepted", (data) => {
+      get().handleCallAccepted(data);
+    });
+
+    // Remote peer rejected or cancelled
+    socket.on("call:rejected", ({ reason }) => {
+      toast(reason === "declined" ? "Call was declined" : "Call cancelled", { icon: "📵" });
+      get().endCall(false);
+    });
+
+    // Call was ended by remote peer
+    socket.on("call:ended", () => {
+      toast("Call ended", { icon: "📞" });
+      get().endCall(false);
+    });
+
+    // Remote peer is on another call
+    socket.on("call:busy", () => {
+      toast.error("User is on another call");
+      get().endCall(false);
+    });
+
+    // Target user is offline
+    socket.on("call:user-offline", ({ message }) => {
+      toast.error(message || "User is currently offline");
+      get().endCall(false);
+    });
+
+    // WebRTC P2P signaling message (offer, answer, candidate)
+    socket.on("webrtc:signal", async ({ senderId, signalData }) => {
+      await get().handleWebRTCSignal(senderId, signalData);
+    });
+  },
+
+  cleanupSocketListeners: (socket) => {
+    const s = socket || boundSocket;
+    if (s) {
+      s.off("call:incoming");
+      s.off("call:accepted");
+      s.off("call:rejected");
+      s.off("call:ended");
+      s.off("call:busy");
+      s.off("call:user-offline");
+      s.off("webrtc:signal");
+    }
+    boundSocket = null;
+  },
+
+  // =========================================================================
+  // CALL LIFECYCLE HANDLERS
+  // =========================================================================
+
   startOutgoingCall: async (partner, type = "audio") => {
     if (!partner || !partner._id) {
       toast.error("Please select a user to call");
@@ -36,8 +115,12 @@ export const useCallStore = create((set, get) => ({
       return;
     }
 
+    if (!socket || !socket.connected) {
+      toast.error("Real-time network connection is unavailable. Please wait a moment.");
+      return;
+    }
+
     try {
-      // Request microphone and camera (if video call)
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -61,23 +144,20 @@ export const useCallStore = create((set, get) => ({
 
       playOutgoingRingtone();
 
-      // If socket is available, notify the receiver
-      if (socket && socket.connected) {
-        socket.emit("call:initiate", {
-          receiverId: partner._id,
-          callType: type,
-          caller: {
-            _id: authUser._id,
-            fullName: authUser.fullName,
-            profilePic: authUser.profilePic,
-          },
-        });
-      }
+      socket.emit("call:initiate", {
+        receiverId: partner._id,
+        callType: type,
+        caller: {
+          _id: authUser._id,
+          fullName: authUser.fullName,
+          profilePic: authUser.profilePic,
+        },
+      });
     } catch (err) {
       console.error("Error accessing media devices for call:", err);
       let errorMsg = "Unable to access microphone/camera";
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        errorMsg = "Microphone/Camera permission was denied. Please allow permissions in your browser.";
+        errorMsg = "Microphone/Camera permission denied. Please allow permissions in your browser settings.";
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
         errorMsg = "No microphone or camera device found on this system.";
       }
@@ -87,12 +167,12 @@ export const useCallStore = create((set, get) => ({
   },
 
   handleIncomingCall: (data) => {
-    // Only accept incoming if currently idle
+    const { socket } = useAuthStore.getState();
+
+    // If currently busy in a call, reject with busy signal
     if (get().callState !== "idle") {
-      // If already on a call, emit busy to the caller
-      const { socket } = useAuthStore.getState();
-      if (socket && socket.connected && data?.caller?._id) {
-        socket.emit("call:busy", { callerId: data.caller._id });
+      if (socket && socket.connected && data?.callerId) {
+        socket.emit("call:busy", { callerId: data.callerId });
       }
       return;
     }
@@ -152,6 +232,44 @@ export const useCallStore = create((set, get) => ({
     }
   },
 
+  handleCallAccepted: async (data) => {
+    stopOutgoingRingtone();
+    stopIncomingRingtone();
+    playCallConnectedSound();
+
+    set({ callState: "connected" });
+    get().startCallTimer();
+
+    const { callPartner, localStream, callType } = get();
+    const { socket } = useAuthStore.getState();
+
+    if (!callPartner || !socket) return;
+
+    try {
+      // Caller initiates the WebRTC offer
+      const pc = get().createPeerConnection(callPartner._id);
+
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: callType === "video",
+      });
+
+      await pc.setLocalDescription(offer);
+
+      socket.emit("webrtc:signal", {
+        targetUserId: callPartner._id,
+        signalData: {
+          type: "offer",
+          sdp: pc.localDescription,
+        },
+      });
+    } catch (err) {
+      console.error("Error creating WebRTC offer:", err);
+      toast.error("Failed to establish peer media connection");
+      get().endCall(true);
+    }
+  },
+
   rejectCall: () => {
     const { callPartner, callState } = get();
     const { socket } = useAuthStore.getState();
@@ -185,17 +303,136 @@ export const useCallStore = create((set, get) => ({
     get().resetCallState();
   },
 
-  setConnected: () => {
-    stopOutgoingRingtone();
-    stopIncomingRingtone();
-    playCallConnectedSound();
-    set({ callState: "connected" });
-    get().startCallTimer();
+  // =========================================================================
+  // WEBRTC PEER CONNECTION & SIGNALING LOGIC
+  // =========================================================================
+
+  createPeerConnection: (targetUserId) => {
+    if (peerConnection) {
+      try {
+        peerConnection.close();
+      } catch (e) {}
+      peerConnection = null;
+    }
+
+    const { localStream } = get();
+    const { socket } = useAuthStore.getState();
+
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    peerConnection = pc;
+    pendingCandidates = [];
+
+    // Add local audio and video tracks to the peer connection
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        pc.addTrack(track, localStream);
+      });
+    }
+
+    // ICE Candidate generation -> send to peer via Socket.io
+    pc.onicecandidate = (event) => {
+      if (event.candidate && socket && socket.connected) {
+        socket.emit("webrtc:signal", {
+          targetUserId,
+          signalData: {
+            type: "candidate",
+            candidate: event.candidate,
+          },
+        });
+      }
+    };
+
+    // Remote Track received -> display in UI
+    pc.ontrack = (event) => {
+      const [remoteMediaStream] = event.streams;
+      if (remoteMediaStream) {
+        set({ remoteStream: remoteMediaStream });
+      }
+    };
+
+    // Connection state monitor
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+        console.warn("WebRTC connection state:", pc.connectionState);
+      }
+    };
+
+    return pc;
   },
 
-  setRemoteStream: (stream) => {
-    set({ remoteStream: stream });
+  handleWebRTCSignal: async (senderId, signalData) => {
+    const { socket } = useAuthStore.getState();
+    if (!signalData) return;
+
+    try {
+      // 1. RECEIVER receives OFFER from caller
+      if (signalData.type === "offer") {
+        const pc = get().createPeerConnection(senderId);
+
+        await pc.setRemoteDescription(new RTCSessionDescription(signalData.sdp));
+
+        // Drain any pending ICE candidates that arrived before the remote description was set
+        while (pendingCandidates.length > 0) {
+          const cand = pendingCandidates.shift();
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(cand));
+          } catch (e) {
+            console.warn("Error adding queued ICE candidate:", e);
+          }
+        }
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        if (socket && socket.connected) {
+          socket.emit("webrtc:signal", {
+            targetUserId: senderId,
+            signalData: {
+              type: "answer",
+              sdp: pc.localDescription,
+            },
+          });
+        }
+      }
+
+      // 2. CALLER receives ANSWER from receiver
+      else if (signalData.type === "answer") {
+        if (peerConnection) {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(signalData.sdp));
+
+          // Drain any pending ICE candidates
+          while (pendingCandidates.length > 0) {
+            const cand = pendingCandidates.shift();
+            try {
+              await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (e) {
+              console.warn("Error adding queued ICE candidate:", e);
+            }
+          }
+        }
+      }
+
+      // 3. Either peer receives ICE candidate
+      else if (signalData.type === "candidate" && signalData.candidate) {
+        if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+          try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(signalData.candidate));
+          } catch (err) {
+            console.warn("Error adding ICE candidate:", err);
+          }
+        } else {
+          // Buffer candidate until setRemoteDescription completes
+          pendingCandidates.push(signalData.candidate);
+        }
+      }
+    } catch (err) {
+      console.error("Error processing WebRTC signal:", err);
+    }
   },
+
+  // =========================================================================
+  // HARDWARE & MEDIA TOGGLES
+  // =========================================================================
 
   toggleMic: () => {
     const { localStream, isMicMuted } = get();
@@ -223,7 +460,7 @@ export const useCallStore = create((set, get) => ({
     const { isScreenSharing, localStream } = get();
 
     if (isScreenSharing) {
-      // Revert to user camera
+      // Revert from screen share back to user camera
       try {
         const cameraStream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
@@ -237,6 +474,14 @@ export const useCallStore = create((set, get) => ({
             localStream.removeTrack(oldTrack);
           }
           localStream.addTrack(newVideoTrack);
+        }
+
+        // Live replace track on the peer connection sender without renegotiation
+        if (peerConnection) {
+          const sender = peerConnection.getSenders().find((s) => s.track && s.track.kind === "video");
+          if (sender) {
+            sender.replaceTrack(newVideoTrack).catch(console.error);
+          }
         }
 
         set({ isScreenSharing: false, isCameraOff: false });
@@ -253,7 +498,7 @@ export const useCallStore = create((set, get) => ({
         });
         const screenTrack = screenStream.getVideoTracks()[0];
 
-        // Listen for browser "Stop Sharing" floating button
+        // Browser built-in "Stop sharing" bar listener
         screenTrack.onended = () => {
           get().toggleScreenShare();
         };
@@ -265,6 +510,14 @@ export const useCallStore = create((set, get) => ({
             localStream.removeTrack(oldTrack);
           }
           localStream.addTrack(screenTrack);
+        }
+
+        // Live replace track on the peer connection sender
+        if (peerConnection) {
+          const sender = peerConnection.getSenders().find((s) => s.track && s.track.kind === "video");
+          if (sender) {
+            sender.replaceTrack(screenTrack).catch(console.error);
+          }
         }
 
         set({ isScreenSharing: true });
@@ -302,6 +555,16 @@ export const useCallStore = create((set, get) => ({
     stopIncomingRingtone();
     stopOutgoingRingtone();
 
+    // Close and nullify WebRTC Peer Connection
+    if (peerConnection) {
+      try {
+        peerConnection.close();
+      } catch (e) {}
+      peerConnection = null;
+    }
+    pendingCandidates = [];
+
+    // Stop all local tracks (turns off camera indicator light & mic)
     const { localStream } = get();
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
@@ -320,4 +583,3 @@ export const useCallStore = create((set, get) => ({
     });
   },
 }));
-

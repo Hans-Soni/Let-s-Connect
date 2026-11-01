@@ -48,6 +48,7 @@ export function getReceiverSocketId(userId) {
 
 // this is for storig online users
 const userSocketMap = {}; // {userId:socketId}
+const userActiveCallMap = {}; // {userId:partnerUserId}
 
 io.on("connection", (socket) => {
   console.log("A user connected", socket.user.fullName);
@@ -107,8 +108,130 @@ io.on("connection", (socket) => {
     }
   });
 
+  // =========================================================================
+  // WEBRTC CALL SIGNALING EVENTS
+  // =========================================================================
+
+  socket.on("call:initiate", ({ receiverId, callType, caller }) => {
+    try {
+      const targetSocketId = getReceiverSocketId(receiverId?.toString());
+      if (targetSocketId) {
+        userActiveCallMap[socket.userId.toString()] = receiverId.toString();
+        io.to(targetSocketId).emit("call:incoming", {
+          callerId: socket.userId.toString(),
+          caller: caller || {
+            _id: socket.user._id,
+            fullName: socket.user.fullName,
+            profilePic: socket.user.profilePic,
+          },
+          callType: callType || "audio",
+        });
+      } else {
+        socket.emit("call:user-offline", {
+          receiverId,
+          message: "User is currently offline",
+        });
+      }
+    } catch (err) {
+      console.error("Error in call:initiate socket event:", err);
+    }
+  });
+
+  socket.on("call:accept", ({ callerId, receiver }) => {
+    try {
+      const callerSocketId = getReceiverSocketId(callerId?.toString());
+      if (callerSocketId) {
+        userActiveCallMap[callerId.toString()] = socket.userId.toString();
+        userActiveCallMap[socket.userId.toString()] = callerId.toString();
+        io.to(callerSocketId).emit("call:accepted", {
+          receiverId: socket.userId.toString(),
+          receiver: receiver || {
+            _id: socket.user._id,
+            fullName: socket.user.fullName,
+            profilePic: socket.user.profilePic,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Error in call:accept socket event:", err);
+    }
+  });
+
+  socket.on("call:reject", ({ targetUserId, reason }) => {
+    try {
+      delete userActiveCallMap[socket.userId.toString()];
+      if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
+
+      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("call:rejected", {
+          by: socket.userId.toString(),
+          reason: reason || "declined",
+        });
+      }
+    } catch (err) {
+      console.error("Error in call:reject socket event:", err);
+    }
+  });
+
+  socket.on("call:end", ({ targetUserId }) => {
+    try {
+      delete userActiveCallMap[socket.userId.toString()];
+      if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
+
+      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("call:ended", {
+          by: socket.userId.toString(),
+        });
+      }
+    } catch (err) {
+      console.error("Error in call:end socket event:", err);
+    }
+  });
+
+  socket.on("call:busy", ({ callerId }) => {
+    try {
+      const callerSocketId = getReceiverSocketId(callerId?.toString());
+      if (callerSocketId) {
+        io.to(callerSocketId).emit("call:busy", {
+          by: socket.userId.toString(),
+        });
+      }
+    } catch (err) {
+      console.error("Error in call:busy socket event:", err);
+    }
+  });
+
+  socket.on("webrtc:signal", ({ targetUserId, signalData }) => {
+    try {
+      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("webrtc:signal", {
+          senderId: socket.userId.toString(),
+          signalData,
+        });
+      }
+    } catch (err) {
+      console.error("Error in webrtc:signal socket event:", err);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.user.fullName);
+
+    const partnerId = userActiveCallMap[userId];
+    if (partnerId) {
+      const partnerSocketId = getReceiverSocketId(partnerId);
+      if (partnerSocketId) {
+        io.to(partnerSocketId).emit("call:ended", {
+          by: userId,
+          reason: "disconnected",
+        });
+      }
+      delete userActiveCallMap[userId];
+      delete userActiveCallMap[partnerId];
+    }
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
+import { useCallStore } from "./useCallStore";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.MODE === "development" 
   ? "http://localhost:5002" 
@@ -154,10 +155,17 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+
+    // Initialize WebRTC calling listeners
+    useCallStore.getState().initSocketListeners(socket);
   },
 
   disconnectSocket: () => {
-    if (get().socket?.connected) get().socket.disconnect();
+    const { socket } = get();
+    if (socket) {
+      useCallStore.getState().cleanupSocketListeners(socket);
+      if (socket.connected) socket.disconnect();
+    }
     set({ socket: null, onlineUsers: [] });
   },
 }));
@@ -169,4 +177,3 @@ if (typeof window !== "undefined") {
     useAuthStore.getState().handleSessionExpired();
   });
 }
-
