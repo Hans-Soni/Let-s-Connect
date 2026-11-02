@@ -60,7 +60,7 @@ export const signup = async (req, res) => {
       try {
         await Consent.create({
           accepted: true,
-          termsVersion: "1.1",
+          termsVersion: "2.0",
           acceptedAt,
           ipAddress: clientIp,
           emailId: normalizedEmail,

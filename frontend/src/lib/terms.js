@@ -1,16 +1,142 @@
-export const CURRENT_TERMS_VERSION = "1.1";
+export const CURRENT_TERMS_VERSION = "2.0";
+
+export const TERMS_LAST_UPDATED = "November 2026";
 
 export const TERMS_SECTIONS = [
   {
-    title: "Data use and service providers",
-    text: "You authorize Let's Connect to collect, store, and process your account details, messages, and any images, audio, or video you share to provide the chat service. Service providers, including MongoDB, Cloudinary, Arcjet, and Upstash, may process data as needed for storage, media delivery, and service security.",
+    id: "overview",
+    title: "1. Overview & Service Scope",
+    badge: "Platform",
+    summary:
+      "Let's Connect is a real-time messaging, WebRTC telephony, and professional communication application created by Hans Soni.",
+    paragraphs: [
+      "Welcome to Let's Connect. By registering an account, accessing, or using our web and mobile applications, you enter into a legally binding agreement to comply with and be bound by these Terms and Conditions and our Privacy Policy.",
+      "If you do not agree to these terms, you must not access or use the application. These terms apply to all registered members, visitors, and users of the service.",
+    ],
   },
   {
-    title: "Chat retention",
-    text: "Chat text and attached media are scheduled for deletion after 24 hours. Cleanup depends on service availability, and provider logs, backups, or cached copies may have separate retention periods; exact deletion from every provider or backup cannot be guaranteed by this app.",
+    id: "account",
+    title: "2. Account Registration, Identity & Designation Privacy",
+    badge: "Identity",
+    summary:
+      "Your credentials are protected with one-way cryptographic hashing, and your designation is displayed to safeguard email privacy.",
+    paragraphs: [
+      "To access communication features, you must register with a valid email address, your full name, and a secure password. Passwords are salted and hashed using one-way bcrypt algorithms and cannot be retrieved in plaintext by administrators.",
+      "To protect your privacy across public chats, contact directories, and group interactions, Let's Connect displays your professional Designation (e.g., Software Engineer, Product Manager) rather than your private email address.",
+      "You retain full control over your account settings and may update your full name, professional designation, profile picture, or change your password at any time via your profile dashboard.",
+    ],
+    bullets: [
+      "You are responsible for maintaining the confidentiality of your login credentials.",
+      "Sessions automatically terminate after 15 minutes of inactivity to protect unauthorized access on shared devices.",
+      "Accounts must not be shared or transferred without explicit authorization.",
+    ],
   },
   {
-    title: "Account and security data",
-    text: "Account information is retained while your account is active and is not covered by the 24-hour chat-message cleanup. For the consent record, we store your signup IP address, email address, account ID, acceptance time, and terms version with your account. Security and operational providers may retain request or diagnostic data according to their own policies.",
+    id: "messaging",
+    title: "3. Encrypted Messaging & Multimedia Exchange",
+    badge: "Security",
+    summary:
+      "Chat messages are encrypted using authenticated AES-256-GCM algorithms tied to an automated rotating key-ring architecture.",
+    paragraphs: [
+      "All text communications transmitted across Let's Connect are encrypted at rest using AES-256-GCM authenticated ciphers. Decryption keys are managed via an automated bi-daily cryptographic key rotation schedule to maintain forward security.",
+      "Users may send voice notes, video messages, and image attachments up to 3 MB per asset. Multimedia transfers are conducted via secure HTTPS and temporarily stored in high-performance cloud media repositories (Cloudinary).",
+      "Message delivery receipts and read/seen acknowledgments are shared transparently with conversation participants in real time.",
+    ],
+  },
+  {
+    id: "webrtc",
+    title: "4. Peer-to-Peer Voice & Video Telephony (WebRTC)",
+    badge: "Calls",
+    summary:
+      "Voice and video calls run directly peer-to-peer; audio and video streams are NEVER recorded, monitored, or stored on our servers.",
+    paragraphs: [
+      "Let's Connect provides real-time voice and video calling powered by the WebRTC protocol with STUN/TURN NAT traversal infrastructure.",
+      "Voice and video streams travel directly between peer devices in encrypted real-time media channels (SRTP). Let's Connect does not inspect, tap, intercept, record, or store any call audio, video feeds, or screen shares.",
+      "Users possess full in-call controls to toggle microphones, flip cameras, share their screens, and terminate calls at their discretion. A busy-line lock prevents third-party interruption during active calls.",
+    ],
+  },
+  {
+    id: "retention",
+    title: "5. Ephemeral Retention & Automated 24-Hour Purging",
+    badge: "Privacy",
+    summary:
+      "All conversation text and shared media are ephemeral and automatically purged after 24 hours.",
+    paragraphs: [
+      "In order to preserve user privacy and maintain clean data hygiene, all chat messages, voice notes, video clips, and photo attachments are subject to a strict 24-hour ephemeral retention window.",
+      "Background automated maintenance workers systematically purge expired message documents and instruct cloud media repositories to permanently delete associated media files.",
+      "You may also manually delete your complete conversation history with any contact at any time, immediately removing records and media across participants.",
+    ],
+    bullets: [
+      "Cleanup runs continuously; minor latency in cloud provider propagation may occasionally occur.",
+      "Account profiles and security consent records are retained for account management and are exempt from message auto-deletion.",
+    ],
+  },
+  {
+    id: "consent-forensics",
+    title: "6. Regulatory Compliance, Device IP Logging & Consent Auditing",
+    badge: "Compliance",
+    summary:
+      "Under GDPR and global compliance standards, your verified device IP, email, and timestamp are securely recorded upon terms acceptance.",
+    paragraphs: [
+      "In compliance with international data privacy regulations (including GDPR Article 7 regarding proof of consent), when you create an account and accept these terms, Let's Connect immutably records your authentic device IP address, verified email address, account ID, accepted terms version, and exact UTC timestamp in a secure audit log.",
+      "This record serves as legal verification that terms and data processing authorizations were acknowledged prior to account creation.",
+      "For full transparency, you can inspect your recorded consent IP address, terms version, and timestamp at any time in Profile Settings under 'Account security & consent'.",
+    ],
+  },
+  {
+    id: "acceptable-use",
+    title: "7. Acceptable Use Policy & Community Standards",
+    badge: "Conduct",
+    summary:
+      "Users must communicate respectfully and refrain from malicious, abusive, or unauthorized behavior.",
+    paragraphs: [
+      "You agree to use Let's Connect exclusively for lawful, constructive personal and professional interactions. You strictly agree not to:",
+    ],
+    bullets: [
+      "Transmit unsolicited advertising, commercial spam, chain messages, or harassment.",
+      "Upload or share malicious scripts, viruses, worms, or trojans.",
+      "Attempt to reverse-engineer, decompile, or tamper with application protocols, encryption keys, or APIs.",
+      "Circumvent or attempt to bypass rate limiting, security firewalls, or bot defense mechanisms.",
+      "Impersonate another person, organization, or identity.",
+    ],
+  },
+  {
+    id: "infrastructure",
+    title: "8. Third-Party Infrastructure & Service Providers",
+    badge: "Partners",
+    summary:
+      "Trusted, industry-standard cloud providers power database, rate-limiting, and media services.",
+    paragraphs: [
+      "To deliver high-availability real-time communication, Let's Connect interfaces with vetted third-party service providers:",
+    ],
+    bullets: [
+      "MongoDB Atlas: Cloud database storage for user profiles, encrypted messages, and consent records.",
+      "Cloudinary: Cloud-based image, audio, and video processing and delivery.",
+      "Upstash Redis & Arcjet: Distributed sliding-window rate limiting, threat analysis, and bot protection.",
+      "Open Relay Project: STUN/TURN traversal servers for WebRTC peer-to-peer connection establishment.",
+      "Resend: Automated transactional notifications and welcome emails.",
+    ],
+  },
+  {
+    id: "safety-controls",
+    title: "9. User Safety, Blocking & Account Termination",
+    badge: "Safety",
+    summary:
+      "You have the power to block unwanted users and request account termination.",
+    paragraphs: [
+      "Let's Connect provides robust user-level safety controls. You may block any contact at any time. Blocked individuals cannot send you messages, initiate voice or video calls, or view your online presence or updated avatar.",
+      "We reserve the right to suspend or terminate accounts that violate our Acceptable Use Policy, engage in harassment, or pose a security threat to other members of the community.",
+    ],
+  },
+  {
+    id: "disclaimer",
+    title: "10. Service Availability, Disclaimer & Contact",
+    badge: "Legal",
+    summary:
+      "Provided on an as-is basis. Maintained by developer Hans Soni.",
+    paragraphs: [
+      "Let's Connect is provided on an 'as-is' and 'as-available' basis without warranties of any kind, whether express or implied. While we employ rigorous security and reliability safeguards, uninterrupted or error-free operation cannot be guaranteed.",
+      "If you have inquiries, feedback, or data privacy requests concerning these Terms and Conditions, please contact the developer via GitHub (Hans-Soni/Let-s-Connect) or official profile links.",
+    ],
   },
 ];
