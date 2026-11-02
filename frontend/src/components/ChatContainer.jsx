@@ -42,14 +42,16 @@ function ChatContainer() {
   }, [selectedUser, markMessagesAsSeen]);
 
   const scrollToBottom = (behavior = "auto") => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
-        behavior,
-      });
-    } else if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior });
-    }
+    requestAnimationFrame(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior,
+        });
+      } else if (messageEndRef.current) {
+        messageEndRef.current.scrollIntoView({ behavior });
+      }
+    });
   };
 
   useEffect(() => {
@@ -81,13 +83,20 @@ function ChatContainer() {
                 className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"}`}
               >
                 <div
-                  className={`chat-bubble relative max-w-[85%] sm:max-w-[75%] break-words whitespace-pre-wrap shadow-sm text-sm sm:text-base ${msg.senderId === authUser._id
+                  className={`chat-bubble relative max-w-[85%] sm:max-w-[75%] break-words whitespace-pre-wrap shadow-sm text-sm sm:text-base ${
+                    msg.senderId === authUser._id
                       ? "bg-primary text-primary-content"
                       : "bg-base-200 text-base-content"
-                    }`}
+                  }`}
                 >
                   {msg.image && (
-                    <img src={msg.image} alt="Shared" className="rounded-lg max-h-52 w-auto object-cover mb-1.5" />
+                    <img
+                      src={msg.image}
+                      alt="Shared"
+                      loading="lazy"
+                      decoding="async"
+                      className="rounded-lg max-h-52 w-auto object-cover mb-1.5"
+                    />
                   )}
                   {msg.video && (
                     <video
@@ -146,9 +155,9 @@ function ChatContainer() {
                     <p className="text-[10px] sm:text-xs opacity-75 whitespace-nowrap ml-auto">
                       {msg.createdAt
                         ? new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
                         : ""}
                     </p>
                   </div>

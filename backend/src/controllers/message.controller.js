@@ -34,19 +34,20 @@ const uploadMediaBuffer = (buffer, folder) =>
 export const getAllContacts = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const me = await User.findById(loggedInUserId).select("blockedUsers");
+    const me = await User.findById(loggedInUserId).select("blockedUsers").lean();
     const myBlockedList = (me?.blockedUsers || []).map((id) => id.toString());
 
     const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } })
       .select("-password")
       .collation({ locale: "en", strength: 2 })
-      .sort({ email: 1 });
+      .sort({ email: 1 })
+      .lean();
 
     const sanitizedUsers = filteredUsers.map((u) => {
-      const uObj = u.toObject();
       const hasBlockedMe = u.blockedUsers?.some(
         (bId) => bId.toString() === loggedInUserId.toString()
       );
+      const uObj = { ...u };
       if (hasBlockedMe) {
         uObj.profilePic = "";
         uObj.isBlockedByThem = true;
@@ -98,10 +99,12 @@ export const getMessagesByUserId = async (req, res) => {
         { senderId: userToChatId, receiverId: myId },
       ],
       createdAt: { $gte: retentionCutoff },
-    }).sort({ createdAt: 1 });
+    })
+      .sort({ createdAt: 1 })
+      .lean();
 
     const decryptedMessages = messages.map((msg) => {
-      const msgObj = msg.toObject();
+      const msgObj = { ...msg };
       delete msgObj.imagePublicId;
       delete msgObj.audioPublicId;
       delete msgObj.videoPublicId;
@@ -317,7 +320,9 @@ export const getChatPartners = async (req, res) => {
     const messages = await Message.find({
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
       createdAt: { $gte: retentionCutoff },
-    });
+    })
+      .select("senderId receiverId isSeen")
+      .lean();
 
     const chatPartnerIds = [
       ...new Set(
@@ -336,19 +341,20 @@ export const getChatPartners = async (req, res) => {
       return counts;
     }, new Map());
 
-    const me = await User.findById(loggedInUserId).select("blockedUsers");
+    const me = await User.findById(loggedInUserId).select("blockedUsers").lean();
     const myBlockedList = (me?.blockedUsers || []).map((id) => id.toString());
 
     const chatPartners = await User.find({ _id: { $in: chatPartnerIds } })
       .select("-password")
       .collation({ locale: "en", strength: 2 })
-      .sort({ email: 1 });
+      .sort({ email: 1 })
+      .lean();
 
     const sanitizedChatPartners = chatPartners.map((u) => {
-      const uObj = u.toObject();
       const hasBlockedMe = u.blockedUsers?.some(
         (bId) => bId.toString() === loggedInUserId.toString()
       );
+      const uObj = { ...u };
       if (hasBlockedMe) {
         uObj.profilePic = "";
         uObj.isBlockedByThem = true;
@@ -374,7 +380,7 @@ export const getUserProfile = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    const user = await User.findById(id).select("-password");
+    const user = await User.findById(id).select("-password").lean();
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -385,14 +391,14 @@ export const getUserProfile = async (req, res) => {
       (bId) => bId.toString() === myId.toString()
     );
 
-    const userObj = user.toObject();
+    const userObj = { ...user };
     if (isMeBlockedByTarget) {
       userObj.profilePic = ""; // Hide DP from blocked user
       userObj.isBlockedByThem = true;
     }
 
     // Also check if I have blocked the target user
-    const me = await User.findById(myId).select("blockedUsers");
+    const me = await User.findById(myId).select("blockedUsers").lean();
     const isTargetBlockedByMe = me?.blockedUsers?.some(
       (bId) => bId.toString() === id.toString()
     );
@@ -477,7 +483,7 @@ export const unblockUser = async (req, res) => {
 export const getBlockedUsers = async (req, res) => {
   try {
     const myId = req.user._id;
-    const user = await User.findById(myId).select("blockedUsers");
+    const user = await User.findById(myId).select("blockedUsers").lean();
     res.status(200).json(user?.blockedUsers || []);
   } catch (error) {
     console.error("Error in getBlockedUsers controller: ", error.message);

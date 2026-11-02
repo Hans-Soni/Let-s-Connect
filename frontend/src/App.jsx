@@ -1,17 +1,18 @@
 import { Navigate, Route, Routes, useLocation } from "react-router";
-import ChatPage from "./pages/ChatPage";
-import LoginPage from "./pages/LoginPage";
-import SignUpPage from "./pages/SignUpPage";
-import UserProfilePage from "./pages/UserProfilePage";
-import WelcomePage from "./pages/WelcomePage";
+import { useEffect, lazy, Suspense } from "react";
 import { useAuthStore } from "./store/useAuthStore";
-import { useEffect } from "react";
 import PageLoader from "./components/PageLoader";
 import GlobalThemeToggle from "./components/GlobalThemeToggle";
 import { useThemeStore } from "./store/useThemeStore";
 import CallModal from "./components/CallModal";
-
 import toast, { Toaster } from "react-hot-toast";
+
+// Code-split pages for smaller initial bundle and faster load performance
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignUpPage = lazy(() => import("./pages/SignUpPage"));
+const UserProfilePage = lazy(() => import("./pages/UserProfilePage"));
+const WelcomePage = lazy(() => import("./pages/WelcomePage"));
 
 function App() {
   const { checkAuth, isCheckingAuth, authUser, logout } = useAuthStore();
@@ -81,14 +82,16 @@ function App() {
         </div>
       )}
 
-      <Routes>
-        <Route path="/" element={authUser ? <ChatPage /> : <WelcomePage />} />
-        <Route path="/welcome" element={<WelcomePage />} />
-        <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
-        <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
-        <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
-        <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={authUser ? <ChatPage /> : <WelcomePage />} />
+          <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
+          <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
+          <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
+          <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
+        </Routes>
+      </Suspense>
 
       <CallModal />
       <Toaster position="top-right" containerClassName="z-[99999]" toastOptions={{ duration: 4000 }} />
