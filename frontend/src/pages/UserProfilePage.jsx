@@ -563,12 +563,19 @@ function UserProfilePage({ profileUser, onClose }) {
                   {consentRecord?.accepted && (
                     <div className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm text-base-content">
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                      <p>
-                        You accepted terms version <strong>{consentRecord.termsVersion}</strong>
-                        {consentRecord.acceptedAt && (
-                          <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
-                        )}.
-                      </p>
+                      <div>
+                        <p>
+                          You accepted terms version <strong>{consentRecord.termsVersion}</strong>
+                          {consentRecord.acceptedAt && (
+                            <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
+                          )}.
+                        </p>
+                        {consentRecord.ipAddress && (
+                          <p className="text-xs text-base-content/60 mt-1 font-mono">
+                            Recorded IP: <span className="text-primary font-medium">{consentRecord.ipAddress}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                   <button
@@ -899,6 +906,11 @@ function UserProfilePage({ profileUser, onClose }) {
                     {consentRecord.acceptedAt && (
                       <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
                     )}.
+                    {consentRecord.ipAddress && (
+                      <span className="block mt-1 text-xs text-base-content/60 font-mono">
+                        Recorded IP: <span className="text-primary font-medium">{consentRecord.ipAddress}</span>
+                      </span>
+                    )}
                   </span>
                 ) : (
                   <span>Your saved consent record could not be found.</span>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
@@ -9,14 +9,29 @@ import logoLight from "../assets/logo-light.png";
 import logoDark from "../assets/logo-dark.png";
 import DeveloperFooter from "../components/DeveloperFooter";
 import TermsContent from "../components/TermsContent";
+import { detectClientIp } from "../lib/detectClientIp";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
   const [isConsentOpen, setIsConsentOpen] = useState(false);
   const [hasAcceptedConsent, setHasAcceptedConsent] = useState(false);
   const [consentDeclined, setConsentDeclined] = useState(false);
+  const [clientIp, setClientIp] = useState("");
   const { signup, isSigningUp } = useAuthStore();
   const { theme } = useThemeStore();
+
+  // Proactively detect genuine client device IP
+  useEffect(() => {
+    let isMounted = true;
+    detectClientIp().then((ip) => {
+      if (ip && isMounted) {
+        setClientIp(ip);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -27,7 +42,13 @@ function SignUpPage() {
 
   const handleAcceptConsent = async () => {
     if (!hasAcceptedConsent || isSigningUp) return;
-    const created = await signup({ ...formData, dataConsent: true });
+    const resolvedIp =
+      clientIp ||
+      (await Promise.race([
+        detectClientIp(),
+        new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
+      ]));
+    const created = await signup({ ...formData, dataConsent: true, clientIp: resolvedIp });
     if (created) setIsConsentOpen(false);
   };
 
@@ -98,56 +119,51 @@ function SignUpPage() {
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         className="input"
-                        placeholder="Enter your password"
+                        placeholder="••••••••"
                       />
                     </div>
                   </div>
 
                   {/* SUBMIT BUTTON */}
-                  <button className="auth-btn" type="submit" disabled={isSigningUp}>
+                  <button className="btn btn-primary w-full" type="submit" disabled={isSigningUp}>
                     {isSigningUp ? (
-                      <LoaderIcon className="w-full h-5 animate-spin text-center" />
+                      <LoaderIcon className="size-5 animate-spin" />
                     ) : (
                       "Create Account"
                     )}
                   </button>
                 </form>
 
-                <div className="mt-3 sm:mt-6 text-center">
-                  <Link to="/login" className="auth-link">
-                    Already have an account? Login
-                  </Link>
+                {/* FOOTER */}
+                <div className="text-center mt-3 sm:mt-6">
+                  <p className="text-xs sm:text-sm text-base-content/60">
+                    Already have an account?{" "}
+                    <Link to="/login" className="link link-primary">
+                      Sign in
+                    </Link>
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* FORM ILLUSTRATION - RIGHT SIDE */}
-            <div className="hidden md:w-1/2 md:flex items-center justify-center p-6 bg-gradient-to-bl from-base-200/50 to-transparent">
-              <div>
-                <img
-                  src={`${import.meta.env.BASE_URL}signup.png`}
-                  alt="People using mobile devices"
-                  className="w-full h-auto object-contain"
-                />
-                <div className="mt-6 text-center">
-                  <h3 className="text-xl font-medium text-primary">Start Your Journey Today</h3>
-
-                  <div className="mt-4 flex justify-center gap-4">
-                    <span className="auth-badge">Free</span>
-                    <span className="auth-badge">Easy Setup</span>
-                    <span className="auth-badge">Private</span>
-                  </div>
+            {/* RIGHT SIDE - HERO CONTENT */}
+            <div className="hidden md:flex md:w-1/2 p-8 flex-col justify-center items-center text-center">
+              <div className="max-w-md">
+                <div className="size-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <MessageCircleIcon className="size-10 text-primary" />
                 </div>
+                <h3 className="text-2xl font-bold text-base-content mb-3">Join our community</h3>
+                <p className="text-base-content/70">
+                  Connect with friends, share moments, and stay in touch with the people who matter most.
+                </p>
               </div>
             </div>
           </div>
         </BorderAnimatedContainer>
       </div>
 
-      {/* DEVELOPER DESCRIPTION & PROJECTS FOOTER */}
-      <div className="w-full max-w-6xl shrink-0">
-        <DeveloperFooter />
-      </div>
+      {/* DEVELOPER FOOTER */}
+      <DeveloperFooter />
 
       {isConsentOpen && (
         createPortal(
@@ -182,6 +198,12 @@ function SignUpPage() {
                   I have read and agree to these terms, and authorize the data use described above.
                 </span>
               </label>
+
+              {clientIp && (
+                <p className="mt-2 text-xs text-base-content/60">
+                  Device IP for audit &amp; security consent: <code className="font-mono text-primary font-medium">{clientIp}</code>
+                </p>
+              )}
 
               {consentDeclined && (
                 <p className="mt-3 text-sm text-warning" role="status">

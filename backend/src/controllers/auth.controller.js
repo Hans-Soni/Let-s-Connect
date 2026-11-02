@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { ENV } from "../lib/env.js";
 import cloudinary from "../lib/cloudinary.js";
 import { io } from "../lib/socket.js";
+import { extractClientIp } from "../lib/ipUtils.js";
 
 export const signup = async (req, res) => {
   const { fullName, email, password, dataConsent } = req.body;
@@ -55,12 +56,13 @@ export const signup = async (req, res) => {
 
     if (newUser) {
       const savedUser = await newUser.save();
+      const clientIp = extractClientIp(req);
       try {
         await Consent.create({
           accepted: true,
           termsVersion: "1.1",
           acceptedAt,
-          ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+          ipAddress: clientIp,
           emailId: normalizedEmail,
           userId: savedUser._id,
         });
@@ -207,7 +209,7 @@ export const updateProfile = async (req, res) => {
 export const getConsentRecord = async (req, res) => {
   try {
     const consent = await Consent.findOne({ userId: req.user._id })
-      .select("accepted termsVersion acceptedAt")
+      .select("accepted termsVersion acceptedAt ipAddress")
       .lean();
 
     if (!consent) {
