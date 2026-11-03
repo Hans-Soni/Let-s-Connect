@@ -630,6 +630,7 @@ export const useChatStore = create((set, get) => ({
     if (!socket) return;
 
     socket.off("newUser");
+    socket.off("userDeleted");
     socket.on("newUser", (newUser) => {
       const { authUser } = useAuthStore.getState();
       if (!newUser || (authUser && newUser._id === authUser._id)) return;
@@ -638,11 +639,25 @@ export const useChatStore = create((set, get) => ({
       const updatedContacts = insertInDictionaryOrder(currentContacts, newUser);
       set({ allContacts: updatedContacts });
     });
+
+    socket.on("userDeleted", ({ userId }) => {
+      if (!userId) return;
+      const { allContacts, chats, selectedUser } = get();
+      const updatedContacts = allContacts.filter((c) => String(c._id) !== String(userId));
+      const updatedChats = chats.filter((c) => String(c._id) !== String(userId));
+      const updates = { allContacts: updatedContacts, chats: updatedChats };
+      if (selectedUser && String(selectedUser._id) === String(userId)) {
+        updates.selectedUser = null;
+        updates.messages = [];
+      }
+      set(updates);
+    });
   },
 
   unsubscribeFromUsers: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
     socket.off("newUser");
+    socket.off("userDeleted");
   },
 }));

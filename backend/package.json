@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "test": "node --test src/middleware/rateLimit.middleware.test.js",
     "test:keys": "node --test src/lib/secretGenerator.test.js",
-    "test:all": "node --test src/middleware/rateLimit.middleware.test.js src/lib/secretGenerator.test.js src/lib/ipUtils.test.js src/lib/googleAuth.test.js"
+    "test:all": "node --test src/middleware/rateLimit.middleware.test.js src/lib/secretGenerator.test.js src/lib/ipUtils.test.js src/lib/googleAuth.test.js src/lib/accountDeletion.test.js"
   },
   "keywords": [],
   "type": "module",

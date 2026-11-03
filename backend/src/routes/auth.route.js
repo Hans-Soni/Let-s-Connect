@@ -7,6 +7,7 @@ import {
   updateProfile,
   getConsentRecord,
   changePassword,
+  deleteAccount,
 } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
@@ -54,6 +55,7 @@ router.post("/refresh", async (req, res) => {
 router.put("/update-profile", protectRoute, updateProfile);
 router.get("/consent", protectRoute, getConsentRecord);
 router.put("/change-password", protectRoute, changePassword);
+router.delete("/delete-account", protectRoute, deleteAccount);
 
 router.get("/check", protectRoute, (req, res) => res.status(200).json(req.user));
 

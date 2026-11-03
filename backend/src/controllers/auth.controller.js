@@ -2,11 +2,13 @@ import { sendWelcomeEmail } from "../emails/emailHandlers.js";
 import { generateToken } from "../lib/utils.js";
 import Consent from "../models/Consent.js";
 import User from "../models/User.js";
+import Message from "../models/Message.js";
 import bcrypt from "bcryptjs";
 import { ENV } from "../lib/env.js";
 import cloudinary from "../lib/cloudinary.js";
 import { io } from "../lib/socket.js";
 import { extractClientIp } from "../lib/ipUtils.js";
+import { getCloudinaryPublicId } from "../lib/messageRetention.js";
 import { OAuth2Client } from "google-auth-library";
 
 const googleClient = new OAuth2Client(ENV.GOOGLE_CLIENT_ID);
@@ -406,5 +408,98 @@ export const changePassword = async (req, res) => {
   } catch (error) {
     console.error("Error changing password:", error);
     return res.status(500).json({ message: "Unable to change password" });
+  }
+};
+
+export const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 1. Delete user profile picture from Cloudinary if stored there
+    if (user.profilePic) {
+      const publicId = getCloudinaryPublicId(user.profilePic);
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.error("Error deleting user profile picture from Cloudinary:", err.message);
+        }
+      }
+    }
+
+    // 2. Find and clean up all messages sent or received by this user
+    try {
+      const messages = await Message.find({
+        $or: [{ senderId: userId }, { receiverId: userId }],
+      }).select("image imagePublicId audio audioPublicId video videoPublicId");
+
+      for (const msg of messages) {
+        const assets = [
+          { publicId: msg.imagePublicId || getCloudinaryPublicId(msg.image), resourceType: "image" },
+          { publicId: msg.audioPublicId || getCloudinaryPublicId(msg.audio), resourceType: "video" },
+          { publicId: msg.videoPublicId || getCloudinaryPublicId(msg.video), resourceType: "video" },
+        ];
+        for (const asset of assets) {
+          if (asset.publicId) {
+            try {
+              await cloudinary.uploader.destroy(asset.publicId, { resource_type: asset.resourceType });
+            } catch (mediaErr) {
+              console.error(`Error deleting Cloudinary asset ${asset.publicId}:`, mediaErr.message);
+            }
+          }
+        }
+      }
+
+      await Message.deleteMany({
+        $or: [{ senderId: userId }, { receiverId: userId }],
+      });
+    } catch (msgErr) {
+      console.error("Error cleaning up messages during account deletion:", msgErr.message);
+    }
+
+    // 3. Remove user reference from all other users' blockedUsers list
+    try {
+      await User.updateMany({ blockedUsers: userId }, { $pull: { blockedUsers: userId } });
+    } catch (blockErr) {
+      console.error("Error updating blocked users during account deletion:", blockErr.message);
+    }
+
+    // 4. IMPORTANT LEGAL REQUIREMENT:
+    // Retain consent record (IP address, terms version, acceptance timestamp, email)
+    // for GDPR audit compliance, but mark accountDeletedAt.
+    try {
+      await Consent.updateOne(
+        { userId: userId },
+        { $set: { accountDeletedAt: new Date() } }
+      );
+    } catch (consentErr) {
+      console.error("Warning: Could not stamp accountDeletedAt on consent record:", consentErr.message);
+    }
+
+    // 5. Delete the User record itself
+    await User.findByIdAndDelete(userId);
+
+    // 6. Broadcast user deletion via Socket.IO so connected peers immediately remove them
+    try {
+      io.emit("userDeleted", { userId: userId.toString() });
+      io.emit("userLoggedOut", { userId: userId.toString() });
+    } catch (socketErr) {
+      console.error("Socket broadcast error during account deletion:", socketErr.message);
+    }
+
+    // 7. Clear authentication cookies
+    res.cookie("jwt", "", { maxAge: 0, partitioned: true, secure: true, sameSite: "none" });
+
+    return res.status(200).json({
+      message: "Your account and all personal details have been permanently deleted. Consent audit records have been preserved for compliance.",
+    });
+  } catch (error) {
+    console.error("Error in deleteAccount controller:", error);
+    return res.status(500).json({ message: "Internal server error during account deletion" });
   }
 };

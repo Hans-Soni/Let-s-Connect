@@ -30,6 +30,10 @@ const consentSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    accountDeletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

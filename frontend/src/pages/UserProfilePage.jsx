@@ -10,6 +10,8 @@ import PageLoader from "../components/PageLoader";
 import DeveloperFooter from "../components/DeveloperFooter";
 import {
   ArrowLeft,
+  ArrowRight,
+  AlertTriangle,
   Trash2,
   MessageSquare,
   Sun,
@@ -52,7 +54,16 @@ function UserProfilePage({ profileUser, onClose }) {
     setViewingProfileUser,
   } = useChatStore();
 
-  const { onlineUsers, authUser, updateProfile, getConsentRecord, changePassword, logout } = useAuthStore();
+  const {
+    onlineUsers,
+    authUser,
+    updateProfile,
+    getConsentRecord,
+    changePassword,
+    logout,
+    deleteAccount,
+    isDeletingAccount,
+  } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
   const [user, setUser] = useState(() => {
@@ -88,7 +99,20 @@ function UserProfilePage({ profileUser, onClose }) {
     newPassword: "",
     confirmPassword: "",
   });
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmationStep, setDeleteConfirmationStep] = useState(1);
+  const [deleteAckChecked, setDeleteAckChecked] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const profileImageInputRef = useRef(null);
+
+  const handleConfirmDeleteAccount = async () => {
+    if (deleteConfirmationText.trim().toUpperCase() !== "DELETE" || isDeletingAccount) return;
+    const success = await deleteAccount();
+    if (success) {
+      setShowDeleteAccountModal(false);
+      navigate("/login");
+    }
+  };
 
   useEffect(() => {
     setSelectedProfileImage("");
@@ -658,6 +682,32 @@ function UserProfilePage({ profileUser, onClose }) {
                   Sign out of Let's Connect
                 </button>
               </div>
+
+              {/* DANGER ZONE: ACCOUNT DELETION */}
+              <div className="border-t border-error/25 pt-4 mt-2">
+                <div className="rounded-2xl border border-error/30 bg-error/5 p-4 sm:p-5">
+                  <div className="flex items-center gap-2.5 text-error mb-2">
+                    <AlertTriangle className="size-5 shrink-0" />
+                    <h4 className="font-bold text-sm sm:text-base">Danger Zone</h4>
+                  </div>
+                  <p className="text-xs sm:text-sm text-base-content/70 leading-relaxed mb-4">
+                    Permanently delete your account, contacts, and personal chat history. This action cannot be reversed. In compliance with legal &amp; GDPR audits, your recorded terms agreement remains archived.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmationStep(1);
+                      setDeleteAckChecked(false);
+                      setDeleteConfirmationText("");
+                      setShowDeleteAccountModal(true);
+                    }}
+                    className="btn btn-error btn-outline hover:bg-error hover:text-white w-full gap-2 rounded-xl font-semibold text-sm transition-all shadow-sm"
+                  >
+                    <Trash2 className="size-4" />
+                    Delete My Account
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -924,6 +974,151 @@ function UserProfilePage({ profileUser, onClose }) {
                 </button>
               </div>
             </section>
+          </div>,
+          document.body
+        )
+      )}
+
+      {/* 2-STEP ACCOUNT DELETION CONFIRMATION MODAL */}
+      {showDeleteAccountModal && isMe && (
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/75 backdrop-blur-sm p-3 sm:p-6 animate-fade-in">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-account-title"
+              className="my-auto w-full max-w-lg rounded-2xl bg-base-100 p-6 text-base-content shadow-2xl border border-error/30 sm:p-7 space-y-5"
+            >
+              {deleteConfirmationStep === 1 ? (
+                /* STEP 1: INITIAL WARNING & ACKNOWLEDGEMENT */
+                <>
+                  <div className="flex items-start gap-3.5">
+                    <div className="p-3 bg-error/10 text-error rounded-2xl shrink-0">
+                      <AlertTriangle className="size-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="badge badge-error badge-outline text-xs font-semibold uppercase tracking-wider mb-1">
+                        Step 1 of 2 Confirmation
+                      </span>
+                      <h3 id="delete-account-title" className="text-lg sm:text-xl font-bold text-base-content">
+                        Delete Your Account Permanently?
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 rounded-xl bg-base-200/60 p-4 text-xs sm:text-sm text-base-content/80 leading-relaxed border border-base-content/10">
+                    <p className="font-semibold text-error">
+                      Warning: This process is permanent and cannot be undone.
+                    </p>
+                    <ul className="list-disc list-inside space-y-1.5 opacity-90">
+                      <li>Your profile, credentials, and contacts will be wiped.</li>
+                      <li>All your 1-on-1 messages and media will be permanently deleted.</li>
+                      <li>Your session and active connections will be terminated immediately.</li>
+                    </ul>
+                    <div className="p-2.5 rounded-lg bg-base-300/80 border border-base-content/10 text-xs text-base-content/70">
+                      <strong>Legal &amp; Terms Compliance Notice:</strong> Per GDPR &amp; data governance regulations, your previously recorded Terms of Service consent record (version, IP address, and acceptance timestamp) will be retained in our compliance audit ledger.
+                    </div>
+                  </div>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-error/30 bg-error/5 p-3.5 select-none">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-error mt-0.5"
+                      checked={deleteAckChecked}
+                      onChange={(e) => setDeleteAckChecked(e.target.checked)}
+                    />
+                    <span className="text-xs sm:text-sm font-medium text-base-content">
+                      I understand the consequences and want to proceed to the final confirmation step.
+                    </span>
+                  </label>
+
+                  <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDeleteAccountModal(false);
+                        setDeleteConfirmationStep(1);
+                        setDeleteAckChecked(false);
+                      }}
+                      className="btn btn-ghost w-full sm:w-auto rounded-xl"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmationStep(2)}
+                      disabled={!deleteAckChecked}
+                      className="btn btn-error w-full sm:w-auto rounded-xl text-white font-semibold gap-2"
+                    >
+                      <span>Continue to Step 2</span>
+                      <ArrowRight className="size-4" />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* STEP 2: FINAL CONFIRMATION & VERIFICATION */
+                <>
+                  <div className="flex items-start gap-3.5">
+                    <div className="p-3 bg-error text-white rounded-2xl shrink-0 shadow-lg shadow-error/30">
+                      <Trash2 className="size-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="badge badge-error text-xs font-semibold uppercase tracking-wider mb-1 text-white">
+                        Step 2 of 2 Final Confirmation
+                      </span>
+                      <h3 id="delete-account-title" className="text-lg sm:text-xl font-bold text-error">
+                        Final Chance: Confirm Deletion
+                      </h3>
+                    </div>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-base-content/80 leading-relaxed">
+                    To prevent accidental deletion, please type <strong className="text-error font-mono font-bold tracking-wider">DELETE</strong> below to permanently erase your account ({authUser?.email}):
+                  </p>
+
+                  <div>
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder='Type "DELETE" to confirm'
+                      value={deleteConfirmationText}
+                      onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                      disabled={isDeletingAccount}
+                      className="input input-bordered input-error w-full font-mono font-semibold tracking-wider text-sm focus:outline-none focus:ring-2 focus:ring-error"
+                    />
+                  </div>
+
+                  <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmationStep(1)}
+                      disabled={isDeletingAccount}
+                      className="btn btn-ghost w-full sm:w-auto rounded-xl"
+                    >
+                      Back to Step 1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmDeleteAccount}
+                      disabled={deleteConfirmationText.trim().toUpperCase() !== "DELETE" || isDeletingAccount}
+                      className="btn btn-error w-full sm:w-auto rounded-xl text-white font-semibold gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
+                    >
+                      {isDeletingAccount ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          <span>Deleting Account...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="size-4" />
+                          <span>Permanently Delete My Account</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>,
           document.body
         )
