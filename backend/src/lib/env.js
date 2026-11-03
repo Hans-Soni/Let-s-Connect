@@ -16,6 +16,6 @@ export const ENV = {
   ARCJET_ENV: process.env.ARCJET_ENV,
   UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY, // legacy – used only for decrypting old enc:... messages
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "624896610383-ng9rkc9ocnqgk03npkkg4c12e8b24pkl.apps.googleusercontent.com",
   // KEY_MASTER_KEY is read directly by keyRotation.js via process.env to avoid it being logged accidentally
 };
-

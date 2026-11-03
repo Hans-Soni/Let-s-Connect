@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "test": "node --test src/middleware/rateLimit.middleware.test.js",
     "test:keys": "node --test src/lib/secretGenerator.test.js",
-    "test:all": "node --test src/middleware/rateLimit.middleware.test.js src/lib/secretGenerator.test.js src/lib/ipUtils.test.js"
+    "test:all": "node --test src/middleware/rateLimit.middleware.test.js src/lib/secretGenerator.test.js src/lib/ipUtils.test.js src/lib/googleAuth.test.js"
   },
   "keywords": [],
   "type": "module",
@@ -24,6 +24,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-mongo-sanitize": "^2.2.0",
+    "google-auth-library": "^11.3.3",
     "helmet": "^8.3.0",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.2",

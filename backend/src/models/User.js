@@ -20,9 +20,16 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: 100,
     },
+    googleId: {
+      type: String,
+      default: null,
+      index: true,
+    },
     password: {
       type: String,
-      required: true,
+      required: function () {
+        return !this.googleId;
+      },
       minlength: 6,
     },
     profilePic: {

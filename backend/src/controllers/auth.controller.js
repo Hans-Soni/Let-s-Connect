@@ -7,6 +7,9 @@ import { ENV } from "../lib/env.js";
 import cloudinary from "../lib/cloudinary.js";
 import { io } from "../lib/socket.js";
 import { extractClientIp } from "../lib/ipUtils.js";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client(ENV.GOOGLE_CLIENT_ID);
 
 export const signup = async (req, res) => {
   const { fullName, email, password, dataConsent } = req.body;
@@ -124,7 +127,12 @@ export const login = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
-    // never tell the client which one is incorrect: password or email
+
+    if (!user.password && user.googleId) {
+      return res.status(400).json({
+        message: "This account was registered using Google. Please sign in with Google.",
+      });
+    }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(400).json({ message: "Invalid credentials" });
@@ -142,6 +150,113 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error("Error in login controller:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { credential, clientIp } = req.body;
+
+    if (!credential || typeof credential !== "string") {
+      return res.status(400).json({ message: "Google credential is required" });
+    }
+
+    // 1. Verify Google ID token
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: ENV.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      console.error("Google verifyIdToken failed:", verifyError.message);
+      return res.status(401).json({ message: "Invalid or expired Google credential" });
+    }
+
+    if (!payload?.email) {
+      return res.status(400).json({ message: "Google account does not provide a valid email" });
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    const fullName = payload.name?.trim() || email.split("@")[0];
+    const profilePic = payload.picture || "";
+    const googleId = payload.sub;
+
+    let user = await User.findOne({ email });
+    let isNewUser = false;
+
+    if (!user) {
+      // 2. New user registration via Google
+      isNewUser = true;
+      user = new User({
+        fullName,
+        email,
+        profilePic,
+        googleId,
+        designation: "",
+      });
+
+      const savedUser = await user.save();
+
+      // Record legal consent (Terms v2.0) with verified client IP
+      const ipAddress = clientIp && typeof clientIp === "string" ? clientIp : extractClientIp(req);
+      try {
+        await Consent.create({
+          accepted: true,
+          termsVersion: "2.0",
+          acceptedAt: new Date(),
+          ipAddress,
+          emailId: email,
+          userId: savedUser._id,
+        });
+      } catch (consentError) {
+        console.error("Consent record creation warning for Google user:", consentError.message);
+      }
+
+      // Broadcast new user to all connected clients
+      try {
+        io.emit("newUser", {
+          _id: savedUser._id,
+          fullName: savedUser.fullName,
+          email: savedUser.email,
+          designation: savedUser.designation || "",
+          profilePic: savedUser.profilePic,
+        });
+      } catch (socketErr) {
+        console.error("Socket broadcast error for newUser:", socketErr);
+      }
+    } else {
+      // 3. Existing user logging in with Google: link account & sync profile picture if empty
+      let needsSave = false;
+      if (!user.googleId) {
+        user.googleId = googleId;
+        needsSave = true;
+      }
+      if (!user.profilePic && profilePic) {
+        user.profilePic = profilePic;
+        needsSave = true;
+      }
+      if (needsSave) {
+        await user.save();
+      }
+    }
+
+    // 4. Issue app session token & set httpOnly cookie
+    const token = generateToken(user._id, res);
+
+    res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      designation: user.designation || "",
+      profilePic: user.profilePic,
+      token,
+      isNewUser,
+    });
+  } catch (error) {
+    console.error("Error in googleAuth controller:", error);
+    res.status(500).json({ message: "Internal server error during Google authentication" });
   }
 };
 
@@ -227,7 +342,6 @@ export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     if (
-      typeof currentPassword !== "string" ||
       typeof newPassword !== "string" ||
       typeof confirmPassword !== "string"
     ) {
@@ -249,20 +363,26 @@ export const changePassword = async (req, res) => {
     const user = await User.findById(req.user._id).select("+password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const isCurrentPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordCorrect) {
-      return res.status(400).json({ message: "Current password is incorrect" });
-    }
+    // If user already has a password, verify currentPassword
+    if (user.password) {
+      if (typeof currentPassword !== "string") {
+        return res.status(400).json({ message: "Current password is required" });
+      }
+      const isCurrentPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordCorrect) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
 
-    const isNewPasswordSame = await bcrypt.compare(newPassword, user.password);
-    if (isNewPasswordSame) {
-      return res.status(400).json({ message: "Choose a new password different from your current one" });
+      const isNewPasswordSame = await bcrypt.compare(newPassword, user.password);
+      if (isNewPasswordSame) {
+        return res.status(400).json({ message: "Choose a new password different from your current one" });
+      }
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
 
-    return res.status(200).json({ message: "Password changed successfully" });
+    return res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     console.error("Error changing password:", error);
     return res.status(500).json({ message: "Unable to change password" });

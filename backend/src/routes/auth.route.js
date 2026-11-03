@@ -2,6 +2,7 @@ import express from "express";
 import {
   signup,
   login,
+  googleAuth,
   logout,
   updateProfile,
   getConsentRecord,
@@ -17,6 +18,7 @@ router.use(arcjetProtection);
 
 router.post("/signup", signup);
 router.post("/login", login);
+router.post("/google", googleAuth);
 router.post("/logout", logout);
 
 // Silent-refresh: re-issues a fresh 15-min JWT without forcing re-login.
