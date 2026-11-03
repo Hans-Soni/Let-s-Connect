@@ -78,10 +78,15 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  googleLogin: async ({ credential, clientIp }) => {
+  googleLogin: async ({ credential, clientIp, dataConsent = false }) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axiosInstance.post("/auth/google", { credential, clientIp });
+      const res = await axiosInstance.post("/auth/google", { credential, clientIp, dataConsent });
+
+      if (res.data?.requiresConsent) {
+        return { requiresConsent: true, userDetails: res.data };
+      }
+
       sessionStorage.setItem("jwt", res.data.token);
       localStorage.removeItem("jwt");
       set({ authUser: res.data });
@@ -93,10 +98,10 @@ export const useAuthStore = create((set, get) => ({
       );
 
       get().connectSocket();
-      return true;
+      return { success: true, authUser: res.data };
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Google Sign-In failed");
-      return false;
+      return { success: false, error: error.response?.data?.message || error.message };
     } finally {
       set({ isLoggingIn: false });
     }

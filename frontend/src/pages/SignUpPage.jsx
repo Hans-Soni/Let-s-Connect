@@ -18,6 +18,7 @@ function SignUpPage() {
   const [isConsentOpen, setIsConsentOpen] = useState(false);
   const [hasAcceptedConsent, setHasAcceptedConsent] = useState(false);
   const [consentDeclined, setConsentDeclined] = useState(false);
+  const [pendingGoogleAuth, setPendingGoogleAuth] = useState(null);
   const [clientIp, setClientIp] = useState("");
   const { signup, googleLogin, isSigningUp, isLoggingIn } = useAuthStore();
   const { theme } = useThemeStore();
@@ -37,26 +38,43 @@ function SignUpPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setPendingGoogleAuth(null);
     setConsentDeclined(false);
     setHasAcceptedConsent(false);
     setIsConsentOpen(true);
   };
 
   const handleAcceptConsent = async () => {
-    if (!hasAcceptedConsent || isSigningUp) return;
+    if (!hasAcceptedConsent || isSigningUp || isLoggingIn) return;
     const resolvedIp =
       clientIp ||
       (await Promise.race([
         detectClientIp(),
         new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
       ]));
-    const created = await signup({ ...formData, dataConsent: true, clientIp: resolvedIp });
-    if (created) setIsConsentOpen(false);
+
+    if (pendingGoogleAuth) {
+      // Finalize Google account creation with explicit legal consent
+      const result = await googleLogin({
+        credential: pendingGoogleAuth.credential,
+        clientIp: resolvedIp,
+        dataConsent: true,
+      });
+      if (result?.success) {
+        setIsConsentOpen(false);
+        setPendingGoogleAuth(null);
+      }
+    } else {
+      // Standard email/password signup
+      const created = await signup({ ...formData, dataConsent: true, clientIp: resolvedIp });
+      if (created) setIsConsentOpen(false);
+    }
   };
 
   const handleDeclineConsent = () => {
     setHasAcceptedConsent(false);
     setConsentDeclined(true);
+    setPendingGoogleAuth(null);
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
@@ -70,7 +88,24 @@ function SignUpPage() {
         detectClientIp(),
         new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
       ]));
-    await googleLogin({ credential: credentialResponse.credential, clientIp: resolvedIp });
+
+    // Attempt Google login without pre-assumed consent
+    const result = await googleLogin({
+      credential: credentialResponse.credential,
+      clientIp: resolvedIp,
+      dataConsent: false,
+    });
+
+    if (result?.requiresConsent) {
+      // New Google user must explicitly review and accept terms & conditions
+      setPendingGoogleAuth({
+        credential: credentialResponse.credential,
+        userDetails: result.userDetails,
+      });
+      setHasAcceptedConsent(false);
+      setConsentDeclined(false);
+      setIsConsentOpen(true);
+    }
   };
 
   return (
@@ -165,6 +200,22 @@ function SignUpPage() {
                     width="100%"
                   />
                 </div>
+                <p className="mt-2 text-xs text-center text-base-content/60">
+                  By continuing with Google, you will review and accept our{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingGoogleAuth(null);
+                      setHasAcceptedConsent(false);
+                      setConsentDeclined(false);
+                      setIsConsentOpen(true);
+                    }}
+                    className="link link-primary font-medium inline"
+                  >
+                    Terms &amp; Data Authorization
+                  </button>
+                  .
+                </p>
 
                 {/* FOOTER */}
                 <div className="text-center mt-3 sm:mt-6">
@@ -213,6 +264,28 @@ function SignUpPage() {
                 Please review and accept before creating your account.
               </p>
 
+              {pendingGoogleAuth && (
+                <div className="mt-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3 text-base-content">
+                  {pendingGoogleAuth.userDetails?.profilePic ? (
+                    <img
+                      src={pendingGoogleAuth.userDetails.profilePic}
+                      alt="Google avatar"
+                      className="size-10 rounded-full border border-primary/40 object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="size-8 text-primary" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                      Google Account Identified
+                    </p>
+                    <p className="truncate text-sm font-medium text-base-content">
+                      {pendingGoogleAuth.userDetails?.fullName || "Google User"} ({pendingGoogleAuth.userDetails?.email})
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <TermsContent />
 
               <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-base-content/15 p-3">
@@ -224,7 +297,7 @@ function SignUpPage() {
                     setHasAcceptedConsent(event.target.checked);
                     setConsentDeclined(false);
                   }}
-                  disabled={isSigningUp}
+                  disabled={isSigningUp || isLoggingIn}
                 />
                 <span className="text-sm text-base-content">
                   I have read and agree to these terms, and authorize the data use described above.
@@ -239,7 +312,7 @@ function SignUpPage() {
 
               {consentDeclined && (
                 <p className="mt-3 text-sm text-warning" role="status">
-                  You declined. Your account was not created and your details were not submitted.
+                  You declined. Your account was not created and no details were submitted.
                   This consent screen will remain open.
                 </p>
               )}
@@ -249,7 +322,7 @@ function SignUpPage() {
                   type="button"
                   className="btn btn-ghost"
                   onClick={handleDeclineConsent}
-                  disabled={isSigningUp}
+                  disabled={isSigningUp || isLoggingIn}
                 >
                   Disagree
                 </button>
@@ -257,9 +330,15 @@ function SignUpPage() {
                   type="button"
                   className="btn btn-primary"
                   onClick={handleAcceptConsent}
-                  disabled={!hasAcceptedConsent || isSigningUp}
+                  disabled={!hasAcceptedConsent || isSigningUp || isLoggingIn}
                 >
-                  {isSigningUp ? <LoaderIcon className="size-5 animate-spin" /> : "Accept & Create Account"}
+                  {isSigningUp || isLoggingIn ? (
+                    <LoaderIcon className="size-5 animate-spin" />
+                  ) : pendingGoogleAuth ? (
+                    "Accept & Create Account with Google"
+                  ) : (
+                    "Accept & Create Account"
+                  )}
                 </button>
               </div>
             </section>

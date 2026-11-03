@@ -155,7 +155,7 @@ export const login = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
   try {
-    const { credential, clientIp } = req.body;
+    const { credential, clientIp, dataConsent } = req.body;
 
     if (!credential || typeof credential !== "string") {
       return res.status(400).json({ message: "Google credential is required" });
@@ -184,11 +184,19 @@ export const googleAuth = async (req, res) => {
     const googleId = payload.sub;
 
     let user = await User.findOne({ email });
-    let isNewUser = false;
 
+    // 2. If user does NOT exist, terms acceptance is mandatory before creating account
     if (!user) {
-      // 2. New user registration via Google
-      isNewUser = true;
+      if (dataConsent !== true) {
+        return res.status(200).json({
+          requiresConsent: true,
+          email,
+          fullName,
+          profilePic,
+        });
+      }
+
+      // Explicit consent verified: create new user
       user = new User({
         fullName,
         email,
@@ -199,7 +207,7 @@ export const googleAuth = async (req, res) => {
 
       const savedUser = await user.save();
 
-      // Record legal consent (Terms v2.0) with verified client IP
+      // Record verified legal consent (Terms v2.0) with genuine device IP
       const ipAddress = clientIp && typeof clientIp === "string" ? clientIp : extractClientIp(req);
       try {
         await Consent.create({
@@ -226,33 +234,45 @@ export const googleAuth = async (req, res) => {
       } catch (socketErr) {
         console.error("Socket broadcast error for newUser:", socketErr);
       }
-    } else {
-      // 3. Existing user logging in with Google: link account & sync profile picture if empty
-      let needsSave = false;
-      if (!user.googleId) {
-        user.googleId = googleId;
-        needsSave = true;
-      }
-      if (!user.profilePic && profilePic) {
-        user.profilePic = profilePic;
-        needsSave = true;
-      }
-      if (needsSave) {
-        await user.save();
-      }
+
+      const token = generateToken(savedUser._id, res);
+
+      return res.status(201).json({
+        _id: savedUser._id,
+        fullName: savedUser.fullName,
+        email: savedUser.email,
+        designation: savedUser.designation || "",
+        profilePic: savedUser.profilePic,
+        token,
+        isNewUser: true,
+      });
+    }
+
+    // 3. Existing user logging in with Google: link account & sync profile picture if empty
+    let needsSave = false;
+    if (!user.googleId) {
+      user.googleId = googleId;
+      needsSave = true;
+    }
+    if (!user.profilePic && profilePic) {
+      user.profilePic = profilePic;
+      needsSave = true;
+    }
+    if (needsSave) {
+      await user.save();
     }
 
     // 4. Issue app session token & set httpOnly cookie
     const token = generateToken(user._id, res);
 
-    res.status(200).json({
+    return res.status(200).json({
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
       designation: user.designation || "",
       profilePic: user.profilePic,
       token,
-      isNewUser,
+      isNewUser: false,
     });
   } catch (error) {
     console.error("Error in googleAuth controller:", error);
