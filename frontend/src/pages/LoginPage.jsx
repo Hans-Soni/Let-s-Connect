@@ -7,15 +7,27 @@ import { Link } from "react-router";
 import logoLight from "../assets/logo-light.png";
 import logoDark from "../assets/logo-dark.png";
 import DeveloperFooter from "../components/DeveloperFooter";
+import { GoogleLogin } from "@react-oauth/google";
+import { detectClientIp } from "../lib/detectClientIp";
+import toast from "react-hot-toast";
 
 function LoginPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const { login, isLoggingIn } = useAuthStore();
+  const { login, googleLogin, isLoggingIn } = useAuthStore();
   const { theme } = useThemeStore();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     login(formData);
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      toast.error("Google authentication failed");
+      return;
+    }
+    const clientIp = await detectClientIp();
+    await googleLogin({ credential: credentialResponse.credential, clientIp });
   };
 
   return (
@@ -32,7 +44,7 @@ function LoginPage() {
                     <img src={theme === "dark" ? logoDark : logoLight} alt="Let's Connect Logo" className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-4" />
                   </Link>
                   <h2 className="text-xl sm:text-2xl font-bold text-base-content mb-1 sm:mb-2">Welcome Back</h2>
-                  <p className="text-xs sm:text-sm text-base-content/60">Login to access to your account</p>
+                  <p className="text-xs sm:text-sm text-base-content/60">Login to access your account</p>
                 </div>
 
                 {/* FORM */}
@@ -78,6 +90,22 @@ function LoginPage() {
                     )}
                   </button>
                 </form>
+
+                {/* GOOGLE SIGN-IN SECTION */}
+                <div className="divider text-xs text-base-content/40 my-3 sm:my-5">OR</div>
+                <div className="flex justify-center w-full">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {
+                      toast.error("Google Sign-In was cancelled or failed");
+                    }}
+                    theme={theme === "dark" ? "filled_black" : "outline"}
+                    shape="pill"
+                    size="large"
+                    text="signin_with"
+                    width="100%"
+                  />
+                </div>
 
                 <div className="mt-3 sm:mt-6 text-center">
                   <Link to="/signup" className="auth-link">

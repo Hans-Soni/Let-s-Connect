@@ -10,6 +10,8 @@ import logoDark from "../assets/logo-dark.png";
 import DeveloperFooter from "../components/DeveloperFooter";
 import TermsContent from "../components/TermsContent";
 import { detectClientIp } from "../lib/detectClientIp";
+import { GoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
@@ -17,7 +19,7 @@ function SignUpPage() {
   const [hasAcceptedConsent, setHasAcceptedConsent] = useState(false);
   const [consentDeclined, setConsentDeclined] = useState(false);
   const [clientIp, setClientIp] = useState("");
-  const { signup, isSigningUp } = useAuthStore();
+  const { signup, googleLogin, isSigningUp, isLoggingIn } = useAuthStore();
   const { theme } = useThemeStore();
 
   // Proactively detect genuine client device IP
@@ -55,6 +57,20 @@ function SignUpPage() {
   const handleDeclineConsent = () => {
     setHasAcceptedConsent(false);
     setConsentDeclined(true);
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      toast.error("Google authentication failed");
+      return;
+    }
+    const resolvedIp =
+      clientIp ||
+      (await Promise.race([
+        detectClientIp(),
+        new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
+      ]));
+    await googleLogin({ credential: credentialResponse.credential, clientIp: resolvedIp });
   };
 
   return (
@@ -125,7 +141,7 @@ function SignUpPage() {
                   </div>
 
                   {/* SUBMIT BUTTON */}
-                  <button className="btn btn-primary w-full" type="submit" disabled={isSigningUp}>
+                  <button className="btn btn-primary w-full" type="submit" disabled={isSigningUp || isLoggingIn}>
                     {isSigningUp ? (
                       <LoaderIcon className="size-5 animate-spin" />
                     ) : (
@@ -133,6 +149,22 @@ function SignUpPage() {
                     )}
                   </button>
                 </form>
+
+                {/* GOOGLE SIGN-UP / SIGN-IN SECTION */}
+                <div className="divider text-xs text-base-content/40 my-3 sm:my-5">OR</div>
+                <div className="flex justify-center w-full">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {
+                      toast.error("Google Sign-In was cancelled or failed");
+                    }}
+                    theme={theme === "dark" ? "filled_black" : "outline"}
+                    shape="pill"
+                    size="large"
+                    text="signup_with"
+                    width="100%"
+                  />
+                </div>
 
                 {/* FOOTER */}
                 <div className="text-center mt-3 sm:mt-6">

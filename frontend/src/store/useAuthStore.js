@@ -78,6 +78,30 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  googleLogin: async ({ credential, clientIp }) => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/google", { credential, clientIp });
+      sessionStorage.setItem("jwt", res.data.token);
+      localStorage.removeItem("jwt");
+      set({ authUser: res.data });
+
+      toast.success(
+        res.data.isNewUser
+          ? `Account created! Welcome, ${res.data.fullName}`
+          : `Welcome back, ${res.data.fullName}!`
+      );
+
+      get().connectSocket();
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Google Sign-In failed");
+      return false;
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
   logout: async () => {
     try {
       await axiosInstance.post("/auth/logout");
