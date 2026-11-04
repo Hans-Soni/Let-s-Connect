@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
+import { useThemeStore } from "../store/useThemeStore";
 import {
   ArrowRight,
   Bot,
@@ -42,25 +43,22 @@ const LOGIN_URL = "https://hans-soni.github.io/Let-s-Connect/#/login";
 const SIGNUP_URL = "#signup";
 const LIVE_SIGNUP_URL = "https://hans-soni.github.io/Let-s-Connect/#/signup";
 
-// Theme hook matching Lovable
+// Theme hook synchronizing with useThemeStore, localStorage, and <html> class
 function useSamvaadTheme() {
-  const [dark, setDark] = useState(true);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("samvaad-theme");
-    if (saved) {
-      setDark(saved === "dark");
-    } else {
-      setDark(true);
-    }
-  }, []);
+  const { theme, setTheme } = useThemeStore();
+  const dark = theme === "dark";
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("samvaad-theme", dark ? "dark" : "light");
-  }, [dark]);
+    localStorage.setItem("chat-theme", theme);
+  }, [dark, theme]);
 
-  return { dark, toggle: () => setDark((prev) => !prev) };
+  const toggle = () => {
+    setTheme(dark ? "light" : "dark");
+  };
+
+  return { dark, toggle };
 }
 
 // Reveal observer hook matching Lovable
@@ -82,18 +80,27 @@ function useReveal() {
   }, []);
 }
 
-// Emblem component (gold in light mode, silver in dark mode)
-function Emblem({ className = "" }) {
+// Emblem component (gold in light mode with contrast drop-shadow, silver in dark mode)
+function Emblem({ className = "", dark: darkProp }) {
+  const { dark: themeDark } = useSamvaadTheme();
+  const dark = darkProp !== undefined ? darkProp : themeDark;
+
   return (
     <div aria-hidden="true" className={`pointer-events-none ${className}`}>
-      <img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden" />
-      <img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block" />
+      <img
+        src={dark ? emblemSilver : emblemGold}
+        alt=""
+        className="h-full w-full object-contain filter drop-shadow-sm dark:drop-shadow-none transition-opacity duration-300"
+      />
     </div>
   );
 }
 
 // Orbiting Emblem ring
-function EmblemOrbit({ className = "" }) {
+function EmblemOrbit({ className = "", dark: darkProp }) {
+  const { dark: themeDark } = useSamvaadTheme();
+  const dark = darkProp !== undefined ? darkProp : themeDark;
+
   return (
     <div aria-hidden="true" className={`pointer-events-none aspect-square ${className}`}>
       <div className="absolute inset-0 rounded-full bg-glow blur-2xl animate-breathe" />
@@ -103,21 +110,30 @@ function EmblemOrbit({ className = "" }) {
       </div>
       <div className="absolute inset-[30%] grid place-items-center">
         <div aria-hidden="true" className="pointer-events-none h-full w-full animate-bloom drop-shadow-2xl">
-          <img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden" />
-          <img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block" />
+          <img
+            src={dark ? emblemSilver : emblemGold}
+            alt=""
+            className="h-full w-full object-contain filter drop-shadow-md dark:drop-shadow-none transition-opacity duration-300"
+          />
         </div>
       </div>
     </div>
   );
 }
 
-// Logo component
-function Logo({ className = "" }) {
+// Logo component - delivers the right high-contrast logo for light and dark modes
+function Logo({ className = "", dark: darkProp }) {
+  const { dark: themeDark } = useSamvaadTheme();
+  const dark = darkProp !== undefined ? darkProp : themeDark;
+
+  // In dark mode: use logoLight (light silver/white text on dark background)
+  // In light mode: use logoDark (deep terracotta text on ivory background)
   return (
-    <>
-      <img src={logoLight} alt="samवाद" className={`dark:hidden ${className}`} />
-      <img src={logoDark} alt="samवाद" className={`hidden dark:block ${className}`} />
-    </>
+    <img
+      src={dark ? logoLight : logoDark}
+      alt="samवाद"
+      className={`h-auto object-contain transition-opacity duration-300 ${className}`}
+    />
   );
 }
 
@@ -304,8 +320,8 @@ function Hero() {
   return (
     <section id="top" className="relative overflow-hidden pb-24 pt-36 sm:pt-44">
       <div className="grain absolute inset-0 opacity-60" />
-      <Emblem className="absolute -left-10 bottom-10 h-40 w-56 opacity-10 animate-float" />
-      <Emblem className="absolute right-[42%] top-28 h-16 w-24 opacity-20 animate-float [animation-delay:2s]" />
+      <Emblem className="absolute -left-10 bottom-10 h-40 w-56 opacity-30 dark:opacity-10 animate-float" />
+      <Emblem className="absolute right-[42%] top-28 h-16 w-24 opacity-40 dark:opacity-20 animate-float [animation-delay:2s]" />
       <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_1fr]">
         <div className="reveal">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-semibold text-primary">
@@ -727,7 +743,7 @@ function SecuritySection() {
 
   return (
     <section id="security" className="relative overflow-hidden bg-secondary py-28">
-      <Emblem className="absolute -left-16 top-16 h-48 w-64 -rotate-12 opacity-10 animate-float" />
+      <Emblem className="absolute -left-16 top-16 h-48 w-64 -rotate-12 opacity-30 dark:opacity-10 animate-float" />
       <div className="relative mx-auto max-w-7xl px-5">
         <SectionHeading
           kicker="Security under the hood"
@@ -1012,7 +1028,7 @@ function CtaBanner() {
   return (
     <section className="px-5 pb-28">
       <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-brand px-8 py-20 text-center text-primary-foreground shadow-elegant">
-        <Emblem className="absolute -right-10 -top-6 h-48 w-72 rotate-12 opacity-20 animate-float" />
+        <Emblem className="absolute -right-10 -top-6 h-48 w-72 rotate-12 opacity-35 dark:opacity-20 animate-float" />
         <Emblem className="relative mx-auto h-20 w-28 animate-bloom" />
         <h2 className="relative mt-6 text-4xl font-semibold sm:text-6xl">
           Begin your <span className="font-deva">संवाद</span>
@@ -1055,8 +1071,7 @@ function SignupSection() {
         <div className="min-w-0">
           <div aria-hidden="true" className="relative mb-8 h-32 w-32">
             <div className="absolute inset-0 animate-spin-slow rounded-full border border-dashed border-gold/50" />
-            <img src={emblemGold} alt="" className="absolute inset-5 h-22 w-22 animate-bloom object-contain dark:hidden" />
-            <img src={emblemSilver} alt="" className="absolute inset-5 hidden h-22 w-22 animate-bloom object-contain dark:block" />
+            <Emblem className="absolute inset-5 h-22 w-22 animate-bloom" />
           </div>
           <p className="text-sm font-semibold text-primary">A new conversation starts here</p>
           <h2 id="signup-heading" className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
