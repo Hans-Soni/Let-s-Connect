@@ -170,9 +170,8 @@ function Header({ dark, toggle }) {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
-        isScrolled ? "glass border-b border-border py-2" : "py-3 sm:py-4"
-      }`}
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${isScrolled ? "glass border-b border-border py-2" : "py-3 sm:py-4"
+        }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-5">
         <a href="#top" className="shrink-0 flex items-center">
@@ -535,9 +534,8 @@ function HowItWorks() {
               return (
                 <li
                   key={step.num}
-                  className={`reveal how-timeline-item ${
-                    isRight ? "how-step-right" : "how-step-left"
-                  }`}
+                  className={`reveal how-timeline-item ${isRight ? "how-step-right" : "how-step-left"
+                    }`}
                 >
                   {/* Card Column */}
                   <div className="how-timeline-card-col">
