@@ -169,9 +169,8 @@ function Header({ dark, toggle }) {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
-        isScrolled ? "glass border-b border-border py-2" : "py-4"
-      }`}
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${isScrolled ? "glass border-b border-border py-2" : "py-4"
+        }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5">
         <a href="#top" className="shrink-0">
@@ -524,54 +523,32 @@ function HowItWorks() {
           }
           sub="The life of a conversation on samवाद, step by step."
         />
-        <div className="relative mt-16 max-w-4xl mx-auto">
+        <div className="how-timeline relative mt-16 max-w-4xl mx-auto">
           {/* Central vertical timeline divider */}
-          <div
-            aria-hidden="true"
-            className="absolute top-8 bottom-8 left-7 md:left-1/2 w-0.5 bg-border pointer-events-none"
-            style={{ transform: "translateX(-50%)" }}
-          />
+          <div aria-hidden="true" className="how-timeline-line" />
 
-          <ol className="relative space-y-10 md:space-y-14">
+          <ol className="relative space-y-10 md:space-y-16">
             {steps.map((step, idx) => {
-              const isEven = idx % 2 === 1;
+              const isRight = idx % 2 === 1;
               return (
                 <li
                   key={step.num}
-                  className="reveal relative flex flex-col md:flex-row items-start md:items-center"
+                  className={`reveal how-timeline-item ${
+                    isRight ? "how-step-right" : "how-step-left"
+                  }`}
                 >
-                  {/* Content card */}
-                  <div
-                    className={`w-full md:w-1/2 pl-20 md:pl-0 ${
-                      isEven
-                        ? "md:order-2 md:pl-12"
-                        : "md:order-1 md:pr-12 md:text-right"
-                    }`}
-                  >
-                    <div className="rounded-3xl border border-border bg-card p-6 shadow-card transition duration-300 hover:shadow-elegant">
+                  {/* Card Column */}
+                  <div className="how-timeline-card-col">
+                    <div className="how-timeline-card">
                       <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
                       <p className="mt-2 text-muted-foreground leading-relaxed">{step.desc}</p>
                     </div>
                   </div>
 
-                  {/* Centered badge on timeline line */}
-                  <div
-                    className="absolute left-7 md:left-1/2 top-6 z-10 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-card text-primary font-display text-lg font-bold shadow-card transition-transform duration-300 hover:scale-110"
-                    style={{
-                      transform: "translateX(-50%)",
-                      boxShadow: "0 0 0 6px var(--background)",
-                    }}
-                  >
+                  {/* Centered number badge */}
+                  <div className="how-timeline-badge" aria-label={`Step ${step.num}`}>
                     {step.num}
                   </div>
-
-                  {/* Empty balancer spacer for desktop alternating layout */}
-                  <div
-                    className={`hidden md:block md:w-1/2 ${
-                      isEven ? "md:order-1" : "md:order-2"
-                    }`}
-                    aria-hidden="true"
-                  />
                 </li>
               );
             })}
@@ -825,7 +802,7 @@ function CompareSection() {
           kicker="Honest comparison"
           title={
             <>
-              Why <span className="font-deva text-gradient">samवाद</span> feels different
+              Why <span className="font-deva text-gradient">Samवाद</span> feels different
             </>
           }
           sub="How we stand apart from corporate suites and personal messengers."
@@ -1019,9 +996,8 @@ function FaqSection() {
             return (
               <div
                 key={q}
-                className={`reveal overflow-hidden rounded-2xl border bg-card transition ${
-                  isOpen ? "border-primary shadow-card" : "border-border"
-                }`}
+                className={`reveal overflow-hidden rounded-2xl border bg-card transition ${isOpen ? "border-primary shadow-card" : "border-border"
+                  }`}
               >
                 <button
                   onClick={() => setActiveFaq(isOpen ? null : idx)}
@@ -1032,9 +1008,8 @@ function FaqSection() {
                   <Plus className={`h-5 w-5 shrink-0 text-primary transition duration-300 ${isOpen ? "rotate-45" : ""}`} />
                 </button>
                 <div
-                  className={`grid transition-all duration-300 ${
-                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                  }`}
+                  className={`grid transition-all duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    }`}
                 >
                   <p className="overflow-hidden px-5 text-muted-foreground">
                     <span className="block pb-5">{a}</span>
