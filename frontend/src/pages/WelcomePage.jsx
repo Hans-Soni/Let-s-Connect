@@ -140,8 +140,8 @@ function SectionHeading({ kicker, title, sub }) {
   return (
     <div className="reveal mx-auto max-w-3xl text-center">
       <p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">{kicker}</p>
-      <h2 className="mt-4 text-4xl font-semibold sm:text-5xl">{title}</h2>
-      {sub && <p className="mt-5 text-lg text-muted-foreground">{sub}</p>}
+      <h2 className="mt-3 text-3xl font-semibold sm:text-4xl md:text-5xl">{title}</h2>
+      {sub && <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground">{sub}</p>}
     </div>
   );
 }
@@ -324,7 +324,7 @@ function Hero() {
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-semibold text-primary">
             <Sparkles className="h-3.5 w-3.5" /> New · HD calling with screen sharing
           </span>
-          <h1 className="mt-6 text-5xl font-semibold leading-[1.02] sm:text-7xl">
+          <h1 className="mt-6 text-4xl font-semibold leading-[1.08] sm:text-6xl md:text-7xl">
             Every conversation,<br />
             <span className="text-gradient italic">beautifully private.</span>
           </h1>
@@ -512,7 +512,7 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how" className="py-28">
+    <section id="how" className="py-16 sm:py-24 md:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker="How it works"
@@ -523,11 +523,11 @@ function HowItWorks() {
           }
           sub="The life of a conversation on samवाद, step by step."
         />
-        <div className="how-timeline relative mt-16 max-w-4xl mx-auto">
+        <div className="how-timeline relative mt-12 sm:mt-16 max-w-4xl mx-auto">
           {/* Central vertical timeline divider */}
           <div aria-hidden="true" className="how-timeline-line" />
 
-          <ol className="relative space-y-10 md:space-y-16">
+          <ol className="relative space-y-4 sm:space-y-6 md:space-y-16">
             {steps.map((step, idx) => {
               const isRight = idx % 2 === 1;
               return (
@@ -540,12 +540,22 @@ function HowItWorks() {
                   {/* Card Column */}
                   <div className="how-timeline-card-col">
                     <div className="how-timeline-card">
-                      <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
-                      <p className="mt-2 text-muted-foreground leading-relaxed">{step.desc}</p>
+                      {/* Mobile step badge + title */}
+                      <div className="flex items-center gap-3 md:block">
+                        <span className="how-badge-mobile" aria-hidden="true">
+                          {step.num}
+                        </span>
+                        <h3 className="text-lg sm:text-xl font-semibold text-foreground">
+                          {step.title}
+                        </h3>
+                      </div>
+                      <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        {step.desc}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Centered number badge */}
+                  {/* Centered number badge (desktop) */}
                   <div className="how-timeline-badge" aria-label={`Step ${step.num}`}>
                     {step.num}
                   </div>
@@ -796,7 +806,7 @@ function CompareSection() {
   ];
 
   return (
-    <section id="compare" className="py-28">
+    <section id="compare" className="py-16 sm:py-24 md:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker="Honest comparison"
@@ -807,7 +817,10 @@ function CompareSection() {
           }
           sub="How we stand apart from corporate suites and personal messengers."
         />
-        <div className="reveal mt-14 overflow-x-auto rounded-3xl border border-border bg-card shadow-card">
+        <p className="mt-6 text-center text-xs text-muted-foreground md:hidden">
+          ← Swipe horizontally to view all messengers →
+        </p>
+        <div className="reveal mt-6 md:mt-14 overflow-x-auto rounded-3xl border border-border bg-card shadow-card">
           <table className="w-full min-w-[720px] text-left">
             <thead>
               <tr className="border-b border-border text-sm">
