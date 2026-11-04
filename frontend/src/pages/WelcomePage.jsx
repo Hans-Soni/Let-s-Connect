@@ -126,11 +126,9 @@ function Logo({ className = "", dark: darkProp }) {
   const { dark: themeDark } = useSamvaadTheme();
   const dark = darkProp !== undefined ? darkProp : themeDark;
 
-  // In dark mode: use logoLight (light silver/white text on dark background)
-  // In light mode: use logoDark (deep terracotta text on ivory background)
   return (
     <img
-      src={dark ? logoLight : logoDark}
+      src={dark ? logoDark : logoLight}
       alt="samवाद"
       className={`h-auto object-contain transition-opacity duration-300 ${className}`}
     />
@@ -526,31 +524,59 @@ function HowItWorks() {
           }
           sub="The life of a conversation on samवाद, step by step."
         />
-        <ol className="relative mt-16 space-y-6 before:absolute before:bottom-6 before:left-7 before:top-6 before:w-px before:bg-border md:before:left-1/2">
-          {steps.map((step, idx) => {
-            const isEven = idx % 2 === 1;
-            return (
-              <li
-                key={step.num}
-                className={`reveal relative grid gap-4 pl-20 md:grid-cols-2 md:gap-16 md:pl-0 ${
-                  !isEven ? "md:[&>div]:col-start-1" : ""
-                }`}
-              >
-                <span className="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-background font-display text-lg font-semibold text-primary md:left-1/2 md:-translate-x-1/2">
-                  {step.num}
-                </span>
-                <div
-                  className={`rounded-3xl border border-border bg-card p-6 shadow-card ${
-                    !isEven ? "md:text-right" : "md:col-start-2"
-                  }`}
+        <div className="relative mt-16 max-w-4xl mx-auto">
+          {/* Central vertical timeline divider */}
+          <div
+            aria-hidden="true"
+            className="absolute top-8 bottom-8 left-7 md:left-1/2 w-0.5 bg-border pointer-events-none"
+            style={{ transform: "translateX(-50%)" }}
+          />
+
+          <ol className="relative space-y-10 md:space-y-14">
+            {steps.map((step, idx) => {
+              const isEven = idx % 2 === 1;
+              return (
+                <li
+                  key={step.num}
+                  className="reveal relative flex flex-col md:flex-row items-start md:items-center"
                 >
-                  <h3 className="text-xl font-semibold">{step.title}</h3>
-                  <p className="mt-2 text-muted-foreground">{step.desc}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                  {/* Content card */}
+                  <div
+                    className={`w-full md:w-1/2 pl-20 md:pl-0 ${
+                      isEven
+                        ? "md:order-2 md:pl-12"
+                        : "md:order-1 md:pr-12 md:text-right"
+                    }`}
+                  >
+                    <div className="rounded-3xl border border-border bg-card p-6 shadow-card transition duration-300 hover:shadow-elegant">
+                      <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
+                      <p className="mt-2 text-muted-foreground leading-relaxed">{step.desc}</p>
+                    </div>
+                  </div>
+
+                  {/* Centered badge on timeline line */}
+                  <div
+                    className="absolute left-7 md:left-1/2 top-6 z-10 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-card text-primary font-display text-lg font-bold shadow-card transition-transform duration-300 hover:scale-110"
+                    style={{
+                      transform: "translateX(-50%)",
+                      boxShadow: "0 0 0 6px var(--background)",
+                    }}
+                  >
+                    {step.num}
+                  </div>
+
+                  {/* Empty balancer spacer for desktop alternating layout */}
+                  <div
+                    className={`hidden md:block md:w-1/2 ${
+                      isEven ? "md:order-1" : "md:order-2"
+                    }`}
+                    aria-hidden="true"
+                  />
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       </div>
     </section>
   );
