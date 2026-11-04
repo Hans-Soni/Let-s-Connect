@@ -1,28 +1,72 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { useThemeStore } from "../store/useThemeStore";
+import {
+  ArrowRight,
+  Bot,
+  Check,
+  Clock,
+  Eye,
+  EyeOff,
+  Fingerprint,
+  Gauge,
+  KeyRound,
+  Lock,
+  Mail,
+  Menu,
+  Mic,
+  MicOff,
+  MonitorUp,
+  Moon,
+  Phone,
+  PhoneOff,
+  Plus,
+  RefreshCw,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  User,
+  UserX,
+  Video,
+  X,
+  Zap,
+} from "lucide-react";
 import logoLight from "../assets/samvaad_logo_light.png";
 import logoDark from "../assets/samvaad_logo_dark.png";
 import emblemGold from "../assets/emblem_gold-sNN9olCf.png";
 import emblemSilver from "../assets/emblem_silver-CXs3LN2i.png";
 import "../welcome.css";
 
-export default function WelcomePage() {
-  const { theme, setTheme } = useThemeStore();
-  const [isScrolled, setIsScrolled] = useState(false);
+const LOGIN_URL = "https://hans-soni.github.io/Let-s-Connect/#/login";
+const SIGNUP_URL = "#signup";
+const LIVE_SIGNUP_URL = "https://hans-soni.github.io/Let-s-Connect/#/signup";
 
-  // Scroll listener for sticky glass header
+// Theme hook matching Lovable
+function useSamvaadTheme() {
+  const [dark, setDark] = useState(true);
+
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const saved = localStorage.getItem("samvaad-theme");
+    if (saved) {
+      setDark(saved === "dark");
+    } else {
+      setDark(true);
+    }
   }, []);
 
-  // Reveal observer on scroll
   useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("samvaad-theme", dark ? "dark" : "light");
+  }, [dark]);
+
+  return { dark, toggle: () => setDark((prev) => !prev) };
+}
+
+// Reveal observer hook matching Lovable
+function useReveal() {
+  useEffect(() => {
+    const elements = document.querySelectorAll(".reveal");
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -31,18 +75,1169 @@ export default function WelcomePage() {
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.12 }
     );
-    const elements = document.querySelectorAll(".reveal");
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
+}
 
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+// Emblem component (gold in light mode, silver in dark mode)
+function Emblem({ className = "" }) {
+  return (
+    <div aria-hidden="true" className={`pointer-events-none ${className}`}>
+      <img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden" />
+      <img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block" />
+    </div>
+  );
+}
+
+// Orbiting Emblem ring
+function EmblemOrbit({ className = "" }) {
+  return (
+    <div aria-hidden="true" className={`pointer-events-none aspect-square ${className}`}>
+      <div className="absolute inset-0 rounded-full bg-glow blur-2xl animate-breathe" />
+      <div className="absolute inset-[6%] rounded-full border border-dashed border-gold/40 animate-spin-slow" />
+      <div className="absolute inset-[18%] rounded-full border border-primary/30 animate-spin-reverse">
+        <span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-shine shadow-elegant" />
+      </div>
+      <div className="absolute inset-[30%] grid place-items-center">
+        <div aria-hidden="true" className="pointer-events-none h-full w-full animate-bloom drop-shadow-2xl">
+          <img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden" />
+          <img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Logo component
+function Logo({ className = "" }) {
+  return (
+    <>
+      <img src={logoLight} alt="samवाद" className={`dark:hidden ${className}`} />
+      <img src={logoDark} alt="samवाद" className={`hidden dark:block ${className}`} />
+    </>
+  );
+}
+
+// Section heading helper
+function SectionHeading({ kicker, title, sub }) {
+  return (
+    <div className="reveal mx-auto max-w-3xl text-center">
+      <p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">{kicker}</p>
+      <h2 className="mt-4 text-4xl font-semibold sm:text-5xl">{title}</h2>
+      {sub && <p className="mt-5 text-lg text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+// Header component with scroll glass blur, theme toggle, and mobile menu
+function Header({ dark, toggle }) {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const navLinks = [
+    ["Features", "#features"],
+    ["Calling", "#calling"],
+    ["How it works", "#how"],
+    ["Compare", "#compare"],
+    ["Security", "#security"],
+    ["FAQ", "#faq"],
+  ];
+
+  return (
+    <header
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+        isScrolled ? "glass border-b border-border py-2" : "py-4"
+      }`}
+    >
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5">
+        <a href="#top" className="shrink-0">
+          <Logo className="h-9 w-auto sm:h-11" />
+        </a>
+        <nav className="hidden items-center gap-1 lg:flex">
+          {navLinks.map(([label, href]) => (
+            <a
+              key={href}
+              href={href}
+              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border transition hover:rotate-12 hover:bg-secondary"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <a
+            href={LOGIN_URL}
+            className="hidden rounded-full px-4 py-2 text-sm font-semibold sm:inline-block hover:text-primary"
+          >
+            Sign in
+          </a>
+          <a
+            href={SIGNUP_URL}
+            className="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-0.5 sm:inline-block"
+          >
+            Start free
+          </a>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-expanded={mobileMenuOpen}
+            aria-label="Menu"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border lg:hidden"
+          >
+            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+      {mobileMenuOpen && (
+        <div className="glass mx-4 mt-3 animate-pop rounded-2xl border border-border p-3 lg:hidden">
+          {navLinks.map(([label, href]) => (
+            <a
+              key={href}
+              href={href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="block rounded-xl px-4 py-3 font-medium hover:bg-secondary"
+            >
+              {label}
+            </a>
+          ))}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <a
+              href={LOGIN_URL}
+              className="rounded-xl border border-border px-4 py-3 text-center font-semibold"
+            >
+              Sign in
+            </a>
+            <a
+              href={SIGNUP_URL}
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-xl bg-primary px-4 py-3 text-center font-semibold text-primary-foreground"
+            >
+              Start free
+            </a>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+// Aarav Joshi Chat Card in Hero
+function HeroChatCard() {
+  return (
+    <div className="relative mx-auto w-full max-w-md animate-float">
+      <div className="absolute -inset-6 rounded-[2.5rem] bg-glow blur-2xl" />
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-elegant">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="relative grid h-10 w-10 place-items-center rounded-full bg-brand font-display font-bold text-primary-foreground">
+              AJ
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-success" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Aarav Joshi</p>
+              <p className="text-xs text-primary">Lead Designer · online</p>
+            </div>
+          </div>
+          <div className="flex gap-2 text-muted-foreground">
+            <Phone className="h-4 w-4" />
+            <Video className="h-4 w-4" />
+          </div>
+        </div>
+        <div className="space-y-3 p-5">
+          <div className="flex animate-pop" style={{ animationDelay: "0.4s" }}>
+            <p className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm rounded-bl-sm bg-secondary">
+              Namaste! Tried the new HD video call yet? 🎙️
+            </p>
+          </div>
+          <div className="flex animate-pop justify-end" style={{ animationDelay: "1.4s" }}>
+            <p className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm rounded-br-sm bg-primary text-primary-foreground">
+              Yes — crystal clear. And it only shows my designation, not my email ✨
+            </p>
+          </div>
+          <div className="flex animate-pop" style={{ animationDelay: "2.4s" }}>
+            <p className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm rounded-bl-sm bg-secondary">
+              Perfect. Sharing my screen now…
+            </p>
+          </div>
+          <div className="flex animate-pop gap-1 rounded-2xl bg-secondary px-4 py-3 w-fit" style={{ animationDelay: "3.2s" }}>
+            <span className="h-2 w-2 animate-dot rounded-full bg-muted-foreground" style={{ animationDelay: "0s" }} />
+            <span className="h-2 w-2 animate-dot rounded-full bg-muted-foreground" style={{ animationDelay: "0.15s" }} />
+            <span className="h-2 w-2 animate-dot rounded-full bg-muted-foreground" style={{ animationDelay: "0.3s" }} />
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t border-border bg-muted px-5 py-3">
+          <span className="flex items-center gap-2 font-mono text-xs">
+            <span className="h-2 w-2 rounded-full bg-success" />
+            Voice call · 04:18
+          </span>
+          <span className="flex h-5 items-end gap-0.5">
+            <span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0s" }} />
+            <span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.12s" }} />
+            <span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.24s" }} />
+            <span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.36s" }} />
+            <span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.48s" }} />
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Hero section
+function Hero() {
+  return (
+    <section id="top" className="relative overflow-hidden pb-24 pt-36 sm:pt-44">
+      <div className="grain absolute inset-0 opacity-60" />
+      <Emblem className="absolute -left-10 bottom-10 h-40 w-56 opacity-10 animate-float" />
+      <Emblem className="absolute right-[42%] top-28 h-16 w-24 opacity-20 animate-float [animation-delay:2s]" />
+      <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_1fr]">
+        <div className="reveal">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> New · HD calling with screen sharing
+          </span>
+          <h1 className="mt-6 text-5xl font-semibold leading-[1.02] sm:text-7xl">
+            Every conversation,<br />
+            <span className="text-gradient italic">beautifully private.</span>
+          </h1>
+          <p className="mt-4 font-deva text-2xl text-muted-foreground">
+            संवाद — where dialogue feels human again.
+          </p>
+          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+            Real-time chat, crystal-clear voice &amp; video and messages that clean themselves up after 24 hours — without ever exposing your email or phone number.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <a
+              href={SIGNUP_URL}
+              className="group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-4 font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-1"
+            >
+              Start chatting free <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+            </a>
+            <a
+              href={LOGIN_URL}
+              className="rounded-full border border-border px-7 py-4 font-semibold transition hover:bg-secondary"
+            >
+              Sign in
+            </a>
+          </div>
+          <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />Real-time WebSockets
+            </span>
+            <span className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />24h auto-cleanup
+            </span>
+            <span className="flex items-center gap-2">
+              <Video className="h-4 w-4 text-primary" />HD P2P calls
+            </span>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />Zero email exposure
+            </span>
+          </div>
+        </div>
+        <div className="reveal relative">
+          <EmblemOrbit className="absolute left-1/2 top-1/2 w-[140%] max-w-[680px] -translate-x-1/2 -translate-y-1/2" />
+          <HeroChatCard />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Marquee ticker
+function Marquee() {
+  const items = [
+    "WebRTC P2P",
+    "Screen sharing",
+    "Socket.io realtime",
+    "STUN + TURN",
+    "Voice notes",
+    "Read receipts",
+    "No ads",
+    "No tracking",
+    "Designation privacy",
+    "24h ephemeral",
+  ];
+  return (
+    <div className="overflow-hidden border-y border-border bg-secondary py-5">
+      <div className="flex w-max animate-marquee gap-10">
+        {[...items, ...items].map((text, idx) => (
+          <span key={idx} className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">
+            {text}
+            <span className="text-shine">✦</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Features section
+function Features() {
+  const featuresList = [
+    {
+      icon: Phone,
+      title: "1-on-1 Voice & Video",
+      desc: "Direct peer-to-peer WebRTC with STUN and TURN support — call across Wi-Fi and mobile networks with zero setup.",
+      tag: "Global NAT traversal",
+    },
+    {
+      icon: MonitorUp,
+      title: "In-browser Screen Sharing",
+      desc: "Share your desktop, a tab or a slide deck live during calls, then swap back to your camera in a click.",
+      tag: "Live track swapping",
+    },
+    {
+      icon: Clock,
+      title: "24-hour Ephemeral Chats",
+      desc: "No permanent traces, no bloated storage. Chat history quietly cleans itself after 24 hours.",
+      tag: "Automated pruning",
+    },
+    {
+      icon: UserX,
+      title: "Designation, not Email",
+      desc: "Peers see your professional designation — Architect, Designer — never your personal email.",
+      tag: "Zero email exposure",
+    },
+    {
+      icon: Zap,
+      title: "Instant WebSockets",
+      desc: "Bidirectional Socket.io pipelines power typing status, online presence and instant read receipts.",
+      tag: "High-throughput delivery",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Blocking & Safety",
+      desc: "Block unwanted users with immediate picture concealment, purge chats and mute sounds anytime.",
+      tag: "Consent first",
+    },
+  ];
+
+  return (
+    <section id="features" className="relative py-28">
+      <div className="mx-auto max-w-7xl px-5">
+        <SectionHeading
+          kicker="Crafted for modern dialogue"
+          title={
+            <>
+              Everything you need, <span className="text-gradient italic">nothing you don't</span>
+            </>
+          }
+          sub="Built with Vite, React, Express, MongoDB Atlas and WebRTC for a clean, lightning-fast experience."
+        />
+        <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {featuresList.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <article
+                key={item.title}
+                className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant"
+                style={{ transitionDelay: `${index * 70}ms` }}
+              >
+                <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100" />
+                <div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-brand text-primary-foreground transition duration-500 group-hover:rotate-6 group-hover:scale-110">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="relative mt-6 text-2xl font-semibold">{item.title}</h3>
+                <p className="relative mt-3 text-muted-foreground">{item.desc}</p>
+                <p className="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                  <Check className="h-4 w-4" />
+                  {item.tag}
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// How it works section
+function HowItWorks() {
+  const steps = [
+    {
+      num: "01",
+      title: "Create your account",
+      desc: "Sign up with a name, email and password. Passwords are hashed with bcrypt and you accept the versioned terms — your consent is recorded with time and source.",
+    },
+    {
+      num: "02",
+      title: "Set your designation",
+      desc: 'Choose how peers know you — “Software Architect”, “Designer”. Your email stays hidden from every other user.',
+    },
+    {
+      num: "03",
+      title: "Chat in real time",
+      desc: "Socket.io delivers messages instantly with typing status, online presence, read receipts, voice notes and image sharing.",
+    },
+    {
+      num: "04",
+      title: "Call & share screen",
+      desc: "Start a peer-to-peer WebRTC voice or video call in one click and swap your camera for your screen at any moment.",
+    },
+    {
+      num: "05",
+      title: "Let it fade away",
+      desc: "A background job sweeps every minute and removes messages older than 24 hours — including their stored images and voice notes.",
+    },
+  ];
+
+  return (
+    <section id="how" className="py-28">
+      <div className="mx-auto max-w-6xl px-5">
+        <SectionHeading
+          kicker="How it works"
+          title={
+            <>
+              From hello to <span className="text-gradient italic">gone in 24 hours</span>
+            </>
+          }
+          sub="The life of a conversation on samवाद, step by step."
+        />
+        <ol className="relative mt-16 space-y-6 before:absolute before:bottom-6 before:left-7 before:top-6 before:w-px before:bg-border md:before:left-1/2">
+          {steps.map((step, idx) => {
+            const isEven = idx % 2 === 1;
+            return (
+              <li
+                key={step.num}
+                className={`reveal relative grid gap-4 pl-20 md:grid-cols-2 md:gap-16 md:pl-0 ${
+                  !isEven ? "md:[&>div]:col-start-1" : ""
+                }`}
+              >
+                <span className="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-background font-display text-lg font-semibold text-primary md:left-1/2 md:-translate-x-1/2">
+                  {step.num}
+                </span>
+                <div
+                  className={`rounded-3xl border border-border bg-card p-6 shadow-card ${
+                    !isEven ? "md:text-right" : "md:col-start-2"
+                  }`}
+                >
+                  <h3 className="text-xl font-semibold">{step.title}</h3>
+                  <p className="mt-2 text-muted-foreground">{step.desc}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+// Calling section with interactive mute button
+function CallingSection() {
+  const [isMuted, setIsMuted] = useState(false);
+
+  return (
+    <section id="calling" className="relative overflow-hidden bg-secondary py-28">
+      <EmblemOrbit className="absolute -right-40 top-1/2 w-[520px] -translate-y-1/2 opacity-40" />
+      <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
+        <div className="reveal">
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Voice · Video · Screen</p>
+          <h2 className="mt-4 text-4xl font-semibold sm:text-5xl">
+            Face-to-face, <span className="text-gradient italic">right in your browser</span>
+          </h2>
+          <p className="mt-5 text-lg text-muted-foreground">
+            One click starts a peer-to-peer HD call. No downloads, no plugins — fluid 30 FPS video and crisp audio across 4G, 5G and strict firewalls.
+          </p>
+          <ul className="mt-8 space-y-4">
+            {[
+              "Peer-to-peer encrypted media streams",
+              "STUN + Open Relay TURN fallback",
+              "Swap camera ↔ screen mid-call",
+            ].map((text) => (
+              <li key={text} className="flex items-center gap-3">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground">
+                  <Check className="h-4 w-4" />
+                </span>
+                {text}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="reveal">
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-elegant">
+            <div className="relative grid aspect-video place-items-center overflow-hidden rounded-2xl bg-brand">
+              <div className="relative grid place-items-center">
+                <span className="absolute h-28 w-28 animate-ring rounded-full border-2 border-primary-foreground" />
+                <span
+                  className="absolute h-28 w-28 animate-ring rounded-full border-2 border-primary-foreground"
+                  style={{ animationDelay: "1.2s" }}
+                />
+                <div className="grid h-28 w-28 place-items-center rounded-full bg-card font-display text-4xl font-bold text-primary">
+                  PS
+                </div>
+              </div>
+              <p className="absolute bottom-4 left-4 rounded-full bg-card/80 px-3 py-1 text-xs font-semibold">
+                Priya Sharma · Software Architect
+              </p>
+              <div className="absolute right-4 top-4 h-24 w-36 rounded-xl border-2 border-card bg-secondary grid place-items-center text-xs font-semibold text-muted-foreground">
+                You
+              </div>
+            </div>
+            <div className="mt-4 flex justify-center gap-3">
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                aria-label="Toggle mute"
+                className="grid h-12 w-12 place-items-center rounded-full bg-secondary transition hover:scale-110"
+              >
+                {isMuted ? <MicOff className="h-5 w-5 text-destructive" /> : <Mic className="h-5 w-5" />}
+              </button>
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-secondary">
+                <Video className="h-5 w-5" />
+              </span>
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-secondary">
+                <MonitorUp className="h-5 w-5" />
+              </span>
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-destructive text-destructive-foreground">
+                <PhoneOff className="h-5 w-5" />
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Privacy section with real-time 24h countdown
+function PrivacySection() {
+  const [hoursLeft, setHoursLeft] = useState(24);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    timerRef.current = window.setInterval(() => {
+      setHoursLeft((prev) => (prev <= 0 ? 24 : prev - 1));
+    }, 900);
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  const circumference = 2 * Math.PI * 88;
+  const dashOffset = circumference * (1 - hoursLeft / 24);
+
+  return (
+    <section id="privacy" className="bg-secondary py-28">
+      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
+        <div className="reveal order-2 lg:order-1">
+          <div className="relative mx-auto grid aspect-square max-w-sm place-items-center">
+            <svg viewBox="0 0 200 200" className="absolute inset-0 -rotate-90">
+              <circle cx="100" cy="100" r="88" fill="none" stroke="var(--border)" strokeWidth="10" />
+              <circle
+                cx="100"
+                cy="100"
+                r="88"
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                style={{ transition: "stroke-dashoffset 0.8s ease" }}
+              />
+            </svg>
+            <div className="text-center">
+              <Lock className="mx-auto h-8 w-8 text-primary" />
+              <p className="mt-2 font-display text-6xl font-semibold">{hoursLeft}h</p>
+              <p className="text-sm text-muted-foreground">until this chat disappears</p>
+            </div>
+          </div>
+        </div>
+        <div className="reveal order-1 lg:order-2">
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Privacy &amp; safety</p>
+          <h2 className="mt-4 text-4xl font-semibold sm:text-5xl">
+            Your words, <span className="text-gradient italic">your control</span>
+          </h2>
+          <p className="mt-5 text-lg text-muted-foreground">
+            Conversations live for a day, then vanish. Your identity stays yours — only your designation is ever shown.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+              <Clock className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Self-cleaning chats</span>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+              <UserX className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Block &amp; hide pictures</span>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+              <Lock className="h-5 w-5 text-primary" />
+              <span className="font-semibold">No email exposure</span>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              <span className="font-semibold">No ads, no tracking</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Security section
+function SecuritySection() {
+  const securityFeatures = [
+    {
+      icon: KeyRound,
+      title: "AES-256-GCM at rest",
+      desc: "Every message is encrypted before it reaches the database, with an authentication tag that detects tampering.",
+    },
+    {
+      icon: RefreshCw,
+      title: "Keys rotate twice a day",
+      desc: "A versioned key ring rotates at 00:00 and 12:00 IST. Older messages stay readable; new ones always use a fresh key.",
+    },
+    {
+      icon: Fingerprint,
+      title: "Signed sessions",
+      desc: "JSON Web Tokens in secure cookies authenticate both API calls and live socket connections.",
+    },
+    {
+      icon: Bot,
+      title: "Bot & attack shield",
+      desc: "Arcjet blocks automated bots and common attacks like SQL injection before they reach the app.",
+    },
+    {
+      icon: Gauge,
+      title: "Rate limiting",
+      desc: "100 requests per 15 minutes per client, tracked in Redis with an automatic fallback limiter.",
+    },
+    {
+      icon: Shield,
+      title: "Input hardening",
+      desc: "Helmet security headers, MongoDB query sanitising and XSS cleaning on every request.",
+    },
+  ];
+
+  return (
+    <section id="security" className="relative overflow-hidden bg-secondary py-28">
+      <Emblem className="absolute -left-16 top-16 h-48 w-64 -rotate-12 opacity-10 animate-float" />
+      <div className="relative mx-auto max-w-7xl px-5">
+        <SectionHeading
+          kicker="Security under the hood"
+          title={
+            <>
+              Built like a vault, <span className="text-gradient italic">feels like a chat</span>
+            </>
+          }
+          sub="Privacy isn't a setting on samवाद — it's how the backend is engineered."
+        />
+        <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {securityFeatures.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.title}
+                className="reveal group flex gap-4 rounded-3xl border border-border bg-card p-6 transition duration-500 hover:-translate-y-1 hover:shadow-elegant"
+                style={{ transitionDelay: `${idx * 60}ms` }}
+              >
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{item.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Compare section
+function CompareSection() {
+  const matrix = [
+    ["Zero email / phone exposure", "Only your designation is shown", [true, false, false, false]],
+    ["24-hour ephemeral cleanup", "Messages purge themselves automatically", [true, false, false, false]],
+    ["Browser-native HD calls", "No desktop or mobile app needed", [true, false, false, false]],
+    ["In-browser screen sharing", "One-click during video calls", [true, false, false, false]],
+    ["STUN + TURN traversal", "Connects across carriers & firewalls", [true, true, true, true]],
+    ["Voice notes & HD media", "Fullscreen zoom on images", [true, true, true, true]],
+    ["100% ad-free, zero tracking", "No algorithmic feed or data selling", [true, false, true, false]],
+    ["Ultra-lightweight loading", "Vite + optimized WebSockets", [true, false, true, false]],
+  ];
+
+  return (
+    <section id="compare" className="py-28">
+      <div className="mx-auto max-w-6xl px-5">
+        <SectionHeading
+          kicker="Honest comparison"
+          title={
+            <>
+              Why <span className="font-deva text-gradient">samवाद</span> feels different
+            </>
+          }
+          sub="How we stand apart from corporate suites and personal messengers."
+        />
+        <div className="reveal mt-14 overflow-x-auto rounded-3xl border border-border bg-card shadow-card">
+          <table className="w-full min-w-[720px] text-left">
+            <thead>
+              <tr className="border-b border-border text-sm">
+                <th className="p-5 font-semibold text-muted-foreground">Capability</th>
+                <th className="bg-primary p-5 text-center font-deva text-lg text-primary-foreground">samवाद</th>
+                {["WhatsApp", "Telegram", "Slack / Teams"].map((c) => (
+                  <th key={c} className="p-5 text-center font-semibold text-muted-foreground">
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {matrix.map(([feature, subtitle, values]) => (
+                <tr key={feature} className="border-b border-border last:border-0 transition hover:bg-muted">
+                  <td className="p-5">
+                    <p className="font-semibold">{feature}</p>
+                    <p className="text-sm text-muted-foreground">{subtitle}</p>
+                  </td>
+                  {values.map((val, i) => (
+                    <td key={i} className={`p-5 text-center ${i === 0 ? "bg-primary/10" : ""}`}>
+                      {val ? (
+                        <Check className="mx-auto h-5 w-5 text-primary" />
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Benefits section
+function BenefitsSection() {
+  const benefits = [
+    {
+      icon: UserX,
+      title: "No identity leakage",
+      desc: "Connect with colleagues without handing out your phone number or personal email.",
+    },
+    {
+      icon: MonitorUp,
+      title: "Runs in any browser",
+      desc: "Chrome, Safari, Firefox, Edge or mobile — just open the link. Nothing to install.",
+    },
+    {
+      icon: Clock,
+      title: "Zero storage bloat",
+      desc: "24-hour retention keeps your device clean. No gigabytes of stale media cache.",
+    },
+    {
+      icon: Zap,
+      title: "Instant P2P speed",
+      desc: "Low-latency media pipelines for crisp audio and fluid 30 FPS video.",
+    },
+  ];
+
+  return (
+    <section id="benefits" className="py-28">
+      <div className="mx-auto max-w-7xl px-5">
+        <SectionHeading
+          kicker="Why people choose us"
+          title={
+            <>
+              Real benefits for <span className="text-gradient italic">people &amp; teams</span>
+            </>
+          }
+        />
+        <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {benefits.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.title}
+                className="reveal rounded-3xl border border-border bg-card p-6 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant"
+                style={{ transitionDelay: `${idx * 70}ms` }}
+              >
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-secondary text-primary">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="mt-5 text-xl font-semibold">{item.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{item.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Stack section
+function StackSection() {
+  const stack = [
+    ["Frontend", ["React 19", "Vite", "Zustand", "React Router", "Socket.io client", "Axios"]],
+    ["Realtime & media", ["Socket.io", "WebRTC", "STUN / TURN", "Cloudinary"]],
+    ["Backend", ["Node.js", "Express", "MongoDB Atlas", "Mongoose", "node-cron"]],
+    ["Security & services", ["Arcjet", "Upstash Redis", "JWT", "bcrypt", "Helmet", "Resend email"]],
+  ];
+
+  return (
+    <section id="stack" className="py-28">
+      <div className="mx-auto max-w-6xl px-5">
+        <SectionHeading
+          kicker="The technology"
+          title={
+            <>
+              A modern stack, <span className="text-gradient italic">end to end</span>
+            </>
+          }
+          sub="Full-stack MERN with realtime sockets and peer-to-peer media."
+        />
+        <div className="mt-14 grid gap-5 sm:grid-cols-2">
+          {stack.map(([category, techList]) => (
+            <div key={category} className="reveal rounded-3xl border border-border bg-card p-6 shadow-card">
+              <h3 className="text-lg font-semibold">{category}</h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {techList.map((tech) => (
+                  <span
+                    key={tech}
+                    className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-xs font-medium text-foreground"
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// FAQ section with animated accordion
+function FaqSection() {
+  const [activeFaq, setActiveFaq] = useState(0);
+
+  const faqs = [
+    [
+      "Do I need to install anything?",
+      "No. samवाद runs entirely in your browser — Chrome, Safari, Firefox, Edge or mobile. Calls and screen sharing work without plugins.",
+    ],
+    [
+      "Can other users see my email address?",
+      "Never. Other people only see your name and the designation you choose.",
+    ],
+    [
+      "What exactly happens after 24 hours?",
+      "A cleanup job runs every minute. Messages older than 24 hours are deleted, along with any images or voice notes attached to them.",
+    ],
+    [
+      "Are my messages encrypted?",
+      "Yes. Messages are stored with AES-256-GCM encryption using keys that rotate twice a day. Calls travel directly between devices over WebRTC.",
+    ],
+    [
+      "Will calls work on mobile data or office Wi-Fi?",
+      "Yes. STUN and TURN relay servers help calls connect across 4G/5G carriers and strict corporate firewalls.",
+    ],
+    [
+      "Can I block someone?",
+      "Yes. Blocking hides your profile picture from them immediately, and you can clear a chat history or mute sounds anytime.",
+    ],
+  ];
+
+  return (
+    <section id="faq" className="py-28">
+      <div className="mx-auto max-w-3xl px-5">
+        <SectionHeading
+          kicker="Questions"
+          title={
+            <>
+              Frequently <span className="text-gradient italic">asked</span>
+            </>
+          }
+        />
+        <div className="mt-12 space-y-3">
+          {faqs.map(([q, a], idx) => {
+            const isOpen = activeFaq === idx;
+            return (
+              <div
+                key={q}
+                className={`reveal overflow-hidden rounded-2xl border bg-card transition ${
+                  isOpen ? "border-primary shadow-card" : "border-border"
+                }`}
+              >
+                <button
+                  onClick={() => setActiveFaq(isOpen ? null : idx)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"
+                >
+                  <span>{q}</span>
+                  <Plus className={`h-5 w-5 shrink-0 text-primary transition duration-300 ${isOpen ? "rotate-45" : ""}`} />
+                </button>
+                <div
+                  className={`grid transition-all duration-300 ${
+                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <p className="overflow-hidden px-5 text-muted-foreground">
+                    <span className="block pb-5">{a}</span>
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// CTA Banner
+function CtaBanner() {
+  return (
+    <section className="px-5 pb-28">
+      <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-brand px-8 py-20 text-center text-primary-foreground shadow-elegant">
+        <Emblem className="absolute -right-10 -top-6 h-48 w-72 rotate-12 opacity-20 animate-float" />
+        <Emblem className="relative mx-auto h-20 w-28 animate-bloom" />
+        <h2 className="relative mt-6 text-4xl font-semibold sm:text-6xl">
+          Begin your <span className="font-deva">संवाद</span>
+        </h2>
+        <p className="relative mx-auto mt-5 max-w-xl text-lg opacity-90">
+          Join people enjoying real-time chat, HD calling and true ephemeral privacy.
+        </p>
+        <div className="relative mt-9 flex flex-wrap justify-center gap-3">
+          <a
+            href={SIGNUP_URL}
+            className="rounded-full bg-card px-8 py-4 font-semibold text-foreground transition hover:-translate-y-1"
+          >
+            Create free account
+          </a>
+          <a
+            href={LOGIN_URL}
+            className="rounded-full border-2 border-primary-foreground/60 px-8 py-4 font-semibold transition hover:bg-primary-foreground/10"
+          >
+            I already have an account
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Signup section
+function SignupSection() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSubmitted(true);
   };
 
   return (
-<div className={`welcome-page min-h-screen overflow-x-hidden ${theme === "dark" ? "dark" : ""}`}><header className="fixed inset-x-0 top-0 z-50 transition-all duration-500 py-4"><div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5"><a href="#top" className="shrink-0"><img src={logoLight} alt="samवाद" className="dark:hidden h-9 w-auto sm:h-11"/><img src={logoDark} alt="samवाद" className="hidden dark:block h-9 w-auto sm:h-11"/></a><nav className="hidden items-center gap-1 lg:flex"><a href="#features" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground">Features</a><a href="#calling" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground">Calling</a><a href="#how" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground">How it works</a><a href="#compare" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground">Compare</a><a href="#security" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground">Security</a><a href="#faq" className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground">FAQ</a></nav><div className="flex items-center gap-2"><button aria-label="Toggle theme" className="grid h-10 w-10 place-items-center rounded-full border border-border transition hover:rotate-12 hover:bg-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sun h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></button><a href="https://hans-soni.github.io/Let-s-Connect/#/login" className="hidden rounded-full px-4 py-2 text-sm font-semibold sm:inline-block hover:text-primary">Sign in</a><a href="#signup" className="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-0.5 sm:inline-block">Start free</a><button aria-expanded="false" aria-label="Menu" className="grid h-10 w-10 place-items-center rounded-full border border-border lg:hidden"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-menu h-4 w-4" aria-hidden="true"><path d="M4 5h16"></path><path d="M4 12h16"></path><path d="M4 19h16"></path></svg></button></div></div></header><main><section id="top" className="relative overflow-hidden pb-24 pt-36 sm:pt-44"><div className="grain absolute inset-0 opacity-60"></div><div aria-hidden="true" className="pointer-events-none absolute -left-10 bottom-10 h-40 w-56 opacity-10 animate-float"><img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden"/><img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block"/></div><div aria-hidden="true" className="pointer-events-none absolute right-[42%] top-28 h-16 w-24 opacity-20 animate-float [animation-delay:2s]"><img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden"/><img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block"/></div><div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_1fr]"><div className="reveal"><span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-semibold text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles h-3.5 w-3.5" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg> New · HD calling with screen sharing</span><h1 className="mt-6 text-5xl font-semibold leading-[1.02] sm:text-7xl">Every conversation,<br/><span className="text-gradient italic">beautifully private.</span></h1><p className="mt-4 font-deva text-2xl text-muted-foreground">संवाद — where dialogue feels human again.</p><p className="mt-6 max-w-xl text-lg text-muted-foreground">Real-time chat, crystal-clear voice &amp; video and messages that clean themselves up after 24 hours — without ever exposing your email or phone number.</p><div className="mt-9 flex flex-wrap gap-3"><a href="#signup" className="group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-4 font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-1">Start chatting free <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right h-4 w-4 transition group-hover:translate-x-1" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a><a href="https://hans-soni.github.io/Let-s-Connect/#/login" className="rounded-full border border-border px-7 py-4 font-semibold transition hover:bg-secondary">Sign in</a></div><div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground"><span className="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zap h-4 w-4 text-primary" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>Real-time WebSockets</span><span className="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock h-4 w-4 text-primary" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>24h auto-cleanup</span><span className="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video h-4 w-4 text-primary" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg>HD P2P calls</span><span className="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check h-4 w-4 text-primary" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>Zero email exposure</span></div></div><div className="reveal relative"><div aria-hidden="true" className="pointer-events-none aspect-square absolute left-1/2 top-1/2 w-[140%] max-w-[680px] -translate-x-1/2 -translate-y-1/2"><div className="absolute inset-0 rounded-full bg-glow blur-2xl animate-breathe"></div><div className="absolute inset-[6%] rounded-full border border-dashed border-gold/40 animate-spin-slow"></div><div className="absolute inset-[18%] rounded-full border border-primary/30 animate-spin-reverse"><span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-shine shadow-elegant"></span></div><div className="absolute inset-[30%] grid place-items-center"><div aria-hidden="true" className="pointer-events-none h-full w-full animate-bloom drop-shadow-2xl"><img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden"/><img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block"/></div></div></div><div className="relative mx-auto w-full max-w-md animate-float"><div className="absolute -inset-6 rounded-[2.5rem] bg-glow blur-2xl"></div><div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-elegant"><div className="flex items-center justify-between border-b border-border px-5 py-4"><div className="flex items-center gap-3"><div className="relative grid h-10 w-10 place-items-center rounded-full bg-brand font-display font-bold text-primary-foreground">AJ<span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-success"></span></div><div><p className="text-sm font-semibold">Aarav Joshi</p><p className="text-xs text-primary">Lead Designer · online</p></div></div><div className="flex gap-2 text-muted-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone h-4 w-4" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"></path></svg><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video h-4 w-4" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg></div></div><div className="space-y-3 p-5"><div className="flex animate-pop " style={{ animationDelay: "0.4s" }}><p className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm rounded-bl-sm bg-secondary">Namaste! Tried the new HD video call yet? 🎙️</p></div><div className="flex animate-pop justify-end" style={{ animationDelay: "1.4s" }}><p className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm rounded-br-sm bg-primary text-primary-foreground">Yes — crystal clear. And it only shows my designation, not my email ✨</p></div><div className="flex animate-pop " style={{ animationDelay: "2.4s" }}><p className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm rounded-bl-sm bg-secondary">Perfect. Sharing my screen now…</p></div><div className="flex animate-pop gap-1 rounded-2xl bg-secondary px-4 py-3 w-fit" style={{ animationDelay: "3.2s" }}><span className="h-2 w-2 animate-dot rounded-full bg-muted-foreground" style={{ animationDelay: "0s" }}></span><span className="h-2 w-2 animate-dot rounded-full bg-muted-foreground" style={{ animationDelay: "0.15s" }}></span><span className="h-2 w-2 animate-dot rounded-full bg-muted-foreground" style={{ animationDelay: "0.3s" }}></span></div></div><div className="flex items-center justify-between border-t border-border bg-muted px-5 py-3"><span className="flex items-center gap-2 font-mono text-xs"><span className="h-2 w-2 rounded-full bg-success"></span>Voice call · 04:18</span><span className="flex h-5 items-end gap-0.5"><span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0s" }}></span><span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.12s" }}></span><span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.24s" }}></span><span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.36s" }}></span><span className="h-full w-1 animate-wave rounded-full bg-primary" style={{ animationDelay: "0.48s" }}></span></span></div></div></div></div></div></section><div className="overflow-hidden border-y border-border bg-secondary py-5"><div className="flex w-max animate-marquee gap-10"><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">WebRTC P2P<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Screen sharing<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Socket.io realtime<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">STUN + TURN<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Voice notes<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Read receipts<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">No ads<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">No tracking<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Designation privacy<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">24h ephemeral<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">WebRTC P2P<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Screen sharing<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Socket.io realtime<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">STUN + TURN<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Voice notes<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Read receipts<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">No ads<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">No tracking<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">Designation privacy<span className="text-shine">✦</span></span><span className="flex items-center gap-10 font-display text-xl italic text-muted-foreground">24h ephemeral<span className="text-shine">✦</span></span></div></div><section id="features" className="relative py-28"><div className="mx-auto max-w-7xl px-5"><div className="reveal mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Crafted for modern dialogue</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">Everything you need, <span className="text-gradient italic">nothing you don&#x27;t</span></h2><p className="mt-5 text-lg text-muted-foreground">Built with Vite, React, Express, MongoDB Atlas and WebRTC for a clean, lightning-fast experience.</p></div><div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><article className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "0ms" }}><div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100"></div><div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-brand text-primary-foreground transition duration-500 group-hover:rotate-6 group-hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone h-6 w-6" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"></path></svg></div><h3 className="relative mt-6 text-2xl font-semibold">1-on-1 Voice &amp; Video</h3><p className="relative mt-3 text-muted-foreground">Direct peer-to-peer WebRTC with STUN and TURN support — call across Wi-Fi and mobile networks with zero setup.</p><p className="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Global NAT traversal</p></article><article className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "70ms" }}><div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100"></div><div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-brand text-primary-foreground transition duration-500 group-hover:rotate-6 group-hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-monitor-up h-6 w-6" aria-hidden="true"><path d="m9 10 3-3 3 3"></path><path d="M12 13V7"></path><rect width="20" height="14" x="2" y="3" rx="2"></rect><path d="M12 17v4"></path><path d="M8 21h8"></path></svg></div><h3 className="relative mt-6 text-2xl font-semibold">In-browser Screen Sharing</h3><p className="relative mt-3 text-muted-foreground">Share your desktop, a tab or a slide deck live during calls, then swap back to your camera in a click.</p><p className="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Live track swapping</p></article><article className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "140ms" }}><div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100"></div><div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-brand text-primary-foreground transition duration-500 group-hover:rotate-6 group-hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock h-6 w-6" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg></div><h3 className="relative mt-6 text-2xl font-semibold">24-hour Ephemeral Chats</h3><p className="relative mt-3 text-muted-foreground">No permanent traces, no bloated storage. Chat history quietly cleans itself after 24 hours.</p><p className="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Automated pruning</p></article><article className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "210ms" }}><div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100"></div><div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-brand text-primary-foreground transition duration-500 group-hover:rotate-6 group-hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-x h-6 w-6" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" x2="22" y1="8" y2="13"></line><line x1="22" x2="17" y1="8" y2="13"></line></svg></div><h3 className="relative mt-6 text-2xl font-semibold">Designation, not Email</h3><p className="relative mt-3 text-muted-foreground">Peers see your professional designation — Architect, Designer — never your personal email.</p><p className="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Zero email exposure</p></article><article className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "280ms" }}><div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100"></div><div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-brand text-primary-foreground transition duration-500 group-hover:rotate-6 group-hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zap h-6 w-6" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg></div><h3 className="relative mt-6 text-2xl font-semibold">Instant WebSockets</h3><p className="relative mt-3 text-muted-foreground">Bidirectional Socket.io pipelines power typing status, online presence and instant read receipts.</p><p className="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>High-throughput delivery</p></article><article className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "350ms" }}><div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100"></div><div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-brand text-primary-foreground transition duration-500 group-hover:rotate-6 group-hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check h-6 w-6" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg></div><h3 className="relative mt-6 text-2xl font-semibold">Blocking &amp; Safety</h3><p className="relative mt-3 text-muted-foreground">Block unwanted users with immediate picture concealment, purge chats and mute sounds anytime.</p><p className="relative mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Consent first</p></article></div></div></section><section id="how" className="py-28"><div className="mx-auto max-w-6xl px-5"><div className="reveal mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">How it works</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">From hello to <span className="text-gradient italic">gone in 24 hours</span></h2><p className="mt-5 text-lg text-muted-foreground">The life of a conversation on samवाद, step by step.</p></div><ol className="relative mt-16 space-y-6 before:absolute before:bottom-6 before:left-7 before:top-6 before:w-px before:bg-border md:before:left-1/2"><li className="reveal relative grid gap-4 pl-20 md:grid-cols-2 md:gap-16 md:pl-0 md:[&amp;&gt;div]:col-start-1"><span className="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-background font-display text-lg font-semibold text-primary md:left-1/2 md:-translate-x-1/2">01</span><div className="rounded-3xl border border-border bg-card p-6 shadow-card md:text-right"><h3 className="text-xl font-semibold">Create your account</h3><p className="mt-2 text-muted-foreground">Sign up with a name, email and password. Passwords are hashed with bcrypt and you accept the versioned terms — your consent is recorded with time and source.</p></div></li><li className="reveal relative grid gap-4 pl-20 md:grid-cols-2 md:gap-16 md:pl-0 "><span className="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-background font-display text-lg font-semibold text-primary md:left-1/2 md:-translate-x-1/2">02</span><div className="rounded-3xl border border-border bg-card p-6 shadow-card md:col-start-2"><h3 className="text-xl font-semibold">Set your designation</h3><p className="mt-2 text-muted-foreground">Choose how peers know you — “Software Architect”, “Designer”. Your email stays hidden from every other user.</p></div></li><li className="reveal relative grid gap-4 pl-20 md:grid-cols-2 md:gap-16 md:pl-0 md:[&amp;&gt;div]:col-start-1"><span className="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-background font-display text-lg font-semibold text-primary md:left-1/2 md:-translate-x-1/2">03</span><div className="rounded-3xl border border-border bg-card p-6 shadow-card md:text-right"><h3 className="text-xl font-semibold">Chat in real time</h3><p className="mt-2 text-muted-foreground">Socket.io delivers messages instantly with typing status, online presence, read receipts, voice notes and image sharing.</p></div></li><li className="reveal relative grid gap-4 pl-20 md:grid-cols-2 md:gap-16 md:pl-0 "><span className="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-background font-display text-lg font-semibold text-primary md:left-1/2 md:-translate-x-1/2">04</span><div className="rounded-3xl border border-border bg-card p-6 shadow-card md:col-start-2"><h3 className="text-xl font-semibold">Call &amp; share screen</h3><p className="mt-2 text-muted-foreground">Start a peer-to-peer WebRTC voice or video call in one click and swap your camera for your screen at any moment.</p></div></li><li className="reveal relative grid gap-4 pl-20 md:grid-cols-2 md:gap-16 md:pl-0 md:[&amp;&gt;div]:col-start-1"><span className="absolute left-0 top-0 grid h-14 w-14 place-items-center rounded-full border-2 border-primary bg-background font-display text-lg font-semibold text-primary md:left-1/2 md:-translate-x-1/2">05</span><div className="rounded-3xl border border-border bg-card p-6 shadow-card md:text-right"><h3 className="text-xl font-semibold">Let it fade away</h3><p className="mt-2 text-muted-foreground">A background job sweeps every minute and removes messages older than 24 hours — including their stored images and voice notes.</p></div></li></ol></div></section><section id="calling" className="relative overflow-hidden bg-secondary py-28"><div aria-hidden="true" className="pointer-events-none aspect-square absolute -right-40 top-1/2 w-[520px] -translate-y-1/2 opacity-40"><div className="absolute inset-0 rounded-full bg-glow blur-2xl animate-breathe"></div><div className="absolute inset-[6%] rounded-full border border-dashed border-gold/40 animate-spin-slow"></div><div className="absolute inset-[18%] rounded-full border border-primary/30 animate-spin-reverse"><span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-shine shadow-elegant"></span></div><div className="absolute inset-[30%] grid place-items-center"><div aria-hidden="true" className="pointer-events-none h-full w-full animate-bloom drop-shadow-2xl"><img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden"/><img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block"/></div></div></div><div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2"><div className="reveal"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Voice · Video · Screen</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">Face-to-face, <span className="text-gradient italic">right in your browser</span></h2><p className="mt-5 text-lg text-muted-foreground">One click starts a peer-to-peer HD call. No downloads, no plugins — fluid 30 FPS video and crisp audio across 4G, 5G and strict firewalls.</p><ul className="mt-8 space-y-4"><li className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>Peer-to-peer encrypted media streams</li><li className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>STUN + Open Relay TURN fallback</li><li className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-4 w-4" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>Swap camera ↔ screen mid-call</li></ul></div><div className="reveal"><div className="relative overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-elegant"><div className="relative grid aspect-video place-items-center overflow-hidden rounded-2xl bg-brand"><div className="relative grid place-items-center"><span className="absolute h-28 w-28 animate-ring rounded-full border-2 border-primary-foreground"></span><span className="absolute h-28 w-28 animate-ring rounded-full border-2 border-primary-foreground" style={{ animationDelay: "1.2s" }}></span><div className="grid h-28 w-28 place-items-center rounded-full bg-card font-display text-4xl font-bold text-primary">PS</div></div><p className="absolute bottom-4 left-4 rounded-full bg-card/80 px-3 py-1 text-xs font-semibold">Priya Sharma · Software Architect</p><div className="absolute right-4 top-4 h-24 w-36 rounded-xl border-2 border-card bg-secondary grid place-items-center text-xs font-semibold text-muted-foreground">You</div></div><div className="mt-4 flex justify-center gap-3"><button aria-label="Toggle mute" className="grid h-12 w-12 place-items-center rounded-full bg-secondary transition hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mic h-5 w-5" aria-hidden="true"><path d="M12 19v3"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><rect x="9" y="2" width="6" height="13" rx="3"></rect></svg></button><span className="grid h-12 w-12 place-items-center rounded-full bg-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video h-5 w-5" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg></span><span className="grid h-12 w-12 place-items-center rounded-full bg-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-monitor-up h-5 w-5" aria-hidden="true"><path d="m9 10 3-3 3 3"></path><path d="M12 13V7"></path><rect width="20" height="14" x="2" y="3" rx="2"></rect><path d="M12 17v4"></path><path d="M8 21h8"></path></svg></span><span className="grid h-12 w-12 place-items-center rounded-full bg-destructive text-destructive-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone-off h-5 w-5" aria-hidden="true"><path d="M10.1 13.9a14 14 0 0 0 3.732 2.668 1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2 18 18 0 0 1-12.728-5.272"></path><path d="M22 2 2 22"></path><path d="M4.76 13.582A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 .244.473"></path></svg></span></div></div></div></div></section><section id="privacy" className="bg-secondary py-28"><div className="mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2"><div className="reveal order-2 lg:order-1"><div className="relative mx-auto grid aspect-square max-w-sm place-items-center"><svg viewBox="0 0 200 200" className="absolute inset-0 -rotate-90"><circle cx="100" cy="100" r="88" fill="none" stroke="var(--border)" strokeWidth="10"></circle><circle cx="100" cy="100" r="88" fill="none" stroke="var(--primary)" strokeWidth="10" strokeLinecap="round" strokeDasharray="552.9203070318035" strokeDashoffset="0" style={{ transition: "stroke-dashoffset 0.8s ease" }}></circle></svg><div className="text-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock mx-auto h-8 w-8 text-primary" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><p className="mt-2 font-display text-6xl font-semibold">24h</p><p className="text-sm text-muted-foreground">until this chat disappears</p></div></div></div><div className="reveal order-1 lg:order-2"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Privacy &amp; safety</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">Your words, <span className="text-gradient italic">your control</span></h2><p className="mt-5 text-lg text-muted-foreground">Conversations live for a day, then vanish. Your identity stays yours — only your designation is ever shown.</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock h-5 w-5 text-primary" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg><span className="font-semibold">Self-cleaning chats</span></div><div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-x h-5 w-5 text-primary" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" x2="22" y1="8" y2="13"></line><line x1="22" x2="17" y1="8" y2="13"></line></svg><span className="font-semibold">Block &amp; hide pictures</span></div><div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock h-5 w-5 text-primary" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span className="font-semibold">No email exposure</span></div><div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check h-5 w-5 text-primary" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg><span className="font-semibold">No ads, no tracking</span></div></div></div></div></section><section id="security" className="relative overflow-hidden bg-secondary py-28"><div aria-hidden="true" className="pointer-events-none absolute -left-16 top-16 h-48 w-64 -rotate-12 opacity-10 animate-float"><img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden"/><img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block"/></div><div className="relative mx-auto max-w-7xl px-5"><div className="reveal mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Security under the hood</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">Built like a vault, <span className="text-gradient italic">feels like a chat</span></h2><p className="mt-5 text-lg text-muted-foreground">Privacy isn&#x27;t a setting on samवाद — it&#x27;s how the backend is engineered.</p></div><div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><div className="reveal group flex gap-4 rounded-3xl border border-border bg-card p-6 transition duration-500 hover:-translate-y-1 hover:shadow-elegant" style={{ transitionDelay: "0ms" }}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-key-round h-5 w-5" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"></path><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle></svg></span><div className="min-w-0"><h3 className="text-lg font-semibold">AES-256-GCM at rest</h3><p className="mt-1 text-sm text-muted-foreground">Every message is encrypted before it reaches the database, with an authentication tag that detects tampering.</p></div></div><div className="reveal group flex gap-4 rounded-3xl border border-border bg-card p-6 transition duration-500 hover:-translate-y-1 hover:shadow-elegant" style={{ transitionDelay: "60ms" }}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw h-5 w-5" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg></span><div className="min-w-0"><h3 className="text-lg font-semibold">Keys rotate twice a day</h3><p className="mt-1 text-sm text-muted-foreground">A versioned key ring rotates at 00:00 and 12:00 IST. Older messages stay readable; new ones always use a fresh key.</p></div></div><div className="reveal group flex gap-4 rounded-3xl border border-border bg-card p-6 transition duration-500 hover:-translate-y-1 hover:shadow-elegant" style={{ transitionDelay: "120ms" }}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-fingerprint-pattern h-5 w-5" aria-hidden="true"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"></path><path d="M14 13.12c0 2.38 0 6.38-1 8.88"></path><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"></path><path d="M2 12a10 10 0 0 1 18-6"></path><path d="M2 16h.01"></path><path d="M21.8 16c.2-2 .131-5.354 0-6"></path><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"></path><path d="M8.65 22c.21-.66.45-1.32.57-2"></path><path d="M9 6.8a6 6 0 0 1 9 5.2v2"></path></svg></span><div className="min-w-0"><h3 className="text-lg font-semibold">Signed sessions</h3><p className="mt-1 text-sm text-muted-foreground">JSON Web Tokens in secure cookies authenticate both API calls and live socket connections.</p></div></div><div className="reveal group flex gap-4 rounded-3xl border border-border bg-card p-6 transition duration-500 hover:-translate-y-1 hover:shadow-elegant" style={{ transitionDelay: "180ms" }}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bot h-5 w-5" aria-hidden="true"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg></span><div className="min-w-0"><h3 className="text-lg font-semibold">Bot &amp; attack shield</h3><p className="mt-1 text-sm text-muted-foreground">Arcjet blocks automated bots and common attacks like SQL injection before they reach the app.</p></div></div><div className="reveal group flex gap-4 rounded-3xl border border-border bg-card p-6 transition duration-500 hover:-translate-y-1 hover:shadow-elegant" style={{ transitionDelay: "240ms" }}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-timer h-5 w-5" aria-hidden="true"><line x1="10" x2="14" y1="2" y2="2"></line><line x1="12" x2="15" y1="14" y2="11"></line><circle cx="12" cy="14" r="8"></circle></svg></span><div className="min-w-0"><h3 className="text-lg font-semibold">Rate limiting</h3><p className="mt-1 text-sm text-muted-foreground">100 requests per 15 minutes per client, tracked in Redis with an automatic fallback limiter.</p></div></div><div className="reveal group flex gap-4 rounded-3xl border border-border bg-card p-6 transition duration-500 hover:-translate-y-1 hover:shadow-elegant" style={{ transitionDelay: "300ms" }}><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-border bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-funnel h-5 w-5" aria-hidden="true"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path></svg></span><div className="min-w-0"><h3 className="text-lg font-semibold">Input hardening</h3><p className="mt-1 text-sm text-muted-foreground">Helmet security headers, MongoDB query sanitising and XSS cleaning on every request.</p></div></div></div></div></section><section id="compare" className="py-28"><div className="mx-auto max-w-6xl px-5"><div className="reveal mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Honest comparison</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">Why <span className="font-deva text-gradient">samवाद</span> feels different</h2><p className="mt-5 text-lg text-muted-foreground">How we stand apart from corporate suites and personal messengers.</p></div><div className="reveal mt-14 overflow-x-auto rounded-3xl border border-border bg-card shadow-card"><table className="w-full min-w-[720px] text-left"><thead><tr className="border-b border-border text-sm"><th className="p-5 font-semibold text-muted-foreground">Capability</th><th className="bg-primary p-5 text-center font-deva text-lg text-primary-foreground">samवाद</th><th className="p-5 text-center font-semibold text-muted-foreground">WhatsApp</th><th className="p-5 text-center font-semibold text-muted-foreground">Telegram</th><th className="p-5 text-center font-semibold text-muted-foreground">Slack / Teams</th></tr></thead><tbody><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">Zero email / phone exposure</p><p className="text-sm text-muted-foreground">Only your designation is shown</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td></tr><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">24-hour ephemeral cleanup</p><p className="text-sm text-muted-foreground">Messages purge themselves automatically</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td></tr><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">Browser-native HD calls</p><p className="text-sm text-muted-foreground">No desktop or mobile app needed</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td></tr><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">In-browser screen sharing</p><p className="text-sm text-muted-foreground">One-click during video calls</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td></tr><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">STUN + TURN traversal</p><p className="text-sm text-muted-foreground">Connects across carriers &amp; firewalls</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td></tr><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">Voice notes &amp; HD media</p><p className="text-sm text-muted-foreground">Fullscreen zoom on images</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td></tr><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">100% ad-free, zero tracking</p><p className="text-sm text-muted-foreground">No algorithmic feed or data selling</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td></tr><tr className="border-b border-border last:border-0 transition hover:bg-muted"><td className="p-5"><p className="font-semibold">Ultra-lightweight loading</p><p className="text-sm text-muted-foreground">Vite + optimized WebSockets</p></td><td className="p-5 text-center bg-primary/10"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check mx-auto h-5 w-5 text-success" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></td><td className="p-5 text-center "><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x mx-auto h-5 w-5 text-muted-foreground/50" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></td></tr></tbody></table></div></div></section><section id="benefits" className="py-28"><div className="mx-auto max-w-7xl px-5"><div className="reveal mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Why people choose us</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">Real benefits for <span className="text-gradient italic">people &amp; teams</span></h2></div><div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><div className="reveal rounded-3xl border border-border bg-card p-7 text-center transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "0ms" }}><div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-border bg-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-x h-7 w-7 text-primary" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" x2="22" y1="8" y2="13"></line><line x1="22" x2="17" y1="8" y2="13"></line></svg></div><h3 className="mt-5 text-xl font-semibold">No identity leakage</h3><p className="mt-2 text-sm text-muted-foreground">Connect with colleagues without handing out your phone number or personal email.</p></div><div className="reveal rounded-3xl border border-border bg-card p-7 text-center transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "80ms" }}><div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-border bg-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-globe h-7 w-7 text-primary" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg></div><h3 className="mt-5 text-xl font-semibold">Runs in any browser</h3><p className="mt-2 text-sm text-muted-foreground">Chrome, Safari, Firefox, Edge or mobile — just open the link. Nothing to install.</p></div><div className="reveal rounded-3xl border border-border bg-card p-7 text-center transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "160ms" }}><div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-border bg-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-hard-drive h-7 w-7 text-primary" aria-hidden="true"><path d="M10 16h.01"></path><path d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path><path d="M21.946 12.013H2.054"></path><path d="M6 16h.01"></path></svg></div><h3 className="mt-5 text-xl font-semibold">Zero storage bloat</h3><p className="mt-2 text-sm text-muted-foreground">24-hour retention keeps your device clean. No gigabytes of stale media cache.</p></div><div className="reveal rounded-3xl border border-border bg-card p-7 text-center transition duration-500 hover:-translate-y-2 hover:shadow-elegant" style={{ transitionDelay: "240ms" }}><div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-border bg-secondary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-gauge h-7 w-7 text-primary" aria-hidden="true"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg></div><h3 className="mt-5 text-xl font-semibold">Instant P2P speed</h3><p className="mt-2 text-sm text-muted-foreground">Low-latency media pipelines for crisp audio and fluid 30 FPS video.</p></div></div></div></section><section id="stack" className="py-28"><div className="mx-auto max-w-6xl px-5"><div className="reveal mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">The technology</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">A modern stack, <span className="text-gradient italic">end to end</span></h2><p className="mt-5 text-lg text-muted-foreground">Full-stack MERN with realtime sockets and peer-to-peer media.</p></div><div className="mt-14 grid gap-5 sm:grid-cols-2"><div className="reveal rounded-3xl border border-border bg-card p-7" style={{ transitionDelay: "0ms" }}><p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Frontend</p><div className="mt-4 flex flex-wrap gap-2"><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">React 19</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Vite</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Zustand</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">React Router</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Socket.io client</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Axios</span></div></div><div className="reveal rounded-3xl border border-border bg-card p-7" style={{ transitionDelay: "80ms" }}><p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Realtime &amp; media</p><div className="mt-4 flex flex-wrap gap-2"><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Socket.io</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">WebRTC</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">STUN / TURN</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Cloudinary</span></div></div><div className="reveal rounded-3xl border border-border bg-card p-7" style={{ transitionDelay: "160ms" }}><p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Backend</p><div className="mt-4 flex flex-wrap gap-2"><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Node.js</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Express</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">MongoDB Atlas</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Mongoose</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">node-cron</span></div></div><div className="reveal rounded-3xl border border-border bg-card p-7" style={{ transitionDelay: "240ms" }}><p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">Security &amp; services</p><div className="mt-4 flex flex-wrap gap-2"><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Arcjet</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Upstash Redis</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">JWT</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">bcrypt</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Helmet</span><span className="rounded-full border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium transition hover:border-primary hover:text-primary">Resend email</span></div></div></div></div></section><section id="faq" className="py-28"><div className="mx-auto max-w-3xl px-5"><div className="reveal mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Questions</p><h2 className="mt-4 text-4xl font-semibold sm:text-5xl">Frequently <span className="text-gradient italic">asked</span></h2></div><div className="mt-12 space-y-3"><div className="reveal overflow-hidden rounded-2xl border bg-card transition border-primary shadow-card"><button aria-expanded="true" className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"><span>Do I need to install anything?</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus h-5 w-5 shrink-0 text-primary transition duration-300 rotate-45" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button><div className="grid transition-all duration-300 grid-rows-[1fr]"><p className="overflow-hidden px-5 text-muted-foreground"><span className="block pb-5">No. samवाद runs entirely in your browser — Chrome, Safari, Firefox, Edge or mobile. Calls and screen sharing work without plugins.</span></p></div></div><div className="reveal overflow-hidden rounded-2xl border bg-card transition border-border"><button aria-expanded="false" className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"><span>Can other users see my email address?</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus h-5 w-5 shrink-0 text-primary transition duration-300" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button><div className="grid transition-all duration-300 grid-rows-[0fr]"><p className="overflow-hidden px-5 text-muted-foreground"><span className="block pb-5">Never. Other people only see your name and the designation you choose.</span></p></div></div><div className="reveal overflow-hidden rounded-2xl border bg-card transition border-border"><button aria-expanded="false" className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"><span>What exactly happens after 24 hours?</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus h-5 w-5 shrink-0 text-primary transition duration-300" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button><div className="grid transition-all duration-300 grid-rows-[0fr]"><p className="overflow-hidden px-5 text-muted-foreground"><span className="block pb-5">A cleanup job runs every minute. Messages older than 24 hours are deleted, along with any images or voice notes attached to them.</span></p></div></div><div className="reveal overflow-hidden rounded-2xl border bg-card transition border-border"><button aria-expanded="false" className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"><span>Are my messages encrypted?</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus h-5 w-5 shrink-0 text-primary transition duration-300" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button><div className="grid transition-all duration-300 grid-rows-[0fr]"><p className="overflow-hidden px-5 text-muted-foreground"><span className="block pb-5">Yes. Messages are stored with AES-256-GCM encryption using keys that rotate twice a day. Calls travel directly between devices over WebRTC.</span></p></div></div><div className="reveal overflow-hidden rounded-2xl border bg-card transition border-border"><button aria-expanded="false" className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"><span>Will calls work on mobile data or office Wi-Fi?</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus h-5 w-5 shrink-0 text-primary transition duration-300" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button><div className="grid transition-all duration-300 grid-rows-[0fr]"><p className="overflow-hidden px-5 text-muted-foreground"><span className="block pb-5">Yes. STUN and TURN relay servers help calls connect across 4G/5G carriers and strict corporate firewalls.</span></p></div></div><div className="reveal overflow-hidden rounded-2xl border bg-card transition border-border"><button aria-expanded="false" className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"><span>Can I block someone?</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus h-5 w-5 shrink-0 text-primary transition duration-300" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button><div className="grid transition-all duration-300 grid-rows-[0fr]"><p className="overflow-hidden px-5 text-muted-foreground"><span className="block pb-5">Yes. Blocking hides your profile picture from them immediately, and you can clear a chat history or mute sounds anytime.</span></p></div></div></div></div></section><section className="px-5 pb-28"><div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-brand px-8 py-20 text-center text-primary-foreground shadow-elegant"><div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-6 h-48 w-72 rotate-12 opacity-20 animate-float"><img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden"/><img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block"/></div><div aria-hidden="true" className="pointer-events-none relative mx-auto h-20 w-28 animate-bloom"><img src={emblemGold} alt="" className="h-full w-full object-contain dark:hidden"/><img src={emblemSilver} alt="" className="hidden h-full w-full object-contain dark:block"/></div><h2 className="relative mt-6 text-4xl font-semibold sm:text-6xl">Begin your <span className="font-deva">संवाद</span></h2><p className="relative mx-auto mt-5 max-w-xl text-lg opacity-90">Join people enjoying real-time chat, HD calling and true ephemeral privacy.</p><div className="relative mt-9 flex flex-wrap justify-center gap-3"><a href="#signup" className="rounded-full bg-card px-8 py-4 font-semibold text-foreground transition hover:-translate-y-1">Create free account</a><a href="https://hans-soni.github.io/Let-s-Connect/#/login" className="rounded-full border-2 border-primary-foreground/60 px-8 py-4 font-semibold transition hover:bg-primary-foreground/10">I already have an account</a></div></div></section><section id="signup" aria-labelledby="signup-heading" className="scroll-mt-24 border-t border-border bg-secondary py-20 sm:py-28"><div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-2 lg:gap-20"><div className="min-w-0"><div aria-hidden="true" className="relative mb-8 h-32 w-32"><div className="absolute inset-0 animate-spin-slow rounded-full border border-dashed border-gold/50"></div><img src={emblemGold} alt="" className="absolute inset-5 h-22 w-22 animate-bloom object-contain dark:hidden"/><img src={emblemSilver} alt="" className="absolute inset-5 hidden h-22 w-22 animate-bloom object-contain dark:block"/></div><p className="text-sm font-semibold text-primary">A new conversation starts here</p><h2 id="signup-heading" className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">Join <span className="font-deva text-primary">samवाद.</span></h2><p className="mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">A little less noise. A little more connection. Make room for conversations that matter.</p><div className="mt-8 flex items-start gap-3 border-l-2 border-primary pl-5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check mt-1 h-5 w-5 shrink-0 text-primary" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg><p className="max-w-sm text-sm leading-relaxed text-muted-foreground">Your email is for your account, not your public identity. Other people see your name and designation.</p></div></div><div className="min-w-0 rounded-lg border border-border bg-card p-6 shadow-card sm:p-9"><img src={logoLight} alt="samवाद" className="mb-7 h-10 max-w-full object-contain object-left dark:hidden"/><img src={logoDark} alt="samवाद" className="mb-7 hidden h-10 max-w-full object-contain object-left dark:block"/><h3 className="text-2xl font-semibold">Create your account</h3><p className="mt-2 text-sm text-muted-foreground">Already part of the conversation? <a href="https://hans-soni.github.io/Let-s-Connect/#/login" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 text-primary underline-offset-4 hover:underline h-auto p-0">Sign in</a></p><form className="mt-8 space-y-5"><div className="space-y-2"><label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="signup-name">Full name</label><div className="relative"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-round pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg><input className="flex w-full rounded-md border border-input px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm h-12 bg-background pl-10" id="signup-name" autoComplete="name" placeholder="Your full name" required="" pattern=".*\S.*" name="fullName"/></div></div><div className="space-y-2"><label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="signup-email">Email address</label><div className="relative"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect></svg><input type="email" className="flex w-full rounded-md border border-input px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm h-12 bg-background pl-10" id="signup-email" autoComplete="email" placeholder="you@example.com" required="" name="email"/></div></div><div className="space-y-2"><label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="signup-password">Password</label><div className="relative"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock-keyhole pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" aria-hidden="true"><circle cx="12" cy="16" r="1"></circle><rect x="3" y="10" width="18" height="12" rx="2"></rect><path d="M7 10V7a5 5 0 0 1 10 0v3"></path></svg><input type="password" className="flex w-full rounded-md border border-input px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm h-12 bg-background pl-10 pr-12" id="signup-password" autoComplete="new-password" placeholder="Create a password" minLength="6" maxLength="128" required="" aria-describedby="signup-password-hint" name="password"/><button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 w-9 absolute right-1.5 top-1.5" type="button" aria-label="Show password" title="Show password"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div><p id="signup-password-hint" className="text-xs text-muted-foreground">Use 6–128 characters.</p></div><button className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 px-4 py-2 h-12 w-full" type="submit">Continue to signup <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button><p className="text-center text-xs leading-relaxed text-muted-foreground">Signup finishes in the live app, where you’ll review the Terms &amp; Data Authorization. Details entered here are not sent or saved.</p></form></div></div></section></main><footer className="border-t border-border py-12"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-5 md:flex-row"><img src={logoLight} alt="samवाद" className="dark:hidden h-10 w-auto"/><img src={logoDark} alt="samवाद" className="hidden dark:block h-10 w-auto"/><p className="text-center text-sm text-muted-foreground">Created by Hans Soni — Full-Stack Developer &amp; Cybersecurity Engineer · <a href="https://hans-soni.github.io/" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">Portfolio</a></p><p className="text-sm text-muted-foreground">© 2026 samवाद</p></div></footer></div>
+    <section id="signup" aria-labelledby="signup-heading" className="scroll-mt-24 border-t border-border bg-secondary py-20 sm:py-28">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-2 lg:gap-20">
+        <div className="min-w-0">
+          <div aria-hidden="true" className="relative mb-8 h-32 w-32">
+            <div className="absolute inset-0 animate-spin-slow rounded-full border border-dashed border-gold/50" />
+            <img src={emblemGold} alt="" className="absolute inset-5 h-22 w-22 animate-bloom object-contain dark:hidden" />
+            <img src={emblemSilver} alt="" className="absolute inset-5 hidden h-22 w-22 animate-bloom object-contain dark:block" />
+          </div>
+          <p className="text-sm font-semibold text-primary">A new conversation starts here</p>
+          <h2 id="signup-heading" className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
+            Join <span className="font-deva text-primary">samवाद.</span>
+          </h2>
+          <p className="mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
+            A little less noise. A little more connection. Make room for conversations that matter.
+          </p>
+          <div className="mt-8 flex items-start gap-3 border-l-2 border-primary pl-5">
+            <ShieldAlert className="mt-1 h-5 w-5 shrink-0 text-primary" />
+            <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+              Your email is for your account, not your public identity. Other people see your name and designation.
+            </p>
+          </div>
+        </div>
+        <div className="min-w-0 rounded-lg border border-border bg-card p-6 shadow-card sm:p-9">
+          <Logo className="mb-7 h-10 max-w-full object-contain object-left" />
+          <h3 className="text-2xl font-semibold">Create your account</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Already part of the conversation?{" "}
+            <a href={LOGIN_URL} className="text-primary underline hover:text-primary/80">
+              Sign in
+            </a>
+          </p>
+          {isSubmitted ? (
+            <div className="mt-8 space-y-5" role="status">
+              <div className="flex items-center gap-3 text-primary">
+                <Check className="h-5 w-5" />
+                <h4 className="font-semibold">Continue in the live app</h4>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Your account hasn’t been created yet. Enter your details again in the live app and review its Terms &amp; Data Authorization to finish signing up. Nothing entered here has been sent or saved.
+              </p>
+              <a
+                href={LIVE_SIGNUP_URL}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground shadow transition hover:opacity-90"
+              >
+                Open signup <ArrowRight className="h-4 w-4" />
+              </a>
+              <button
+                type="button"
+                onClick={() => setIsSubmitted(false)}
+                className="h-10 w-full rounded-lg text-sm font-medium hover:bg-secondary transition"
+              >
+                Back to form
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="signup-name" className="block text-sm font-medium">
+                  Full name
+                </label>
+                <div className="relative">
+                  <User aria-hidden="true" className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
+                  <input
+                    id="signup-name"
+                    name="fullName"
+                    autoComplete="name"
+                    placeholder="Your full name"
+                    required
+                    pattern=".*\S.*"
+                    className="h-12 w-full rounded-md border border-input bg-background pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="signup-email" className="block text-sm font-medium">
+                  Email address
+                </label>
+                <div className="relative">
+                  <Mail aria-hidden="true" className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
+                  <input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    required
+                    className="h-12 w-full rounded-md border border-input bg-background pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="signup-password" className="block text-sm font-medium">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock aria-hidden="true" className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
+                  <input
+                    id="signup-password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="Create a password"
+                    minLength={6}
+                    maxLength={128}
+                    required
+                    aria-describedby="signup-password-hint"
+                    className="h-12 w-full rounded-md border border-input bg-background pl-10 pr-12 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-1.5 top-1.5 grid h-9 w-9 place-items-center rounded-md text-muted-foreground hover:bg-secondary"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p id="signup-password-hint" className="text-xs text-muted-foreground">
+                  Use 6–128 characters.
+                </p>
+              </div>
+              <button
+                type="submit"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground shadow transition hover:opacity-90"
+              >
+                Continue to signup <ArrowRight className="h-4 w-4" />
+              </button>
+              <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                Signup finishes in the live app, where you’ll review the Terms &amp; Data Authorization. Details entered here are not sent or saved.
+              </p>
+            </form>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Footer
+function Footer() {
+  return (
+    <footer className="border-t border-border py-12">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-5 md:flex-row">
+        <Logo className="h-10 w-auto" />
+        <p className="text-center text-sm text-muted-foreground">
+          Created by Hans Soni — Full-Stack Developer &amp; Cybersecurity Engineer ·{" "}
+          <a
+            href="https://hans-soni.github.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            hans-soni.github.io
+          </a>
+        </p>
+        <p className="text-xs text-muted-foreground">
+          © {new Date().getFullYear()} samवाद · All rights reserved.
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+// Main WelcomePage Component
+export default function WelcomePage() {
+  const { dark, toggle } = useSamvaadTheme();
+  useReveal();
+
+  return (
+    <div className={`welcome-page min-h-screen overflow-x-hidden ${dark ? "dark" : ""}`}>
+      <Header dark={dark} toggle={toggle} />
+      <main>
+        <Hero />
+        <Marquee />
+        <Features />
+        <HowItWorks />
+        <CallingSection />
+        <PrivacySection />
+        <SecuritySection />
+        <CompareSection />
+        <BenefitsSection />
+        <StackSection />
+        <FaqSection />
+        <CtaBanner />
+        <SignupSection />
+      </main>
+      <Footer />
+    </div>
   );
 }
