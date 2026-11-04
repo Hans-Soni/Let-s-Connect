@@ -130,7 +130,8 @@ function Logo({ className = "", dark: darkProp }) {
     <img
       src={dark ? logoDark : logoLight}
       alt="samवाद"
-      className={`h-auto object-contain transition-opacity duration-300 ${className}`}
+      className={`object-contain transition-opacity duration-300 ${className}`}
+      style={{ maxHeight: "36px", maxWidth: "160px", width: "auto", height: "auto" }}
     />
   );
 }
@@ -169,12 +170,13 @@ function Header({ dark, toggle }) {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${isScrolled ? "glass border-b border-border py-2" : "py-4"
-        }`}
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+        isScrolled ? "glass border-b border-border py-2" : "py-3 sm:py-4"
+      }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5">
-        <a href="#top" className="shrink-0">
-          <Logo className="h-9 w-auto sm:h-11" />
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-5">
+        <a href="#top" className="shrink-0 flex items-center">
+          <Logo className="h-8 w-auto sm:h-10" />
         </a>
         <nav className="hidden items-center gap-1 lg:flex">
           {navLinks.map(([label, href]) => (
@@ -191,19 +193,19 @@ function Header({ dark, toggle }) {
           <button
             onClick={toggle}
             aria-label="Toggle theme"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border transition hover:rotate-12 hover:bg-secondary"
+            className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border border-border transition hover:rotate-12 hover:bg-secondary"
           >
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <a
             href={LOGIN_URL}
-            className="hidden rounded-full px-4 py-2 text-sm font-semibold sm:inline-block hover:text-primary"
+            className="hidden rounded-full px-4 py-2 text-sm font-semibold md:inline-block hover:text-primary"
           >
             Sign in
           </a>
           <a
             href={SIGNUP_URL}
-            className="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-0.5 sm:inline-block"
+            className="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-0.5 md:inline-block"
           >
             Start free
           </a>
@@ -211,7 +213,7 @@ function Header({ dark, toggle }) {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-expanded={mobileMenuOpen}
             aria-label="Menu"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border lg:hidden"
+            className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border border-border md:hidden"
           >
             {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -315,51 +317,51 @@ function HeroChatCard() {
 // Hero section
 function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden pb-24 pt-36 sm:pt-44">
+    <section id="top" className="relative overflow-hidden pb-16 pt-24 sm:pb-24 sm:pt-36 md:pt-40">
       <div className="grain absolute inset-0 opacity-60" />
-      <Emblem className="absolute -left-10 bottom-10 h-40 w-56 opacity-30 dark:opacity-10 animate-float" />
-      <Emblem className="absolute right-[42%] top-28 h-16 w-24 opacity-40 dark:opacity-20 animate-float [animation-delay:2s]" />
-      <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_1fr]">
+      <Emblem className="hidden md:block absolute -left-10 bottom-10 h-40 w-56 opacity-30 dark:opacity-10 animate-float" />
+      <Emblem className="hidden md:block absolute right-[42%] top-28 h-16 w-24 opacity-40 dark:opacity-20 animate-float [animation-delay:2s]" />
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 sm:gap-16 px-4 sm:px-5 lg:grid-cols-[1.1fr_1fr]">
         <div className="reveal">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> New · HD calling with screen sharing
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-1.5 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" /> New · HD calling with screen sharing
           </span>
-          <h1 className="mt-6 text-4xl font-semibold leading-[1.08] sm:text-6xl md:text-7xl">
+          <h1 className="mt-5 sm:mt-6 text-3xl sm:text-5xl lg:text-6xl font-semibold leading-[1.1]">
             Every conversation,<br />
             <span className="text-gradient italic">beautifully private.</span>
           </h1>
-          <p className="mt-4 font-deva text-2xl text-muted-foreground">
+          <p className="mt-3 sm:mt-4 font-deva text-xl sm:text-2xl text-muted-foreground">
             संवाद — where dialogue feels human again.
           </p>
-          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+          <p className="mt-4 sm:mt-6 max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
             Real-time chat, crystal-clear voice &amp; video and messages that clean themselves up after 24 hours — without ever exposing your email or phone number.
           </p>
-          <div className="mt-9 flex flex-wrap gap-3">
+          <div className="mt-7 sm:mt-9 flex flex-col sm:flex-row gap-3">
             <a
               href={SIGNUP_URL}
-              className="group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-4 font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-1"
+              className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-7 py-3.5 sm:py-4 font-semibold text-primary-foreground shadow-elegant transition hover:-translate-y-1 text-center"
             >
               Start chatting free <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
             </a>
             <a
               href={LOGIN_URL}
-              className="rounded-full border border-border px-7 py-4 font-semibold transition hover:bg-secondary"
+              className="rounded-full border border-border px-7 py-3.5 sm:py-4 font-semibold transition hover:bg-secondary text-center"
             >
               Sign in
             </a>
           </div>
-          <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
+          <div className="mt-8 sm:mt-10 grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-3 text-xs sm:text-sm text-muted-foreground">
             <span className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" />Real-time WebSockets
+              <Zap className="h-4 w-4 shrink-0 text-primary" />Real-time WebSockets
             </span>
             <span className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />24h auto-cleanup
+              <Clock className="h-4 w-4 shrink-0 text-primary" />24h auto-cleanup
             </span>
             <span className="flex items-center gap-2">
-              <Video className="h-4 w-4 text-primary" />HD P2P calls
+              <Video className="h-4 w-4 shrink-0 text-primary" />HD P2P calls
             </span>
             <span className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-primary" />Zero email exposure
+              <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />Zero email exposure
             </span>
           </div>
         </div>
@@ -442,8 +444,8 @@ function Features() {
   ];
 
   return (
-    <section id="features" className="relative py-28">
-      <div className="mx-auto max-w-7xl px-5">
+    <section id="features" className="relative py-16 sm:py-24 md:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-5">
         <SectionHeading
           kicker="Crafted for modern dialogue"
           title={
@@ -453,13 +455,13 @@ function Features() {
           }
           sub="Built with Vite, React, Express, MongoDB Atlas and WebRTC for a clean, lightning-fast experience."
         />
-        <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 sm:mt-16 grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {featuresList.map((item, index) => {
             const Icon = item.icon;
             return (
               <article
                 key={item.title}
-                className="reveal group relative overflow-hidden rounded-3xl border border-border bg-card p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant"
+                className="reveal group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border bg-card p-5 sm:p-8 shadow-card transition duration-500 hover:-translate-y-2 hover:shadow-elegant"
                 style={{ transitionDelay: `${index * 70}ms` }}
               >
                 <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-glow opacity-0 transition duration-500 group-hover:opacity-100" />
@@ -574,15 +576,15 @@ function CallingSection() {
   const [isMuted, setIsMuted] = useState(false);
 
   return (
-    <section id="calling" className="relative overflow-hidden bg-secondary py-28">
+    <section id="calling" className="relative overflow-hidden bg-secondary py-16 sm:py-24 md:py-28">
       <EmblemOrbit className="absolute -right-40 top-1/2 w-[520px] -translate-y-1/2 opacity-40" />
-      <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 sm:gap-14 px-4 sm:px-5 lg:grid-cols-2">
         <div className="reveal">
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-shine">Voice · Video · Screen</p>
-          <h2 className="mt-4 text-4xl font-semibold sm:text-5xl">
+          <h2 className="mt-3 text-3xl font-semibold sm:text-4xl md:text-5xl">
             Face-to-face, <span className="text-gradient italic">right in your browser</span>
           </h2>
-          <p className="mt-5 text-lg text-muted-foreground">
+          <p className="mt-4 sm:mt-5 text-base sm:text-lg text-muted-foreground leading-relaxed">
             One click starts a peer-to-peer HD call. No downloads, no plugins — fluid 30 FPS video and crisp audio across 4G, 5G and strict firewalls.
           </p>
           <ul className="mt-8 space-y-4">
@@ -755,9 +757,9 @@ function SecuritySection() {
   ];
 
   return (
-    <section id="security" className="relative overflow-hidden bg-secondary py-28">
-      <Emblem className="absolute -left-16 top-16 h-48 w-64 -rotate-12 opacity-30 dark:opacity-10 animate-float" />
-      <div className="relative mx-auto max-w-7xl px-5">
+    <section id="security" className="relative overflow-hidden bg-secondary py-16 sm:py-24 md:py-28">
+      <Emblem className="hidden md:block absolute -left-16 top-16 h-48 w-64 -rotate-12 opacity-30 dark:opacity-10 animate-float" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-5">
         <SectionHeading
           kicker="Security under the hood"
           title={
@@ -767,7 +769,7 @@ function SecuritySection() {
           }
           sub="Privacy isn't a setting on samवाद — it's how the backend is engineered."
         />
-        <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 sm:mt-16 grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {securityFeatures.map((item, idx) => {
             const Icon = item.icon;
             return (
@@ -928,8 +930,8 @@ function StackSection() {
   ];
 
   return (
-    <section id="stack" className="py-28">
-      <div className="mx-auto max-w-6xl px-5">
+    <section id="stack" className="py-16 sm:py-24 md:py-28">
+      <div className="mx-auto max-w-6xl px-4 sm:px-5">
         <SectionHeading
           kicker="The technology"
           title={
@@ -939,7 +941,7 @@ function StackSection() {
           }
           sub="Full-stack MERN with realtime sockets and peer-to-peer media."
         />
-        <div className="mt-14 grid gap-5 sm:grid-cols-2">
+        <div className="mt-10 sm:mt-14 grid gap-4 sm:gap-5 sm:grid-cols-2">
           {stack.map(([category, techList]) => (
             <div key={category} className="reveal rounded-3xl border border-border bg-card p-6 shadow-card">
               <h3 className="text-lg font-semibold">{category}</h3>
@@ -993,8 +995,8 @@ function FaqSection() {
   ];
 
   return (
-    <section id="faq" className="py-28">
-      <div className="mx-auto max-w-3xl px-5">
+    <section id="faq" className="py-16 sm:py-24 md:py-28">
+      <div className="mx-auto max-w-3xl px-4 sm:px-5">
         <SectionHeading
           kicker="Questions"
           title={
@@ -1040,26 +1042,26 @@ function FaqSection() {
 // CTA Banner
 function CtaBanner() {
   return (
-    <section className="px-5 pb-28">
-      <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-brand px-8 py-20 text-center text-primary-foreground shadow-elegant">
-        <Emblem className="absolute -right-10 -top-6 h-48 w-72 rotate-12 opacity-35 dark:opacity-20 animate-float" />
-        <Emblem className="relative mx-auto h-20 w-28 animate-bloom" />
-        <h2 className="relative mt-6 text-4xl font-semibold sm:text-6xl">
+    <section className="px-4 sm:px-5 pb-16 sm:pb-28">
+      <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-2xl sm:rounded-[2.5rem] bg-brand px-5 py-12 sm:px-8 sm:py-20 text-center text-primary-foreground shadow-elegant">
+        <Emblem className="hidden md:block absolute -right-10 -top-6 h-48 w-72 rotate-12 opacity-35 dark:opacity-20 animate-float" />
+        <Emblem className="relative mx-auto h-16 w-24 sm:h-20 sm:w-28 animate-bloom" />
+        <h2 className="relative mt-5 sm:mt-6 text-3xl sm:text-5xl lg:text-6xl font-semibold">
           Begin your <span className="font-deva">संवाद</span>
         </h2>
-        <p className="relative mx-auto mt-5 max-w-xl text-lg opacity-90">
+        <p className="relative mx-auto mt-4 sm:mt-5 max-w-xl text-base sm:text-lg opacity-90">
           Join people enjoying real-time chat, HD calling and true ephemeral privacy.
         </p>
-        <div className="relative mt-9 flex flex-wrap justify-center gap-3">
+        <div className="relative mt-7 sm:mt-9 flex flex-col sm:flex-row justify-center gap-3">
           <a
             href={SIGNUP_URL}
-            className="rounded-full bg-card px-8 py-4 font-semibold text-foreground transition hover:-translate-y-1"
+            className="rounded-full bg-card px-7 py-3.5 sm:py-4 font-semibold text-foreground transition hover:-translate-y-1 text-center"
           >
             Create free account
           </a>
           <a
             href={LOGIN_URL}
-            className="rounded-full border-2 border-primary-foreground/60 px-8 py-4 font-semibold transition hover:bg-primary-foreground/10"
+            className="rounded-full border-2 border-primary-foreground/60 px-7 py-3.5 sm:py-4 font-semibold transition hover:bg-primary-foreground/10 text-center"
           >
             I already have an account
           </a>
@@ -1080,8 +1082,8 @@ function SignupSection() {
   };
 
   return (
-    <section id="signup" aria-labelledby="signup-heading" className="scroll-mt-24 border-t border-border bg-secondary py-20 sm:py-28">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-2 lg:gap-20">
+    <section id="signup" aria-labelledby="signup-heading" className="scroll-mt-24 border-t border-border bg-secondary py-16 sm:py-24 md:py-28">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 sm:gap-12 px-4 sm:px-5 lg:grid-cols-2 lg:gap-20">
         <div className="min-w-0">
           <div aria-hidden="true" className="relative mb-8 h-32 w-32">
             <div className="absolute inset-0 animate-spin-slow rounded-full border border-dashed border-gold/50" />
@@ -1221,9 +1223,9 @@ function SignupSection() {
 // Footer
 function Footer() {
   return (
-    <footer className="border-t border-border py-12">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-5 md:flex-row">
-        <Logo className="h-10 w-auto" />
+    <footer className="border-t border-border py-8 sm:py-12">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 sm:px-5 md:flex-row text-center md:text-left">
+        <Logo className="h-8 w-auto sm:h-10" />
         <p className="text-center text-sm text-muted-foreground">
           Created by Hans Soni — Full-Stack Developer &amp; Cybersecurity Engineer ·{" "}
           <a
