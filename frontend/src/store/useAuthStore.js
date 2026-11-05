@@ -79,10 +79,10 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  googleLogin: async ({ credential, clientIp, dataConsent = false }) => {
+  googleLogin: async ({ credential, accessToken, clientIp, dataConsent = false }) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axiosInstance.post("/auth/google", { credential, clientIp, dataConsent });
+      const res = await axiosInstance.post("/auth/google", { credential, accessToken, clientIp, dataConsent });
 
       if (res.data?.requiresConsent) {
         return { requiresConsent: true, userDetails: res.data };

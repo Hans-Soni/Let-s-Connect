@@ -157,23 +157,38 @@ export const login = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
   try {
-    const { credential, clientIp, dataConsent } = req.body;
+    const { credential, accessToken, clientIp, dataConsent } = req.body;
 
-    if (!credential || typeof credential !== "string") {
-      return res.status(400).json({ message: "Google credential is required" });
+    if (!credential && !accessToken) {
+      return res.status(400).json({ message: "Google credential or access token is required" });
     }
 
-    // 1. Verify Google ID token
+    // 1. Verify Google credential (ID token) or access token
     let payload;
-    try {
-      const ticket = await googleClient.verifyIdToken({
-        idToken: credential,
-        audience: ENV.GOOGLE_CLIENT_ID,
-      });
-      payload = ticket.getPayload();
-    } catch (verifyError) {
-      console.error("Google verifyIdToken failed:", verifyError.message);
-      return res.status(401).json({ message: "Invalid or expired Google credential" });
+    if (credential && typeof credential === "string") {
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: ENV.GOOGLE_CLIENT_ID,
+        });
+        payload = ticket.getPayload();
+      } catch (verifyError) {
+        console.error("Google verifyIdToken failed:", verifyError.message);
+        return res.status(401).json({ message: "Invalid or expired Google credential" });
+      }
+    } else if (accessToken && typeof accessToken === "string") {
+      try {
+        const googleRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!googleRes.ok) {
+          throw new Error(`Google userinfo returned status ${googleRes.status}`);
+        }
+        payload = await googleRes.json();
+      } catch (tokenError) {
+        console.error("Google access token verification failed:", tokenError.message);
+        return res.status(401).json({ message: "Invalid or expired Google access token" });
+      }
     }
 
     if (!payload?.email) {

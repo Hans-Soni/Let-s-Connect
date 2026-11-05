@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { Eye, EyeOff, Loader2, X } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 import toast from "react-hot-toast";
 
 import { useAuthStore } from "../store/useAuthStore";
@@ -94,6 +94,7 @@ function LoginPage() {
   const [hasAcceptedConsent, setHasAcceptedConsent] = useState(false);
   const [consentDeclined, setConsentDeclined] = useState(false);
   const [pendingGoogleAuth, setPendingGoogleAuth] = useState(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [clientIp, setClientIp] = useState("");
 
   const { login, googleLogin, isLoggingIn } = useAuthStore();
@@ -145,34 +146,52 @@ function LoginPage() {
     login(formData);
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    if (!credentialResponse?.credential) {
-      toast.error("Google authentication failed");
-      return;
-    }
-    const resolvedIp =
-      clientIp ||
-      (await Promise.race([
-        detectClientIp(),
-        new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
-      ]));
+  const handleGoogleTokenSuccess = async (tokenResponse) => {
+    try {
+      setGoogleLoading(true);
+      const accessToken = tokenResponse?.access_token;
+      if (!accessToken) {
+        toast.error("Failed to retrieve Google token");
+        return;
+      }
+      const resolvedIp =
+        clientIp ||
+        (await Promise.race([
+          detectClientIp(),
+          new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
+        ]));
 
-    const result = await googleLogin({
-      credential: credentialResponse.credential,
-      clientIp: resolvedIp,
-      dataConsent: false,
-    });
-
-    if (result?.requiresConsent) {
-      setPendingGoogleAuth({
-        credential: credentialResponse.credential,
-        userDetails: result.userDetails,
+      const result = await googleLogin({
+        accessToken,
+        clientIp: resolvedIp,
+        dataConsent: false,
       });
-      setHasAcceptedConsent(false);
-      setConsentDeclined(false);
-      setIsConsentOpen(true);
+
+      if (result?.requiresConsent) {
+        setPendingGoogleAuth({
+          accessToken,
+          userDetails: result.userDetails,
+        });
+        setHasAcceptedConsent(false);
+        setConsentDeclined(false);
+        setIsConsentOpen(true);
+      }
+    } catch (err) {
+      console.error("Google sign in error:", err);
+      toast.error("Google Sign-In failed. Please try again.");
+    } finally {
+      setGoogleLoading(false);
     }
   };
+
+  const triggerGoogleLogin = useGoogleLogin({
+    onSuccess: handleGoogleTokenSuccess,
+    onError: (err) => {
+      console.error("Google login prompt error:", err);
+      toast.error("Google Sign-In was cancelled or failed");
+      setGoogleLoading(false);
+    },
+  });
 
   const handleAcceptConsent = async () => {
     if (!hasAcceptedConsent || isLoggingIn) return;
@@ -186,6 +205,7 @@ function LoginPage() {
     if (pendingGoogleAuth) {
       const result = await googleLogin({
         credential: pendingGoogleAuth.credential,
+        accessToken: pendingGoogleAuth.accessToken,
         clientIp: resolvedIp,
         dataConsent: true,
       });
@@ -477,11 +497,18 @@ function LoginPage() {
               </div>
 
               {/* Google Sign-In Button */}
-              <div className="relative">
-                <button
-                  type="button"
-                  className="flex h-11 sm:h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-secondary text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:border-primary/60 cursor-pointer"
-                >
+              <button
+                type="button"
+                onClick={() => {
+                  setGoogleLoading(true);
+                  triggerGoogleLogin();
+                }}
+                disabled={googleLoading || isLoggingIn}
+                className="flex h-11 sm:h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-secondary text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:border-primary/60 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {googleLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                ) : (
                   <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
                     <path
                       fill="#FFC107"
@@ -500,20 +527,9 @@ function LoginPage() {
                       d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
                     />
                   </svg>
-                  Sign in with Google
-                </button>
-                {/* Invisible Google OAuth Trigger Overlay */}
-                <div className="absolute inset-0 opacity-0 overflow-hidden rounded-full flex items-center justify-center [&_iframe]:scale-[1.8] [&_iframe]:cursor-pointer">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => toast.error("Google Sign-In was cancelled or failed")}
-                    shape="pill"
-                    size="large"
-                    text="signin_with"
-                    width="400"
-                  />
-                </div>
-              </div>
+                )}
+                <span>{googleLoading ? "Signing in..." : "Sign in with Google"}</span>
+              </button>
 
               {/* Terms and Privacy Notice */}
               <p className="mt-3 text-center text-xs text-muted-foreground">
