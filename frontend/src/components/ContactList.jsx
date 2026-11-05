@@ -165,25 +165,26 @@ function ContactList() {
           </button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {filteredContacts.map((contact) => {
             const isSelected = String(selectedUser?._id) === String(contact._id);
             const isOnline = onlineUsers.includes(contact._id);
+            const profilePic = getUserDisplayPic(contact);
 
             return (
               <div
                 key={contact._id}
                 onClick={() => setSelectedUser(contact)}
-                className={`group relative p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                className={`group relative p-2.5 sm:p-3 rounded-2xl transition-all duration-150 cursor-pointer ${
                   isSelected
-                    ? "border-primary/80 bg-primary/15 shadow-glow"
-                    : "border-border/60 bg-secondary/40 hover:bg-secondary/85 hover:border-primary/40 hover:-translate-y-0.5 shadow-xs"
+                    ? "bg-secondary text-foreground ring-1 ring-border shadow-xs"
+                    : "hover:bg-secondary/50 text-foreground"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {/* User DP / Avatar */}
                   <div
-                    className="relative shrink-0 cursor-pointer group/avatar"
+                    className="relative shrink-0 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -192,23 +193,23 @@ function ContactList() {
                     }}
                     title={`View ${contact.fullName}'s profile`}
                   >
-                    <div
-                      className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full overflow-hidden transition-all duration-200 ring-2 ${
-                        isSelected
-                          ? "ring-primary"
-                          : "ring-border/60 group-hover/avatar:ring-primary/80 group-hover/avatar:scale-105"
-                      }`}
-                    >
-                      <img
-                        src={getUserDisplayPic(contact)}
-                        alt={contact.fullName}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    {profilePic ? (
+                      <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden ring-1 ring-border">
+                        <img
+                          src={profilePic}
+                          alt={contact.fullName}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-primary font-display font-bold text-primary-foreground text-xs sm:text-sm">
+                        {(contact.fullName || "?").slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
                     {/* Status Dot */}
                     <span
-                      className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-card shadow-xs transition-colors duration-300 ${
-                        isOnline ? "bg-emerald-500" : "bg-muted-foreground/40"
+                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card transition-colors ${
+                        isOnline ? "bg-online" : "bg-muted-foreground/30"
                       }`}
                       title={isOnline ? "Online" : "Offline"}
                     />
@@ -216,7 +217,7 @@ function ContactList() {
 
                   <div className="min-w-0 flex-1">
                     <h4
-                      className={`font-semibold text-sm sm:text-base truncate transition-colors ${
+                      className={`font-semibold text-sm truncate transition-colors ${
                         isSelected ? "text-primary" : "text-foreground group-hover:text-primary"
                       }`}
                     >

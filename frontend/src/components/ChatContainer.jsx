@@ -86,14 +86,14 @@ function ChatContainer() {
                   className={`flex ${isMe ? "justify-end" : "justify-start"} animate-rise`}
                 >
                   <div
-                    className={`relative max-w-[85%] sm:max-w-[75%] p-3 sm:p-3.5 break-words whitespace-pre-wrap text-sm sm:text-base transition-all ${
+                    className={`relative max-w-[85%] sm:max-w-[75%] px-4 py-2.5 break-words whitespace-pre-wrap text-sm leading-relaxed ${
                       isMe
-                        ? "rounded-2xl rounded-br-xs bg-primary text-primary-foreground shadow-glow"
-                        : "rounded-2xl rounded-bl-xs bg-secondary/85 text-foreground border border-border/80 shadow-xs"
+                        ? "rounded-2xl rounded-br-sm bg-primary text-primary-foreground shadow-xs"
+                        : "rounded-2xl rounded-bl-sm bg-secondary text-foreground shadow-xs"
                     }`}
                   >
                     {msg.image && (
-                      <div className="overflow-hidden rounded-xl mb-2 border border-black/10">
+                      <div className="overflow-hidden rounded-xl mb-2">
                         <img
                           src={msg.image}
                           alt="Shared"
@@ -108,7 +108,7 @@ function ChatContainer() {
                         controls
                         preload="metadata"
                         src={msg.video}
-                        className="block max-w-full max-h-72 rounded-xl mb-2 overflow-hidden shadow-sm"
+                        className="block max-w-full max-h-72 rounded-xl mb-2 overflow-hidden shadow-xs"
                         aria-label="Shared video"
                         onError={() => {
                           toast.error("This video could not be played.");
@@ -133,29 +133,10 @@ function ChatContainer() {
                     )}
                     {msg.text && <p className="leading-relaxed">{msg.text}</p>}
 
-                    {/* Status Dot & Time */}
-                    <div className="flex items-center justify-between mt-1 gap-2.5 pt-0.5 min-w-[70px]">
-                      {isMe ? (
-                        <div
-                          className="flex items-center gap-1.5 select-none shrink-0"
-                          title={msg.isSeen ? "Seen by recipient" : "Delivered"}
-                        >
-                          <span
-                            className="h-2 w-2 rounded-full transition-all duration-300 inline-block"
-                            style={{
-                              backgroundColor: msg.isSeen ? "#10b981" : "#38bdf8",
-                              boxShadow: msg.isSeen
-                                ? "0 0 8px rgba(16, 185, 129, 0.9)"
-                                : "0 0 8px rgba(56, 189, 248, 0.9)",
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <span />
-                      )}
-
+                    {/* Status & Timestamp */}
+                    <div className="flex items-center justify-end gap-1.5 mt-1 pt-0.5">
                       <p
-                        className={`text-[10px] sm:text-xs font-mono ml-auto ${
+                        className={`text-[10px] font-mono leading-none ${
                           isMe ? "text-primary-foreground/75" : "text-muted-foreground"
                         }`}
                       >
@@ -166,6 +147,15 @@ function ChatContainer() {
                             })
                           : ""}
                       </p>
+
+                      {isMe && (
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full inline-block ${
+                            msg.isSeen ? "bg-emerald-300" : "bg-sky-200 opacity-80"
+                          }`}
+                          title={msg.isSeen ? "Seen by recipient" : "Delivered"}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>

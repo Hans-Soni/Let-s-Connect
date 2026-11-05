@@ -158,37 +158,34 @@ function ChatPage() {
       <LotusEmblem dark={dark} className="pointer-events-none absolute right-10 bottom-8 w-32 -rotate-12 opacity-25 animate-float [animation-delay:-4s]" />
 
       {/* Top Application Header Bar */}
-      <header className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-3 sm:px-6 py-2 sm:py-2.5 shrink-0">
+      <header className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-3 sm:px-6 py-2.5 shrink-0 select-none">
         <div className="flex items-center gap-3">
           <LogoLink dark={dark} />
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping-soft" />
-              <span className="relative h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            Live Realtime P2P
+          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-2.5 py-0.5 text-xs text-muted-foreground backdrop-blur-sm">
+            <span className="h-2 w-2 rounded-full bg-online" />
+            Live WebRTC Direct
           </span>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            Encrypted Dialogue
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            P2P Ephemeral
           </span>
           <ThemeToggle dark={dark} toggle={toggleTheme} />
           {authUser && (
             <button
               type="button"
               onClick={() => setViewingProfileUser(authUser)}
-              className="flex items-center gap-2 p-1 pl-2 pr-3 rounded-full border border-border/80 bg-secondary/80 hover:border-primary/60 transition cursor-pointer shadow-xs"
+              className="flex items-center gap-2 p-1 pl-2 pr-3 rounded-full border border-border bg-card/60 hover:border-primary/50 transition cursor-pointer backdrop-blur-sm"
               title="Open profile settings"
             >
               <img
                 src={authUser.profilePic || `${import.meta.env.BASE_URL}avatar.png`}
                 alt={authUser.fullName}
-                className="h-6 w-6 rounded-full object-cover ring-1 ring-primary/40"
+                className="h-6 w-6 rounded-full object-cover ring-1 ring-border"
               />
-              <span className="text-xs font-semibold text-foreground max-w-[90px] sm:max-w-[120px] truncate">
+              <span className="text-xs font-medium text-foreground max-w-[90px] sm:max-w-[130px] truncate">
                 {authUser.fullName}
               </span>
             </button>
@@ -198,7 +195,7 @@ function ChatPage() {
 
       {/* MAIN CHAT APPLICATION CONTAINER */}
       <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-2 sm:px-4 md:px-6 py-1 sm:py-2 flex flex-col min-h-0">
-        <div className="relative w-full flex-1 flex overflow-hidden rounded-2xl md:rounded-3xl border border-border/70 bg-card/85 shadow-glow backdrop-blur-2xl min-h-[560px] h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)]">
+        <div className="relative w-full flex-1 flex overflow-hidden min-h-[560px] h-[calc(100dvh-5rem)] md:h-[calc(100dvh-6rem)]">
           <BorderAnimatedContainer>
             {viewingProfileUser ? (
               <UserProfilePage
@@ -209,7 +206,7 @@ function ChatPage() {
               <>
                 {/* LEFT SIDE - CONTACTS & CHATS LIST */}
                 <div
-                  className={`w-full md:w-80 md:min-w-[320px] bg-card/60 backdrop-blur-xl flex flex-col h-full border-r border-border/70 ${
+                  className={`w-full md:w-80 md:min-w-[320px] bg-card/50 backdrop-blur-xl flex flex-col h-full border-r border-border ${
                     selectedUser ? "hidden md:flex" : "flex"
                   }`}
                 >
@@ -217,19 +214,16 @@ function ChatPage() {
                   <ActiveTabSwitch />
 
                   <div
-                    className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 md:p-3.5 space-y-2 touch-pan-y"
+                    className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2.5 sm:p-3 space-y-1 touch-pan-y"
                     style={{ WebkitOverflowScrolling: "touch" }}
                   >
                     {activeTab === "chats" ? <ChatsList /> : <ContactList />}
                   </div>
-
-                  {/* DEVELOPER SIDEBAR FOOTER BAR */}
-                  <DeveloperFooter variant="sidebar" />
                 </div>
 
                 {/* RIGHT SIDE - ACTIVE CONVERSATION OR PLACEHOLDER */}
                 <div
-                  className={`flex-1 flex flex-col bg-card/40 backdrop-blur-sm h-full min-h-0 overflow-hidden ${
+                  className={`flex-1 flex flex-col bg-card/30 backdrop-blur-sm h-full min-h-0 overflow-hidden ${
                     selectedUser ? "flex" : "hidden md:flex"
                   }`}
                 >

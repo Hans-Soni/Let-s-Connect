@@ -120,13 +120,13 @@ function ChatHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         {/* Voice call button */}
         <button
           type="button"
           onClick={() => startOutgoingCall(selectedUser, "audio")}
           disabled={isBlocked || isBlockedBy || callState !== "idle"}
-          className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           title="Start voice call"
           aria-label="Start voice call"
         >
@@ -138,42 +138,18 @@ function ChatHeader() {
           type="button"
           onClick={() => startOutgoingCall(selectedUser, "video")}
           disabled={isBlocked || isBlockedBy || callState !== "idle"}
-          className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           title="Start video call"
           aria-label="Start video call"
         >
           <Video className="h-4 w-4" />
         </button>
 
-        {/* Theme toggle directly inside header */}
-        <button
-          type="button"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="relative grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-primary/60 text-muted-foreground hover:text-foreground transition cursor-pointer"
-          title="Toggle theme"
-          aria-label="Toggle theme"
-        >
-          <span
-            className={`absolute transition-all duration-500 ${
-              theme === "dark" ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"
-            }`}
-          >
-            <Sun className="h-4 w-4" />
-          </span>
-          <span
-            className={`absolute transition-all duration-500 ${
-              theme === "dark" ? "rotate-90 opacity-0" : "rotate-0 opacity-100"
-            }`}
-          >
-            <Moon className="h-4 w-4" />
-          </span>
-        </button>
-
         {/* Desktop close button */}
         <button
           type="button"
           onClick={handleBack}
-          className="hidden md:grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-destructive/60 hover:text-destructive hover:bg-destructive/10 text-muted-foreground transition cursor-pointer"
+          className="hidden md:grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
           title="Close conversation"
           aria-label="Close conversation"
         >

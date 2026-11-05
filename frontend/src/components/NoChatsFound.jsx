@@ -10,30 +10,27 @@ function NoChatsFound() {
   const dark = theme === "dark";
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 select-none">
-      <div className="relative animate-float">
-        <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
-        <div className="relative grid h-20 w-20 place-items-center rounded-2xl border border-border bg-card/80 shadow-glow backdrop-blur-xl">
-          <img
-            src={dark ? emblemSilver : emblemGold}
-            alt="Samवाद"
-            className="h-12 w-12 object-contain"
-          />
-        </div>
+    <div className="flex flex-col items-center justify-center py-10 px-4 text-center space-y-3 select-none">
+      <div className="grid h-14 w-14 place-items-center rounded-2xl border border-border bg-card shadow-xs">
+        <img
+          src={dark ? emblemSilver : emblemGold}
+          alt="Samवाद"
+          className="h-8 w-8 object-contain"
+        />
       </div>
       <div className="max-w-xs">
-        <h4 className="font-display text-lg font-bold text-foreground">No active conversations</h4>
-        <p className="text-muted-foreground text-xs mt-1">
-          Connect with registered members from the Contacts tab to start a private conversation.
+        <h4 className="font-semibold text-sm text-foreground">No conversations yet</h4>
+        <p className="text-muted-foreground text-xs mt-0.5">
+          Choose a contact from the directory to start a private conversation.
         </p>
       </div>
       <button
         type="button"
         onClick={() => setActiveTab("contacts")}
-        className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary rounded-full shadow-glow hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-full hover:bg-primary hover:text-primary-foreground transition cursor-pointer"
       >
         <Users className="h-3.5 w-3.5" />
-        Explore Contacts
+        Open Directory
       </button>
     </div>
   );

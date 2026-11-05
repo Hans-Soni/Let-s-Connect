@@ -424,7 +424,10 @@ function MessageInput() {
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex items-center gap-2">
+      <form
+        onSubmit={handleSendMessage}
+        className="max-w-3xl mx-auto flex items-center gap-1.5 rounded-full border border-border bg-secondary/80 p-1.5 sm:p-2 backdrop-blur-xl transition focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 shadow-xs"
+      >
         <input
           type="file"
           accept="image/*,video/mp4,video/webm,video/quicktime"
@@ -438,13 +441,13 @@ function MessageInput() {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={Boolean(audioBlob || isRecording) || isSending}
-          className={`grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full border border-border/70 bg-secondary/80 hover:border-primary/60 hover:text-primary transition shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-            imagePreview ? "text-primary border-primary" : "text-muted-foreground"
+          className={`grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:text-foreground hover:bg-card transition shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            imagePreview ? "text-primary" : ""
           }`}
           title="Attach image or video"
           aria-label="Attach image or video"
         >
-          <ImageIcon className="h-5 w-5" />
+          <ImageIcon className="h-4 w-4" />
         </button>
 
         {/* Voice Note Button */}
@@ -452,13 +455,13 @@ function MessageInput() {
           type="button"
           onClick={isRecording ? stopRecording : handleStartRecording}
           disabled={Boolean(audioBlob || imagePreview || videoFile) || isSending}
-          className={`grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full border border-border/70 bg-secondary/80 hover:border-primary/60 transition shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-            isRecording ? "text-destructive border-destructive" : "text-muted-foreground hover:text-primary"
+          className={`grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:text-foreground hover:bg-card transition shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            isRecording ? "text-destructive" : ""
           }`}
           title={isRecording ? "Stop recording" : "Record voice message"}
           aria-label={isRecording ? "Stop recording" : "Record voice message"}
         >
-          {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </button>
 
         {/* Message Text Input */}
@@ -469,18 +472,18 @@ function MessageInput() {
             setText(e.target.value);
             isSoundEnabled && playRandomKeyStrokeSound();
           }}
-          className="h-10 sm:h-11 flex-1 rounded-full border border-border bg-secondary px-4 sm:px-5 text-sm sm:text-base text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/25 shadow-xs"
-          placeholder="Type a message..."
+          className="flex-1 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          placeholder="Type your message..."
         />
 
         {/* Send Button */}
         <button
           type="submit"
           disabled={isRecording || isSending || (!text.trim() && !imagePreview && !videoFile && !audioBlob)}
-          className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-primary text-primary-foreground shadow-glow hover:brightness-110 active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer shrink-0"
+          className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-xs hover:opacity-90 active:scale-95 transition disabled:opacity-30 disabled:pointer-events-none cursor-pointer shrink-0"
           title="Send message"
         >
-          <SendIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          <SendIcon className="h-3.5 w-3.5" />
         </button>
       </form>
     </div>
