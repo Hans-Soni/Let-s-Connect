@@ -255,7 +255,7 @@ function Header({ dark, toggle }) {
 function HeroChatCard() {
   return (
     <div className="relative mx-auto w-full max-w-md animate-float">
-      <div className="absolute -inset-6 rounded-[2.5rem] bg-glow blur-2xl" />
+      <div className="absolute -inset-3 sm:-inset-6 rounded-[2.5rem] bg-glow blur-2xl pointer-events-none" />
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-elegant">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
@@ -317,7 +317,6 @@ function HeroChatCard() {
 function Hero() {
   return (
     <section id="top" className="relative overflow-hidden pb-16 pt-24 sm:pb-24 sm:pt-36 md:pt-40">
-      <div className="grain absolute inset-0 opacity-60" />
       <Emblem className="hidden md:block absolute -left-10 bottom-10 h-40 w-56 opacity-30 dark:opacity-10 animate-float" />
       <Emblem className="hidden md:block absolute right-[42%] top-28 h-16 w-24 opacity-40 dark:opacity-20 animate-float [animation-delay:2s]" />
       <div className="relative mx-auto grid max-w-7xl items-center gap-12 sm:gap-16 px-4 sm:px-5 lg:grid-cols-[1.1fr_1fr]">
@@ -364,9 +363,11 @@ function Hero() {
             </span>
           </div>
         </div>
-        <div className="reveal relative">
-          <EmblemOrbit className="absolute left-1/2 top-1/2 w-[140%] max-w-[680px] -translate-x-1/2 -translate-y-1/2" />
-          <HeroChatCard />
+        <div className="reveal relative mt-12 sm:mt-16 lg:mt-0">
+          <EmblemOrbit className="absolute left-1/2 top-1/2 w-[85%] sm:w-[110%] lg:w-[140%] max-w-[300px] sm:max-w-[460px] lg:max-w-[680px] -translate-x-1/2 -translate-y-1/2" />
+          <div className="relative z-10">
+            <HeroChatCard />
+          </div>
         </div>
       </div>
     </section>
@@ -1249,7 +1250,7 @@ export default function WelcomePage() {
   useReveal();
 
   return (
-    <div className={`welcome-page min-h-screen overflow-x-hidden ${dark ? "dark" : ""}`}>
+    <div className={`welcome-page w-full max-w-full min-h-screen overflow-x-hidden ${dark ? "dark" : ""}`}>
       <Header dark={dark} toggle={toggle} />
       <main>
         <Hero />
