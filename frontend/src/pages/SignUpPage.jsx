@@ -209,7 +209,7 @@ function SignUpPage() {
   };
 
   return (
-    <div className="auth-page relative flex min-h-screen flex-col overflow-hidden bg-background bg-dots text-foreground">
+    <div className="auth-page relative flex min-h-screen flex-col justify-between overflow-hidden bg-background text-foreground">
       {/* Ambient Gradient Blobs */}
       <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-primary/20 blur-3xl animate-blob" />
       <div className="pointer-events-none absolute -right-24 bottom-10 h-[28rem] w-[28rem] rounded-full bg-primary-glow/20 blur-3xl animate-blob [animation-delay:-7s]" />
@@ -227,7 +227,7 @@ function SignUpPage() {
       <LotusEmblem className="pointer-events-none absolute right-6 top-1/3 w-20 -rotate-12 opacity-25 animate-float [animation-delay:-5s]" />
 
       {/* Top Header */}
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4">
         <LogoLink />
         <div className="flex items-center gap-3">
           <Link
@@ -241,7 +241,7 @@ function SignUpPage() {
       </header>
 
       {/* Main Content Layout */}
-      <main className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-12 pt-6 lg:grid-cols-2">
+      <main className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 lg:gap-12 px-4 sm:px-6 py-3 sm:py-6 lg:grid-cols-2">
         {/* Left Column (Aside Preview) */}
         <section className="order-2 animate-rise lg:order-1">
           <div>
@@ -255,18 +255,18 @@ function SignUpPage() {
             </span>
 
             {/* Headline */}
-            <h1 className="mt-6 font-display text-5xl font-bold leading-[1.05] md:text-6xl text-foreground">
+            <h1 className="mt-3 sm:mt-5 font-display text-4xl sm:text-5xl lg:text-[3.25rem] font-bold leading-[1.08] text-foreground">
               Every conversation, <br />
               <em className="text-gradient italic">beautifully private.</em>
             </h1>
 
             {/* Hindi Subtitle */}
-            <p className="mt-4 font-deva text-2xl text-muted-foreground">
+            <p className="mt-2.5 sm:mt-3 font-deva text-xl sm:text-2xl text-muted-foreground">
               संवाद — where dialogue feels human again.
             </p>
 
             {/* Chat Preview Card */}
-            <div className="relative mt-10 max-w-md rounded-3xl border border-border bg-card/80 shadow-glow backdrop-blur-xl">
+            <div className="relative mt-6 sm:mt-8 max-w-md rounded-3xl border border-border bg-card/80 shadow-glow backdrop-blur-xl">
               {/* Header */}
               <div className="flex items-center gap-3 border-b border-border px-5 py-4">
                 <div className="relative grid h-10 w-10 place-items-center rounded-full bg-primary font-display font-bold text-primary-foreground">
@@ -347,7 +347,7 @@ function SignUpPage() {
             </div>
 
             {/* Aside Feature Badges */}
-            <div className="mt-8 flex flex-wrap gap-2">
+            <div className="mt-5 sm:mt-6 flex flex-wrap gap-2">
               {["Free forever", "No ads", "No tracking", "Designation privacy"].map((badge) => (
                 <span
                   key={badge}
@@ -367,7 +367,7 @@ function SignUpPage() {
             <div className="card-glow-border absolute -inset-px rounded-3xl opacity-70" />
 
             {/* Auth Form Card */}
-            <div className="relative rounded-3xl border border-border bg-card/90 p-8 shadow-glow backdrop-blur-xl">
+            <div className="relative rounded-3xl bg-card/90 p-6 sm:p-7 lg:p-8 shadow-glow backdrop-blur-xl">
               {/* Card Header with Floating Lotus */}
               <div className="text-center">
                 <LotusEmblem className="mx-auto h-12 w-auto animate-float" />
@@ -380,7 +380,7 @@ function SignUpPage() {
               </div>
 
               {/* Sign Up Form */}
-              <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+              <form className="mt-6 sm:mt-7 space-y-4" onSubmit={handleSubmit}>
                 {/* Full Name */}
                 <label className="group block space-y-2">
                   <span className="text-sm font-medium text-foreground">Full name</span>
@@ -500,7 +500,7 @@ function SignUpPage() {
               </form>
 
               {/* Or Divider */}
-              <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="my-4 sm:my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 <span className="h-px flex-1 bg-border" />
                 or
                 <span className="h-px flex-1 bg-border" />
@@ -510,7 +510,7 @@ function SignUpPage() {
               <div className="relative">
                 <button
                   type="button"
-                  className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-secondary text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:border-primary/60 cursor-pointer"
+                  className="flex h-11 sm:h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-secondary text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:border-primary/60 cursor-pointer"
                 >
                   <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
                     <path
@@ -564,7 +564,7 @@ function SignUpPage() {
               </p>
 
               {/* Already have an account link */}
-              <p className="mt-6 text-center text-sm text-muted-foreground">
+              <p className="mt-4 sm:mt-5 text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link to="/login" className="font-semibold text-primary hover:underline">
                   Sign in
@@ -576,7 +576,7 @@ function SignUpPage() {
       </main>
 
       {/* Marquee Ticker Strip */}
-      <div className="relative z-10 overflow-hidden border-y border-border bg-card/40 py-3 backdrop-blur">
+      <div className="relative z-10 overflow-hidden border-y border-border bg-card/40 py-2.5 sm:py-3 backdrop-blur">
         <div className="flex w-max animate-marquee gap-10 font-display text-lg italic text-muted-foreground">
           {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
             <span key={index} className="flex items-center gap-10">
@@ -587,7 +587,7 @@ function SignUpPage() {
       </div>
 
       {/* Footer */}
-      <footer className="relative z-10 py-5 text-center text-xs text-muted-foreground">
+      <footer className="relative z-10 py-3 sm:py-4 text-center text-xs text-muted-foreground">
         Created by <span className="font-semibold text-primary">Hans Soni</span> — Full-Stack
         Software Developer and Cybersecurity Engineer ·{" "}
         <a
