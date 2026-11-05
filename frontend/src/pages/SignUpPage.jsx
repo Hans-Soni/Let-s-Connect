@@ -209,25 +209,25 @@ function SignUpPage() {
   };
 
   return (
-    <div className="auth-page relative flex min-h-screen flex-col overflow-x-hidden bg-background text-foreground">
+    <div className="auth-page relative flex min-h-screen flex-col overflow-hidden bg-background bg-dots text-foreground">
       {/* Ambient Gradient Blobs */}
       <div className="pointer-events-none absolute -left-32 top-20 h-96 w-96 rounded-full bg-primary/20 blur-3xl animate-blob" />
       <div className="pointer-events-none absolute -right-24 bottom-10 h-[28rem] w-[28rem] rounded-full bg-primary-glow/20 blur-3xl animate-blob [animation-delay:-7s]" />
 
-      {/* Orbit Rings with Satellites (Desktop & Tablet) */}
-      <div className="pointer-events-none hidden md:block absolute -top-72 left-1/2 h-[640px] w-[640px] orbit animate-orbit">
+      {/* Orbit Rings with Satellites */}
+      <div className="pointer-events-none absolute -top-72 left-1/2 h-[640px] w-[640px] orbit animate-orbit">
         <span className="absolute bottom-6 left-1/2 h-3 w-3 rounded-full bg-primary shadow-glow" />
         <span className="absolute right-10 top-1/2 h-2 w-2 rounded-full bg-primary-glow" />
       </div>
-      <div className="pointer-events-none hidden md:block absolute -top-48 left-1/2 h-[460px] w-[460px] -translate-x-1/2 rounded-full border border-primary/25 shadow-glow" />
+      <div className="pointer-events-none absolute -top-48 left-1/2 h-[460px] w-[460px] -translate-x-1/2 rounded-full border border-primary/25 shadow-glow" />
 
-      {/* Floating Lotus Emblems (Desktop) */}
-      <LotusEmblem className="pointer-events-none hidden md:block absolute left-1/2 top-[-30px] w-44 -translate-x-1/2 opacity-80 animate-float" />
-      <LotusEmblem className="pointer-events-none hidden md:block absolute -bottom-6 -left-14 w-52 rotate-12 opacity-40 animate-float [animation-delay:-3s]" />
-      <LotusEmblem className="pointer-events-none hidden md:block absolute right-6 top-1/3 w-20 -rotate-12 opacity-25 animate-float [animation-delay:-5s]" />
+      {/* Floating Lotus Emblems */}
+      <LotusEmblem className="pointer-events-none absolute left-1/2 top-[-30px] w-44 -translate-x-1/2 opacity-80 animate-float" />
+      <LotusEmblem className="pointer-events-none absolute -bottom-6 -left-14 w-52 rotate-12 opacity-40 animate-float [animation-delay:-3s]" />
+      <LotusEmblem className="pointer-events-none absolute right-6 top-1/3 w-20 -rotate-12 opacity-25 animate-float [animation-delay:-5s]" />
 
       {/* Top Header */}
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 sm:px-6 py-4 sm:py-5">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
         <LogoLink />
         <div className="flex items-center gap-3">
           <Link
@@ -241,7 +241,7 @@ function SignUpPage() {
       </header>
 
       {/* Main Content Layout */}
-      <main className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 sm:gap-12 px-4 sm:px-6 pb-12 pt-4 sm:pt-6 lg:grid-cols-2">
+      <main className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-12 pt-6 lg:grid-cols-2">
         {/* Left Column (Aside Preview) */}
         <section className="order-2 animate-rise lg:order-1">
           <div>
@@ -255,18 +255,18 @@ function SignUpPage() {
             </span>
 
             {/* Headline */}
-            <h1 className="mt-4 sm:mt-6 font-display text-3xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] text-foreground">
+            <h1 className="mt-6 font-display text-5xl font-bold leading-[1.05] md:text-6xl text-foreground">
               Every conversation, <br />
               <em className="text-gradient italic">beautifully private.</em>
             </h1>
 
             {/* Hindi Subtitle */}
-            <p className="mt-3 sm:mt-4 font-deva text-lg sm:text-2xl text-muted-foreground">
+            <p className="mt-4 font-deva text-2xl text-muted-foreground">
               संवाद — where dialogue feels human again.
             </p>
 
             {/* Chat Preview Card */}
-            <div className="relative mt-8 sm:mt-10 max-w-md mx-auto lg:mx-0 rounded-3xl border border-border bg-card/80 shadow-glow backdrop-blur-xl">
+            <div className="relative mt-10 max-w-md rounded-3xl border border-border bg-card/80 shadow-glow backdrop-blur-xl">
               {/* Header */}
               <div className="flex items-center gap-3 border-b border-border px-5 py-4">
                 <div className="relative grid h-10 w-10 place-items-center rounded-full bg-primary font-display font-bold text-primary-foreground">
@@ -367,7 +367,7 @@ function SignUpPage() {
             <div className="card-glow-border absolute -inset-px rounded-3xl opacity-70" />
 
             {/* Auth Form Card */}
-            <div className="relative rounded-3xl border border-border bg-card/90 p-6 sm:p-8 shadow-glow backdrop-blur-xl">
+            <div className="relative rounded-3xl border border-border bg-card/90 p-8 shadow-glow backdrop-blur-xl">
               {/* Card Header with Floating Lotus */}
               <div className="text-center">
                 <LotusEmblem className="mx-auto h-12 w-auto animate-float" />

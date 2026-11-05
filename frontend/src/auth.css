@@ -26,7 +26,8 @@
   --ring: oklch(38% 0.17 268 / 0.45);
   --gradient-text: linear-gradient(100deg, var(--primary), oklch(60% 0.13 75));
   --shadow-glow: 0 24px 60px -24px var(--primary);
-  --dots: none;
+  --dots: radial-gradient(rgba(26, 21, 53, 0.09) 1px, transparent 1px);
+  --dots: radial-gradient(oklch(22% 0.06 268 / 0.09) 1px, transparent 1px);
   --logo-blend: multiply;
 }
 
@@ -59,7 +60,8 @@
   --ring: oklch(68% 0.19 45 / 0.6);
   --gradient-text: linear-gradient(100deg, var(--primary-glow), var(--primary));
   --shadow-glow: 0 20px 60px -20px var(--primary);
-  --dots: none;
+  --dots: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  --dots: radial-gradient(oklch(100% 0 0 / 0.06) 1px, transparent 1px);
   --logo-blend: lighten;
 }
 
@@ -164,7 +166,8 @@
 }
 
 .auth-page .bg-dots {
-  background-image: none;
+  background-image: var(--dots);
+  background-size: 22px 22px;
 }
 
 .auth-page .bg-card {
