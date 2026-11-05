@@ -55,7 +55,8 @@ function App() {
     (!authUser && location.pathname === "/") ||
     location.pathname === "/welcome" ||
     location.pathname === "/signup" ||
-    location.pathname === "/login";
+    location.pathname === "/login" ||
+    location.pathname === "/signin";
 
   if (isStandalonePage) {
     return (
@@ -67,6 +68,7 @@ function App() {
             <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
             <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
             <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
+            <Route path="/signin" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
             <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
           </Routes>
         </Suspense>
@@ -100,6 +102,7 @@ function App() {
           <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
           <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
           <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
+          <Route path="/signin" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
           <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
         </Routes>
       </Suspense>
