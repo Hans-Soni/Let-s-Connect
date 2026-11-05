@@ -56,27 +56,36 @@ function ChatHeader() {
   };
 
   return (
-    <div className="flex justify-between items-center bg-base-200/80 backdrop-blur-md border-b border-base-100/50 h-16 md:h-20 px-2 sm:px-4 md:px-6 shrink-0 z-20 w-full relative">
-      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+    <div className="flex justify-between items-center bg-card/75 backdrop-blur-xl border-b border-border/70 h-16 md:h-18 px-3 sm:px-5 shrink-0 z-20 w-full relative select-none">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Back Button */}
-        <button 
+        <button
           type="button"
           onClick={handleBack}
-          className="md:hidden p-2.5 -ml-1 rounded-full hover:bg-base-300/80 active:bg-base-300 active:scale-95 transition-all text-base-content hover:text-primary flex items-center justify-center shrink-0 cursor-pointer z-30"
+          className="md:hidden p-2 -ml-1 rounded-full border border-border/60 bg-secondary/70 hover:border-primary/60 text-foreground transition-all cursor-pointer flex items-center justify-center shrink-0 z-30"
           aria-label="Back to conversations"
         >
-          <ArrowLeftIcon className="size-6 stroke-[2.5]" />
+          <ArrowLeftIcon className="h-4 w-4" />
         </button>
 
         {/* User DP / Avatar - Click to open profile */}
         <div
-          className={`avatar ${isOnline ? "online" : "offline"} shrink-0 cursor-pointer group/avatar`}
+          className="relative shrink-0 cursor-pointer group/avatar"
           onClick={handleOpenProfile}
           title={`View ${selectedUser.fullName}'s profile`}
         >
-          <div className="size-10 sm:size-11 rounded-full ring-1 ring-base-content/10 group-hover/avatar:ring-2 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
-            <img src={getUserDisplayPic(selectedUser)} alt={selectedUser.fullName} />
+          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden ring-2 ring-primary/40 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
+            <img
+              src={getUserDisplayPic(selectedUser)}
+              alt={selectedUser.fullName}
+              className="h-full w-full object-cover"
+            />
           </div>
+          <span
+            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card shadow-xs transition-colors duration-300 ${
+              isOnline ? "bg-emerald-500" : "bg-muted-foreground/40"
+            }`}
+          />
         </div>
 
         <div
@@ -84,19 +93,25 @@ function ChatHeader() {
           onClick={handleOpenProfile}
           title={`View ${selectedUser.fullName}'s profile`}
         >
-          <h3 className="text-base-content font-semibold text-sm sm:text-base truncate max-w-[140px] xs:max-w-[190px] sm:max-w-xs hover:text-primary transition-colors">
+          <h3 className="font-display font-bold text-foreground text-sm sm:text-base truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs hover:text-primary transition-colors">
             {selectedUser.fullName}
           </h3>
-          <p className="text-base-content/60 text-xs flex items-center gap-1.5 truncate">
+          <p className="text-muted-foreground text-xs flex items-center gap-1.5 truncate">
             {isBlocked ? (
-              <span className="text-error font-medium">Blocked</span>
+              <span className="text-destructive font-medium">Blocked</span>
             ) : isBlockedBy ? (
-              <span className="text-base-content/50">Unavailable</span>
+              <span className="text-muted-foreground/60">Unavailable</span>
             ) : (
               <>
-                <span className={`inline-block size-1.5 rounded-full shrink-0 ${isOnline ? "bg-emerald-500" : "bg-base-content/40"}`} />
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${
+                    isOnline ? "bg-emerald-500 shadow-glow" : "bg-muted-foreground/40"
+                  }`}
+                />
                 {selectedUser.designation && (
-                  <span className="text-primary font-medium truncate max-w-[120px]">{selectedUser.designation} • </span>
+                  <span className="text-primary font-medium truncate max-w-[130px]">
+                    {selectedUser.designation} •{" "}
+                  </span>
                 )}
                 <span>{isOnline ? "Online" : "Offline"}</span>
               </>
@@ -105,17 +120,17 @@ function ChatHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {/* Voice call button */}
         <button
           type="button"
           onClick={() => startOutgoingCall(selectedUser, "audio")}
           disabled={isBlocked || isBlockedBy || callState !== "idle"}
-          className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           title="Start voice call"
           aria-label="Start voice call"
         >
-          <Phone className="size-4" />
+          <Phone className="h-4 w-4" />
         </button>
 
         {/* Video call button */}
@@ -123,31 +138,46 @@ function ChatHeader() {
           type="button"
           onClick={() => startOutgoingCall(selectedUser, "video")}
           disabled={isBlocked || isBlockedBy || callState !== "idle"}
-          className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-primary/60 hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           title="Start video call"
           aria-label="Start video call"
         >
-          <Video className="size-4" />
+          <Video className="h-4 w-4" />
         </button>
 
         {/* Theme toggle directly inside header */}
         <button
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
+          className="relative grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-primary/60 text-muted-foreground hover:text-foreground transition cursor-pointer"
           title="Toggle theme"
+          aria-label="Toggle theme"
         >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          <span
+            className={`absolute transition-all duration-500 ${
+              theme === "dark" ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"
+            }`}
+          >
+            <Sun className="h-4 w-4" />
+          </span>
+          <span
+            className={`absolute transition-all duration-500 ${
+              theme === "dark" ? "rotate-90 opacity-0" : "rotate-0 opacity-100"
+            }`}
+          >
+            <Moon className="h-4 w-4" />
+          </span>
         </button>
 
         {/* Desktop close button */}
-        <button 
+        <button
           type="button"
-          onClick={handleBack} 
-          className="hidden md:flex btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
+          onClick={handleBack}
+          className="hidden md:grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full border border-border/70 bg-secondary/70 hover:border-destructive/60 hover:text-destructive hover:bg-destructive/10 text-muted-foreground transition cursor-pointer"
           title="Close conversation"
+          aria-label="Close conversation"
         >
-          <XIcon className="w-4 h-4" />
+          <XIcon className="h-4 w-4" />
         </button>
       </div>
     </div>

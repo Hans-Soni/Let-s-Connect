@@ -1,14 +1,15 @@
 function UsersLoadingSkeleton() {
   return (
     <div className="space-y-2">
-      {[1, 2, 3].map((item) => (
-        <div key={item} className="bg-base-200/30 p-4 rounded-lg animate-pulse">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-base-100 rounded-full"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-base-100 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-base-100/70 rounded w-1/2"></div>
-            </div>
+      {[1, 2, 3, 4].map((item) => (
+        <div
+          key={item}
+          className="p-3 rounded-2xl border border-border/40 bg-secondary/30 animate-pulse flex items-center gap-3"
+        >
+          <div className="h-11 w-11 rounded-full bg-secondary/80 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-secondary/90 rounded-md w-2/3" />
+            <div className="h-3 bg-secondary/60 rounded-md w-1/3" />
           </div>
         </div>
       ))}

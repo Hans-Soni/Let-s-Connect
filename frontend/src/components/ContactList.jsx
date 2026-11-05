@@ -102,9 +102,9 @@ function ContactList() {
   return (
     <>
       {/* Sticky Search Header */}
-      <div className="sticky -top-3 md:-top-4 z-10 bg-base-200/95 backdrop-blur-md pt-1 pb-2">
+      <div className="sticky -top-3 md:-top-4 z-10 bg-card/95 backdrop-blur-md pt-1 pb-2.5">
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-base-content/40 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -112,31 +112,31 @@ function ContactList() {
             onKeyDown={(e) => {
               if (e.key === "Escape") setSearchQuery("");
             }}
-            placeholder="Search by name or designation..."
-            className="input input-sm sm:input-md w-full pl-9 pr-9 bg-base-100/90 border border-base-content/15 focus:border-primary focus:outline-none rounded-xl text-xs sm:text-sm placeholder:text-base-content/40 transition-all shadow-xs"
+            placeholder="Search contacts by name or role..."
+            className="h-10 w-full pl-9 pr-9 rounded-full border border-border bg-secondary text-xs sm:text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/25"
             aria-label="Search contacts by name or designation"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-base-content/10 text-base-content/50 hover:text-base-content transition-colors cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition cursor-pointer"
               title="Clear search"
             >
-              <X className="size-3.5" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
         {searchQuery.trim() && (
-          <div className="flex items-center justify-between px-1 pt-1.5 text-[11px] text-base-content/60">
+          <div className="flex items-center justify-between px-2 pt-1.5 text-[11px] text-muted-foreground">
             <span>
               {filteredContacts.length} {filteredContacts.length === 1 ? "contact" : "contacts"} found
             </span>
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="hover:text-primary transition-colors cursor-pointer underline"
+              className="text-primary hover:underline transition cursor-pointer font-medium"
             >
               Clear
             </button>
@@ -146,63 +146,100 @@ function ContactList() {
 
       {/* Filtered Results or Empty State */}
       {filteredContacts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 text-center px-4 space-y-3 bg-base-100/40 rounded-2xl border border-dashed border-base-content/15 mt-1">
-          <div className="size-11 rounded-full bg-base-200/80 flex items-center justify-center text-base-content/40">
-            <Search className="size-5" />
+        <div className="flex flex-col items-center justify-center py-10 text-center px-4 space-y-3 bg-secondary/30 rounded-2xl border border-dashed border-border mt-1">
+          <div className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
+            <Search className="h-5 w-5" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-base-content">No matching contacts</p>
-            <p className="text-xs text-base-content/60 max-w-[220px]">
-              No contacts found for &ldquo;<span className="text-primary font-medium">{searchQuery}</span>&rdquo; by name or designation.
+            <p className="text-sm font-semibold text-foreground">No matching contacts</p>
+            <p className="text-xs text-muted-foreground max-w-[220px]">
+              No contacts found for &ldquo;<span className="text-primary font-medium">{searchQuery}</span>&rdquo;.
             </p>
           </div>
           <button
             type="button"
             onClick={() => setSearchQuery("")}
-            className="btn btn-xs btn-outline btn-primary rounded-lg font-normal cursor-pointer"
+            className="px-3 py-1 rounded-full text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition cursor-pointer"
           >
             Clear search
           </button>
         </div>
       ) : (
-        filteredContacts.map((contact) => (
-          <div
-            key={contact._id}
-            className="bg-primary/10 p-3 sm:p-4 rounded-xl cursor-pointer hover:bg-primary/20 transition-all hover:scale-[1.01]"
-            onClick={() => setSelectedUser(contact)}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              {/* User DP / Avatar - Click to open profile page */}
+        <div className="space-y-2">
+          {filteredContacts.map((contact) => {
+            const isSelected = String(selectedUser?._id) === String(contact._id);
+            const isOnline = onlineUsers.includes(contact._id);
+
+            return (
               <div
-                className={`avatar ${onlineUsers.includes(contact._id) ? "online" : "offline"} shrink-0 cursor-pointer group/avatar`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  setViewingProfileUser(contact);
-                  navigate(`/profile/${contact._id}`);
-                }}
-                title={`View ${contact.fullName}'s profile`}
+                key={contact._id}
+                onClick={() => setSelectedUser(contact)}
+                className={`group relative p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                  isSelected
+                    ? "border-primary/80 bg-primary/15 shadow-glow"
+                    : "border-border/60 bg-secondary/40 hover:bg-secondary/85 hover:border-primary/40 hover:-translate-y-0.5 shadow-xs"
+                }`}
               >
-                <div className="size-11 sm:size-12 rounded-full ring-1 ring-base-content/10 group-hover/avatar:ring-2 group-hover/avatar:ring-primary group-hover/avatar:scale-105 transition-all">
-                  <img src={getUserDisplayPic(contact)} alt={contact.fullName} />
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* User DP / Avatar */}
+                  <div
+                    className="relative shrink-0 cursor-pointer group/avatar"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setViewingProfileUser(contact);
+                      navigate(`/profile/${contact._id}`);
+                    }}
+                    title={`View ${contact.fullName}'s profile`}
+                  >
+                    <div
+                      className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full overflow-hidden transition-all duration-200 ring-2 ${
+                        isSelected
+                          ? "ring-primary"
+                          : "ring-border/60 group-hover/avatar:ring-primary/80 group-hover/avatar:scale-105"
+                      }`}
+                    >
+                      <img
+                        src={getUserDisplayPic(contact)}
+                        alt={contact.fullName}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    {/* Status Dot */}
+                    <span
+                      className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-card shadow-xs transition-colors duration-300 ${
+                        isOnline ? "bg-emerald-500" : "bg-muted-foreground/40"
+                      }`}
+                      title={isOnline ? "Online" : "Offline"}
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h4
+                      className={`font-semibold text-sm sm:text-base truncate transition-colors ${
+                        isSelected ? "text-primary" : "text-foreground group-hover:text-primary"
+                      }`}
+                    >
+                      <HighlightMatch text={contact.fullName} query={searchQuery} />
+                    </h4>
+                    {contact.designation ? (
+                      <p className="text-muted-foreground text-xs truncate max-w-[200px] flex items-center gap-1.5 mt-0.5">
+                        <Briefcase className="h-3 w-3 shrink-0 text-primary/70" />
+                        <span className="truncate">
+                          <HighlightMatch text={contact.designation} query={searchQuery} />
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground/70 text-xs truncate mt-0.5">
+                        {isOnline ? "Active now" : "Offline"}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-base-content font-medium truncate text-sm sm:text-base">
-                  <HighlightMatch text={contact.fullName} query={searchQuery} />
-                </h4>
-                {contact.designation && (
-                  <p className="text-base-content/60 text-xs truncate max-w-[200px] flex items-center gap-1.5 mt-0.5">
-                    <Briefcase className="size-3 shrink-0 text-primary/70" />
-                    <span className="truncate">
-                      <HighlightMatch text={contact.designation} query={searchQuery} />
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        ))
+            );
+          })}
+        </div>
       )}
     </>
   );

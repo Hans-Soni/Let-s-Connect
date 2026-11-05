@@ -322,9 +322,9 @@ function MessageInput() {
 
   if (isBlocked) {
     return (
-      <div className="p-3.5 sm:p-4 border-t border-base-100/50 bg-base-200/90 backdrop-blur-md shrink-0 w-full text-center">
-        <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-error font-medium">
-          <Ban className="size-4 shrink-0" />
+      <div className="p-3.5 sm:p-4 border-t border-border/70 bg-card/80 backdrop-blur-md shrink-0 w-full text-center">
+        <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-destructive font-medium">
+          <Ban className="h-4 w-4 shrink-0" />
           <span>You blocked this user.</span>
           <button
             type="button"
@@ -332,7 +332,7 @@ function MessageInput() {
               setViewingProfileUser(selectedUser);
               navigate(`/profile/${selectedUser._id}`);
             }}
-            className="underline font-bold hover:opacity-80 transition-opacity ml-1"
+            className="underline font-bold hover:opacity-80 transition-opacity ml-1 cursor-pointer"
           >
             Unblock
           </button>
@@ -343,9 +343,9 @@ function MessageInput() {
 
   if (isBlockedBy) {
     return (
-      <div className="p-3.5 sm:p-4 border-t border-base-100/50 bg-base-200/90 backdrop-blur-md shrink-0 w-full text-center">
-        <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-base-content/60">
-          <ShieldAlert className="size-4 shrink-0" />
+      <div className="p-3.5 sm:p-4 border-t border-border/70 bg-card/80 backdrop-blur-md shrink-0 w-full text-center">
+        <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <ShieldAlert className="h-4 w-4 shrink-0" />
           <span>You cannot send messages to this contact.</span>
         </div>
       </div>
@@ -353,7 +353,7 @@ function MessageInput() {
   }
 
   return (
-    <div className="p-2.5 sm:p-4 border-t border-base-100/50 bg-base-200/80 backdrop-blur-md shrink-0 w-full">
+    <div className="p-2.5 sm:p-4 border-t border-border/70 bg-card/85 backdrop-blur-xl shrink-0 w-full">
       {(imagePreview || videoPreviewUrl) && (
         <div className="max-w-3xl mx-auto mb-2 sm:mb-3 flex items-center">
           <div className="relative max-w-full">
@@ -363,7 +363,7 @@ function MessageInput() {
                 controls
                 preload="metadata"
                 aria-label="Video attachment preview"
-                className="max-h-40 max-w-full rounded-xl border border-base-100 shadow-sm"
+                className="max-h-40 max-w-full rounded-2xl border border-border shadow-sm"
                 onError={() => {
                   toast.error("This video cannot be previewed. Please choose another file.");
                 }}
@@ -372,59 +372,59 @@ function MessageInput() {
               <img
                 src={imagePreview}
                 alt="Image attachment preview"
-                className="size-16 sm:size-20 object-cover rounded-xl border border-base-100 shadow-sm"
+                className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-2xl border border-border shadow-sm"
               />
             )}
             <button
               onClick={videoPreviewUrl ? removeVideo : removeImage}
-              className="absolute -top-2 -right-2 size-6 rounded-full bg-base-300 border border-base-content/20 flex items-center justify-center text-base-content hover:bg-base-100 shadow-sm"
+              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground hover:bg-card shadow-sm cursor-pointer"
               type="button"
               aria-label="Remove attachment"
               title="Remove attachment"
             >
-              <XIcon className="size-3.5" />
+              <XIcon className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       )}
 
       {isRecording && (
-        <div className="max-w-3xl mx-auto mb-2 flex items-center justify-between gap-3 rounded-xl bg-error/10 px-3 py-2 text-sm text-base-content">
-          <span aria-live="polite" className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-error animate-pulse" />
+        <div className="max-w-3xl mx-auto mb-2.5 flex items-center justify-between gap-3 rounded-2xl bg-destructive/10 border border-destructive/30 px-3.5 py-2 text-sm text-foreground">
+          <span aria-live="polite" className="flex items-center gap-2 font-mono">
+            <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-ping-soft" />
             Recording {`0${Math.floor(recordingSeconds / 60)}`.slice(-2)}:
             {`0${recordingSeconds % 60}`.slice(-2)} · Max 01:00
           </span>
           <button
             type="button"
             onClick={stopRecording}
-            className="btn btn-error btn-xs text-white"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-destructive text-destructive-foreground text-xs font-semibold shadow-xs hover:brightness-110 cursor-pointer"
             title="Stop recording"
           >
-            <Square className="size-3" />
+            <Square className="h-3 w-3" />
             Stop
           </button>
         </div>
       )}
 
       {audioPreviewUrl && (
-        <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2">
+        <div className="max-w-3xl mx-auto mb-2.5 flex items-center gap-2">
           <audio controls preload="metadata" src={audioPreviewUrl} className="min-w-0 flex-1 h-10">
             Your browser does not support audio playback.
           </audio>
           <button
             type="button"
             onClick={discardAudio}
-            className="btn btn-ghost btn-circle btn-sm shrink-0 text-base-content/70 hover:text-error"
+            className="grid h-8 w-8 place-items-center rounded-full border border-border/70 hover:border-destructive/60 hover:text-destructive text-muted-foreground transition cursor-pointer shrink-0"
             title="Delete recording"
             aria-label="Delete recording"
           >
-            <XIcon className="size-4" />
+            <XIcon className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex items-center gap-1.5 sm:gap-2">
+      <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex items-center gap-2">
         <input
           type="file"
           accept="image/*,video/mp4,video/webm,video/quicktime"
@@ -433,32 +433,35 @@ function MessageInput() {
           className="hidden"
         />
 
+        {/* Attach Media */}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={Boolean(audioBlob || isRecording) || isSending}
-          className={`btn btn-ghost btn-circle btn-sm sm:btn-md shrink-0 text-base-content/70 hover:text-base-content ${
-            imagePreview ? "text-primary" : ""
-          } disabled:opacity-40`}
+          className={`grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full border border-border/70 bg-secondary/80 hover:border-primary/60 hover:text-primary transition shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            imagePreview ? "text-primary border-primary" : "text-muted-foreground"
+          }`}
           title="Attach image or video"
           aria-label="Attach image or video"
         >
-          <ImageIcon className="size-5" />
+          <ImageIcon className="h-5 w-5" />
         </button>
 
+        {/* Voice Note Button */}
         <button
           type="button"
           onClick={isRecording ? stopRecording : handleStartRecording}
           disabled={Boolean(audioBlob || imagePreview || videoFile) || isSending}
-          className={`btn btn-ghost btn-circle btn-sm sm:btn-md shrink-0 text-base-content/70 hover:text-base-content disabled:opacity-40 ${
-            isRecording ? "text-error" : ""
+          className={`grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full border border-border/70 bg-secondary/80 hover:border-primary/60 transition shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            isRecording ? "text-destructive border-destructive" : "text-muted-foreground hover:text-primary"
           }`}
           title={isRecording ? "Stop recording" : "Record voice message"}
           aria-label={isRecording ? "Stop recording" : "Record voice message"}
         >
-          {isRecording ? <Square className="size-5" /> : <Mic className="size-5" />}
+          {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </button>
 
+        {/* Message Text Input */}
         <input
           type="text"
           value={text}
@@ -466,17 +469,18 @@ function MessageInput() {
             setText(e.target.value);
             isSoundEnabled && playRandomKeyStrokeSound();
           }}
-          className="flex-1 bg-base-100 border border-base-content/15 rounded-full py-2.5 px-4 text-sm sm:text-base text-base-content placeholder-base-content/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all shadow-inner"
+          className="h-10 sm:h-11 flex-1 rounded-full border border-border bg-secondary px-4 sm:px-5 text-sm sm:text-base text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/25 shadow-xs"
           placeholder="Type a message..."
         />
 
+        {/* Send Button */}
         <button
           type="submit"
           disabled={isRecording || isSending || (!text.trim() && !imagePreview && !videoFile && !audioBlob)}
-          className="btn btn-primary btn-circle btn-sm sm:btn-md shrink-0 text-white shadow-md disabled:opacity-40 transition-transform active:scale-95"
+          className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-primary text-primary-foreground shadow-glow hover:brightness-110 active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer shrink-0"
           title="Send message"
         >
-          <SendIcon className="size-4 sm:size-5" />
+          <SendIcon className="h-4 w-4 sm:h-5 sm:w-5" />
         </button>
       </form>
     </div>

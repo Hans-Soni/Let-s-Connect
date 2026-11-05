@@ -52,11 +52,13 @@ function App() {
   if (isCheckingAuth) return <PageLoader />;
 
   const isStandalonePage =
-    (!authUser && location.pathname === "/") ||
+    location.pathname === "/" ||
     location.pathname === "/welcome" ||
     location.pathname === "/signup" ||
     location.pathname === "/login" ||
-    location.pathname === "/signin";
+    location.pathname === "/signin" ||
+    location.pathname.startsWith("/profile/") ||
+    location.pathname.startsWith("/user/");
 
   if (isStandalonePage) {
     return (

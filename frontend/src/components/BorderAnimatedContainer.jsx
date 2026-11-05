@@ -1,11 +1,9 @@
-// How to make animated gradient border 👇
-// https://cruip-tutorials.vercel.app/animated-gradient-border/
 function BorderAnimatedContainer({ children }) {
   return (
-    <div className="w-full h-full relative rounded-none md:rounded-2xl flex flex-col md:flex-row overflow-hidden shadow-2xl">
-      <div className="hidden md:block absolute inset-0 bg-[conic-gradient(from_var(--border-angle),theme(colors.base-300/.48)_80%,theme(colors.primary)_86%,theme(colors.secondary)_90%,theme(colors.primary)_94%,theme(colors.base-300/.48))] animate-border" />
-      <div className="absolute inset-0 md:inset-[1px] bg-base-200 rounded-none md:rounded-2xl" />
-      <div className="relative z-10 w-full h-full flex flex-col md:flex-row overflow-hidden">
+    <div className="w-full h-full relative rounded-none md:rounded-3xl flex flex-col md:flex-row overflow-hidden border border-border/70 bg-card/85 shadow-glow backdrop-blur-2xl">
+      {/* Animated Subtle Conic Edge Glow on Desktop */}
+      <div className="pointer-events-none hidden md:block absolute -inset-px rounded-3xl bg-[conic-gradient(from_var(--border-angle),transparent_75%,var(--primary)_86%,var(--primary-glow)_92%,var(--primary)_96%,transparent_100%)] opacity-35 animate-border" />
+      <div className="relative z-10 w-full h-full flex flex-col md:flex-row overflow-hidden bg-card/75 backdrop-blur-xl">
         {children}
       </div>
     </div>
