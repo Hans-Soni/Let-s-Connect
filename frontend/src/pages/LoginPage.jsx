@@ -47,7 +47,7 @@ function LogoLink({ dark }) {
   return (
     <Link to="/" title="Back to welcome page" className="block transition hover:scale-[1.03]">
       <img
-        src={dark ? logoLight : logoDark}
+        src={dark ? logoDark : logoLight}
         alt="Samvād"
         className="h-10 w-auto transition-opacity duration-300"
       />

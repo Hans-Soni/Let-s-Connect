@@ -47,7 +47,7 @@ function LogoLink({ dark }) {
   return (
     <Link to="/" title="Back to welcome page" className="block transition hover:scale-[1.03]">
       <img
-        src={dark ? logoLight : logoDark}
+        src={dark ? logoDark : logoLight}
         alt="Samvād"
         className="h-10 w-auto transition-opacity duration-300"
       />
@@ -65,9 +65,8 @@ function ThemeToggle({ dark, toggle }) {
       className="group relative grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-border bg-card/70 backdrop-blur transition hover:border-primary/60 cursor-pointer"
     >
       <span
-        className={`absolute transition-all duration-500 ${
-          dark ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"
-        }`}
+        className={`absolute transition-all duration-500 ${dark ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"
+          }`}
       >
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="4" />
@@ -75,9 +74,8 @@ function ThemeToggle({ dark, toggle }) {
         </svg>
       </span>
       <span
-        className={`absolute transition-all duration-500 ${
-          dark ? "rotate-90 opacity-0" : "rotate-0 opacity-100"
-        }`}
+        className={`absolute transition-all duration-500 ${dark ? "rotate-90 opacity-0" : "rotate-0 opacity-100"
+          }`}
       >
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
