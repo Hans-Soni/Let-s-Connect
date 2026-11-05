@@ -51,9 +51,13 @@ function App() {
 
   if (isCheckingAuth) return <PageLoader />;
 
-  const isWelcomePage = (!authUser && location.pathname === "/") || location.pathname === "/welcome";
+  const isStandalonePage =
+    (!authUser && location.pathname === "/") ||
+    location.pathname === "/welcome" ||
+    location.pathname === "/signup" ||
+    location.pathname === "/login";
 
-  if (isWelcomePage) {
+  if (isStandalonePage) {
     return (
       <div className="min-h-screen w-full relative">
         <Suspense fallback={<PageLoader />}>
@@ -81,8 +85,6 @@ function App() {
           : "overflow-y-auto"
       }`}
     >
-      {/* DECORATORS - GRID BG & GLOW SHAPES (Only on chat / auth pages) */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
       <div className="absolute top-0 -left-4 size-96 bg-primary opacity-20 blur-[100px] pointer-events-none" />
       <div className="absolute bottom-0 -right-4 size-96 bg-secondary opacity-20 blur-[100px] pointer-events-none" />
 
