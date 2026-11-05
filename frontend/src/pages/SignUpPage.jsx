@@ -48,7 +48,7 @@ function LogoLink({ dark }) {
     <Link to="/" title="Back to welcome page" className="block transition hover:scale-[1.03]">
       <img
         src={dark ? logoDark : logoLight}
-        alt="Samvād"
+        alt="Samवाद"
         className="h-10 w-auto transition-opacity duration-300"
       />
     </Link>
@@ -264,7 +264,7 @@ function SignUpPage() {
 
             {/* Hindi Subtitle */}
             <p className="mt-2.5 sm:mt-3 font-deva text-xl sm:text-2xl text-muted-foreground">
-              संवाद — where dialogue feels human again.
+              Samवाद — where dialogue feels human again.
             </p>
 
             {/* Chat Preview Card */}
@@ -300,7 +300,7 @@ function SignUpPage() {
                   style={{ animationDelay: "0.5s" }}
                   className="w-fit max-w-[85%] animate-rise rounded-2xl rounded-bl-sm bg-secondary px-4 py-2.5 text-sm text-foreground"
                 >
-                  Welcome to Samvād 🌸 Who should we call first?
+                  Welcome to Samवाद 🌸 Who should we call first?
                 </div>
                 <div
                   style={{ animationDelay: "1.1s" }}

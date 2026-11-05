@@ -129,7 +129,7 @@ function Logo({ className = "", dark: darkProp }) {
   return (
     <img
       src={dark ? logoLight : logoDark}
-      alt="samवाद"
+      alt="Samवाद"
       className={`object-contain transition-opacity duration-300 ${className}`}
       style={{ maxHeight: "36px", maxWidth: "160px", width: "auto", height: "auto" }}
     />
@@ -329,7 +329,7 @@ function Hero() {
             <span className="text-gradient italic">beautifully private.</span>
           </h1>
           <p className="mt-3 sm:mt-4 font-deva text-xl sm:text-2xl text-muted-foreground">
-            संवाद — where dialogue feels human again.
+            Samवाद — where dialogue feels human again.
           </p>
           <p className="mt-4 sm:mt-6 max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
             Real-time chat, crystal-clear voice &amp; video and messages that clean themselves up after 24 hours — without ever exposing your email or phone number.
@@ -523,7 +523,7 @@ function HowItWorks() {
               From hello to <span className="text-gradient italic">gone in 24 hours</span>
             </>
           }
-          sub="The life of a conversation on samवाद, step by step."
+          sub="The life of a conversation on Samवाद, step by step."
         />
         <div className="how-timeline relative mt-12 sm:mt-16 max-w-4xl mx-auto">
           {/* Central vertical timeline divider */}
@@ -766,7 +766,7 @@ function SecuritySection() {
               Built like a vault, <span className="text-gradient italic">feels like a chat</span>
             </>
           }
-          sub="Privacy isn't a setting on samवाद — it's how the backend is engineered."
+          sub="Privacy isn't a setting on Samवाद — it's how the backend is engineered."
         />
         <div className="mt-10 sm:mt-16 grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {securityFeatures.map((item, idx) => {
@@ -826,7 +826,7 @@ function CompareSection() {
             <thead>
               <tr className="border-b border-border text-sm">
                 <th className="p-5 font-semibold text-muted-foreground">Capability</th>
-                <th className="bg-primary p-5 text-center font-deva text-lg text-primary-foreground">samवाद</th>
+                <th className="bg-primary p-5 text-center font-deva text-lg text-primary-foreground">Samवाद</th>
                 {["WhatsApp", "Telegram", "Slack / Teams"].map((c) => (
                   <th key={c} className="p-5 text-center font-semibold text-muted-foreground">
                     {c}
@@ -969,7 +969,7 @@ function FaqSection() {
   const faqs = [
     [
       "Do I need to install anything?",
-      "No. samवाद runs entirely in your browser — Chrome, Safari, Firefox, Edge or mobile. Calls and screen sharing work without plugins.",
+      "No. Samवाद runs entirely in your browser — Chrome, Safari, Firefox, Edge or mobile. Calls and screen sharing work without plugins.",
     ],
     [
       "Can other users see my email address?",
@@ -1046,7 +1046,7 @@ function CtaBanner() {
         <Emblem className="hidden md:block absolute -right-10 -top-6 h-48 w-72 rotate-12 opacity-35 dark:opacity-20 animate-float" />
         <Emblem className="relative mx-auto h-16 w-24 sm:h-20 sm:w-28 animate-bloom" />
         <h2 className="relative mt-5 sm:mt-6 text-3xl sm:text-5xl lg:text-6xl font-semibold">
-          Begin your <span className="font-deva">संवाद</span>
+          Begin your <span className="font-deva">Samवाद</span>
         </h2>
         <p className="relative mx-auto mt-4 sm:mt-5 max-w-xl text-base sm:text-lg opacity-90">
           Join people enjoying real-time chat, HD calling and true ephemeral privacy.
@@ -1090,7 +1090,7 @@ function SignupSection() {
           </div>
           <p className="text-sm font-semibold text-primary">A new conversation starts here</p>
           <h2 id="signup-heading" className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
-            Join <span className="font-deva text-primary">samवाद.</span>
+            Join <span className="font-deva text-primary">Samवाद.</span>
           </h2>
           <p className="mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
             A little less noise. A little more connection. Make room for conversations that matter.
@@ -1237,7 +1237,7 @@ function Footer() {
           </a>
         </p>
         <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} samवाद · All rights reserved.
+          © {new Date().getFullYear()} Samवाद · All rights reserved.
         </p>
       </div>
     </footer>
