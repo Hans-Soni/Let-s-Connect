@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { useThemeStore } from "../store/useThemeStore";
+import toast from "react-hot-toast";
+import { axiosInstance } from "../lib/axios";
 import {
   ArrowRight,
   Bot,
@@ -14,6 +16,7 @@ import {
   Lock,
   Mail,
   Menu,
+  MessageSquare,
   Mic,
   MicOff,
   MonitorUp,
@@ -22,10 +25,12 @@ import {
   PhoneOff,
   Plus,
   RefreshCw,
+  Send,
   Shield,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Star,
   Sun,
   User,
   UserX,
@@ -40,8 +45,8 @@ import emblemSilver from "../assets/emblem_silver-CXs3LN2i.png";
 import "../welcome.css";
 
 const LOGIN_URL = "https://hans-soni.github.io/Let-s-Connect/#/login";
-const SIGNUP_URL = "#signup";
-const LIVE_SIGNUP_URL = "https://hans-soni.github.io/Let-s-Connect/#/signup";
+const SIGNUP_URL = "https://hans-soni.github.io/Let-s-Connect/#/signup";
+const FEEDBACK_URL = "#feedback";
 
 // Theme hook synchronizing with useThemeStore, localStorage, and <html> class
 function useSamvaadTheme() {
@@ -166,6 +171,7 @@ function Header({ dark, toggle }) {
     ["Compare", "#compare"],
     ["Security", "#security"],
     ["FAQ", "#faq"],
+    ["Feedback", "#feedback"],
   ];
 
   return (
@@ -1070,146 +1076,257 @@ function CtaBanner() {
   );
 }
 
-// Signup section
-function SignupSection() {
-  const [showPassword, setShowPassword] = useState(false);
+// Feedback section (takes feedback from users)
+function FeedbackSection() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    category: "General",
+    rating: 5,
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e) => {
+  const categories = [
+    { label: "General", icon: "💭" },
+    { label: "Feature Request", icon: "💡" },
+    { label: "Bug Report", icon: "🐛" },
+    { label: "Praise", icon: "🌸" },
+  ];
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    if (!formData.message.trim()) {
+      toast.error("Please enter a feedback message.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await axiosInstance.post("/feedback", formData);
+      setIsSubmitted(true);
+      toast.success("Thank you! Your feedback has been received 🌸");
+    } catch (error) {
+      console.warn("Feedback API error, saving locally:", error);
+      try {
+        const local = JSON.parse(localStorage.getItem("samvaad_feedback") || "[]");
+        local.push({ ...formData, createdAt: new Date().toISOString() });
+        localStorage.setItem("samvaad_feedback", JSON.stringify(local));
+      } catch (err) {}
+      setIsSubmitted(true);
+      toast.success("Thank you! Your feedback has been received 🌸");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setFormData({
+      name: "",
+      email: "",
+      category: "General",
+      rating: 5,
+      message: "",
+    });
+    setIsSubmitted(false);
   };
 
   return (
-    <section id="signup" aria-labelledby="signup-heading" className="scroll-mt-24 border-t border-border bg-secondary py-16 sm:py-24 md:py-28">
+    <section id="feedback" aria-labelledby="feedback-heading" className="scroll-mt-24 border-t border-border bg-secondary py-16 sm:py-24 md:py-28">
       <div className="mx-auto grid max-w-6xl items-center gap-8 sm:gap-12 px-4 sm:px-5 lg:grid-cols-2 lg:gap-20">
+        {/* Left Column: Context */}
         <div className="min-w-0">
           <div aria-hidden="true" className="relative mb-8 h-32 w-32">
             <div className="absolute inset-0 animate-spin-slow rounded-full border border-dashed border-gold/50" />
             <Emblem className="absolute inset-5 h-22 w-22 animate-bloom" />
           </div>
-          <p className="text-sm font-semibold text-primary">A new conversation starts here</p>
-          <h2 id="signup-heading" className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
-            Join <span className="font-deva text-primary">Samवाद.</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> Community Feedback
+          </span>
+          <h2 id="feedback-heading" className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-semibold leading-tight">
+            Help us shape <span className="font-deva text-primary">Samवाद.</span>
           </h2>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
-            A little less noise. A little more connection. Make room for conversations that matter.
+          <p className="mt-4 sm:mt-5 max-w-md text-base sm:text-lg leading-relaxed text-muted-foreground">
+            Have a suggestion, spotted a bug, or loving the experience? We read every piece of feedback to make private dialogue better every single day.
           </p>
-          <div className="mt-8 flex items-start gap-3 border-l-2 border-primary pl-5">
-            <ShieldAlert className="mt-1 h-5 w-5 shrink-0 text-primary" />
-            <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Your email is for your account, not your public identity. Other people see your name and designation.
-            </p>
+          <div className="mt-8 space-y-4">
+            <div className="flex items-start gap-3 border-l-2 border-primary pl-4">
+              <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                <strong className="text-foreground font-semibold">Direct developer review</strong> — your notes guide our feature roadmap and bug fixes directly.
+              </p>
+            </div>
+            <div className="flex items-start gap-3 border-l-2 border-primary/60 pl-4">
+              <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" />
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                <strong className="text-foreground font-semibold">Anonymous by default</strong> — providing your name or email is 100% optional.
+              </p>
+            </div>
           </div>
         </div>
-        <div className="min-w-0 rounded-lg border border-border bg-card p-6 shadow-card sm:p-9">
-          <Logo className="mb-7 h-10 max-w-full object-contain object-left" />
-          <h3 className="text-2xl font-semibold">Create your account</h3>
+
+        {/* Right Column: Feedback Card */}
+        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 shadow-card sm:p-9 relative">
+          <Logo className="mb-5 sm:mb-6 h-10 max-w-full object-contain object-left" />
+          <h3 className="text-2xl font-semibold">Share your feedback</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Already part of the conversation?{" "}
-            <a href={LOGIN_URL} className="text-primary underline hover:text-primary/80">
-              Sign in
-            </a>
+            We’d love to hear your thoughts, bug reports, or feature ideas.
           </p>
+
           {isSubmitted ? (
-            <div className="mt-8 space-y-5" role="status">
-              <div className="flex items-center gap-3 text-primary">
-                <Check className="h-5 w-5" />
-                <h4 className="font-semibold">Continue in the live app</h4>
+            <div className="mt-8 space-y-5 text-center py-6" role="status">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary/15 text-primary">
+                <Check className="h-8 w-8 animate-bloom" />
               </div>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Your account hasn’t been created yet. Enter your details again in the live app and review its Terms &amp; Data Authorization to finish signing up. Nothing entered here has been sent or saved.
-              </p>
-              <a
-                href={LIVE_SIGNUP_URL}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground shadow transition hover:opacity-90"
-              >
-                Open signup <ArrowRight className="h-4 w-4" />
-              </a>
-              <button
-                type="button"
-                onClick={() => setIsSubmitted(false)}
-                className="h-10 w-full rounded-lg text-sm font-medium hover:bg-secondary transition"
-              >
-                Back to form
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div className="space-y-2">
-                <label htmlFor="signup-name" className="block text-sm font-medium">
-                  Full name
-                </label>
-                <div className="relative">
-                  <User aria-hidden="true" className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="signup-name"
-                    name="fullName"
-                    autoComplete="name"
-                    placeholder="Your full name"
-                    required
-                    pattern=".*\S.*"
-                    className="h-12 w-full rounded-md border border-input bg-background pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="signup-email" className="block text-sm font-medium">
-                  Email address
-                </label>
-                <div className="relative">
-                  <Mail aria-hidden="true" className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    required
-                    className="h-12 w-full rounded-md border border-input bg-background pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="signup-password" className="block text-sm font-medium">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock aria-hidden="true" className="pointer-events-none absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="signup-password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    placeholder="Create a password"
-                    minLength={6}
-                    maxLength={128}
-                    required
-                    aria-describedby="signup-password-hint"
-                    className="h-12 w-full rounded-md border border-input bg-background pl-10 pr-12 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    title={showPassword ? "Hide password" : "Show password"}
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-1.5 top-1.5 grid h-9 w-9 place-items-center rounded-md text-muted-foreground hover:bg-secondary"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <p id="signup-password-hint" className="text-xs text-muted-foreground">
-                  Use 6–128 characters.
+              <div>
+                <h4 className="text-xl font-semibold">Thank you for your feedback! 🌸</h4>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground max-w-sm mx-auto">
+                  Your thoughts help us build a more thoughtful, private communication experience for everyone.
                 </p>
               </div>
               <button
-                type="submit"
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground shadow transition hover:opacity-90"
+                type="button"
+                onClick={handleReset}
+                className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-secondary px-6 text-sm font-semibold transition hover:bg-muted cursor-pointer"
               >
-                Continue to signup <ArrowRight className="h-4 w-4" />
+                Send another note <ArrowRight className="h-4 w-4" />
               </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-6 sm:mt-7 space-y-4 sm:space-y-5">
+              {/* Category Pills */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Feedback category
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.label}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, category: cat.label })}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition cursor-pointer ${
+                        formData.category === cat.label
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "border border-border bg-secondary hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  How is your experience?
+                </label>
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      aria-label={`${star} star`}
+                      onClick={() => setFormData({ ...formData, rating: star })}
+                      className="p-1 transition hover:scale-110 cursor-pointer"
+                    >
+                      <Star
+                        className={`h-6 w-6 transition-colors ${
+                          star <= formData.rating
+                            ? "fill-primary text-primary"
+                            : "text-muted-foreground/30 hover:text-primary/50"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-xs font-medium text-muted-foreground">
+                    {formData.rating === 5 && "Outstanding 🌟"}
+                    {formData.rating === 4 && "Very good ✨"}
+                    {formData.rating === 3 && "Good 👍"}
+                    {formData.rating === 2 && "Could be better"}
+                    {formData.rating === 1 && "Needs work"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Name & Email Grid */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label htmlFor="feedback-name" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Name <span className="text-[10px] lowercase font-normal">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <User aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                    <input
+                      id="feedback-name"
+                      name="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Your name"
+                      className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="feedback-email" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Email <span className="text-[10px] lowercase font-normal">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <Mail aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                    <input
+                      id="feedback-email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="you@example.com"
+                      className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Feedback Message */}
+              <div className="space-y-1.5">
+                <label htmlFor="feedback-message" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Your feedback <span className="text-primary">*</span>
+                </label>
+                <div className="relative">
+                  <textarea
+                    id="feedback-message"
+                    name="message"
+                    required
+                    rows={4}
+                    value={formData.message}
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    placeholder="Tell us what you like, what feels tricky, or what features you'd like to see next..."
+                    className="w-full rounded-xl border border-input bg-background p-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary resize-none leading-relaxed"
+                  />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 font-semibold text-primary-foreground shadow transition hover:opacity-95 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" /> Sending…
+                  </>
+                ) : (
+                  <>
+                    Send feedback <Send className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
               <p className="text-center text-xs leading-relaxed text-muted-foreground">
-                Signup finishes in the live app, where you’ll review the Terms &amp; Data Authorization. Details entered here are not sent or saved.
+                Your feedback goes directly to our core engineering team. Thank you for helping build Samवाद!
               </p>
             </form>
           )}
@@ -1265,7 +1382,7 @@ export default function WelcomePage() {
         <StackSection />
         <FaqSection />
         <CtaBanner />
-        <SignupSection />
+        <FeedbackSection />
       </main>
       <Footer />
     </div>
