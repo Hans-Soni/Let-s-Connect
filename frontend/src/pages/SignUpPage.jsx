@@ -31,22 +31,26 @@ const TICKER_ITEMS = [
   "24h ephemeral",
 ];
 
-// Dual-theme lotus emblem component
-function LotusEmblem({ className = "" }) {
+// Dual-theme lotus emblem component (gold in light mode, silver in dark mode)
+function LotusEmblem({ dark, className = "" }) {
   return (
-    <>
-      <img src={emblemGold} alt="" className={`dark:hidden ${className}`} />
-      <img src={emblemSilver} alt="" className={`hidden dark:block ${className}`} />
-    </>
+    <img
+      src={dark ? emblemSilver : emblemGold}
+      alt="Lotus flower"
+      className={`transition-all duration-300 ${className}`}
+    />
   );
 }
 
-// Brand logo link to welcome page
-function LogoLink() {
+// Brand logo link to welcome page (high-contrast symbol for each mode)
+function LogoLink({ dark }) {
   return (
     <Link to="/" title="Back to welcome page" className="block transition hover:scale-[1.03]">
-      <img src={logoLight} alt="Samvād" className="h-10 w-auto dark:hidden" />
-      <img src={logoDark} alt="Samvād" className="hidden h-10 w-auto dark:block" />
+      <img
+        src={dark ? logoLight : logoDark}
+        alt="Samvād"
+        className="h-10 w-auto transition-opacity duration-300"
+      />
     </Link>
   );
 }
@@ -222,13 +226,13 @@ function SignUpPage() {
       <div className="pointer-events-none absolute -top-48 left-1/2 h-[460px] w-[460px] -translate-x-1/2 rounded-full border border-primary/25 shadow-glow" />
 
       {/* Floating Lotus Emblems */}
-      <LotusEmblem className="pointer-events-none absolute left-1/2 top-[-30px] w-44 -translate-x-1/2 opacity-80 animate-float" />
-      <LotusEmblem className="pointer-events-none absolute -bottom-6 -left-14 w-52 rotate-12 opacity-40 animate-float [animation-delay:-3s]" />
-      <LotusEmblem className="pointer-events-none absolute right-6 top-1/3 w-20 -rotate-12 opacity-25 animate-float [animation-delay:-5s]" />
+      <LotusEmblem dark={dark} className="pointer-events-none absolute left-1/2 top-[-30px] w-44 -translate-x-1/2 opacity-80 animate-float" />
+      <LotusEmblem dark={dark} className="pointer-events-none absolute -bottom-6 -left-14 w-52 rotate-12 opacity-40 animate-float [animation-delay:-3s]" />
+      <LotusEmblem dark={dark} className="pointer-events-none absolute right-6 top-1/3 w-20 -rotate-12 opacity-25 animate-float [animation-delay:-5s]" />
 
       {/* Top Header */}
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4">
-        <LogoLink />
+        <LogoLink dark={dark} />
         <div className="flex items-center gap-3">
           <Link
             to="/"
@@ -370,7 +374,7 @@ function SignUpPage() {
             <div className="relative rounded-3xl bg-card/90 p-6 sm:p-7 lg:p-8 shadow-glow backdrop-blur-xl">
               {/* Card Header with Floating Lotus */}
               <div className="text-center">
-                <LotusEmblem className="mx-auto h-12 w-auto animate-float" />
+                <LotusEmblem dark={dark} className="mx-auto h-12 w-auto animate-float" />
                 <h2 className="mt-3 font-display text-3xl font-semibold text-foreground">
                   Create account
                 </h2>

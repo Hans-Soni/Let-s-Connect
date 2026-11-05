@@ -128,7 +128,7 @@ function Logo({ className = "", dark: darkProp }) {
 
   return (
     <img
-      src={dark ? logoDark : logoLight}
+      src={dark ? logoLight : logoDark}
       alt="samवाद"
       className={`object-contain transition-opacity duration-300 ${className}`}
       style={{ maxHeight: "36px", maxWidth: "160px", width: "auto", height: "auto" }}
