@@ -2,7 +2,7 @@ import { useThemeStore } from "../store/useThemeStore";
 import { useChatStore } from "../store/useChatStore";
 import emblemGold from "../assets/emblem_gold-sNN9olCf.png";
 import emblemSilver from "../assets/emblem_silver-CXs3LN2i.png";
-import { ShieldCheck, MessageSquare, Zap, Clock } from "lucide-react";
+import { ShieldCheck, MessageSquare, Zap, Clock, ArrowRight } from "lucide-react";
 
 const NoConversationPlaceholder = () => {
   const { theme } = useThemeStore();
@@ -49,14 +49,14 @@ const NoConversationPlaceholder = () => {
           </span>
         </div>
 
-        {/* Action Prompt Button */}
+        {/* Action Prompt Button matching the high-end card CTA */}
         <button
           type="button"
           onClick={() => setActiveTab("contacts")}
-          className="mt-8 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground hover:shadow-glow cursor-pointer"
+          className="mt-8 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-95 active:scale-95 cursor-pointer"
         >
-          <MessageSquare className="h-3.5 w-3.5" />
-          Choose a contact to start chatting
+          <span>Start a conversation</span>
+          <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </div>

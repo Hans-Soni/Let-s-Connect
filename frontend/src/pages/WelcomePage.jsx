@@ -1176,12 +1176,14 @@ function FeedbackSection() {
         </div>
 
         {/* Right Column: Feedback Card */}
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-6 shadow-card sm:p-9 relative">
-          <Logo className="mb-5 sm:mb-6 h-10 max-w-full object-contain object-left" />
-          <h3 className="text-2xl font-semibold">Share your feedback</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Enter your registered Samवाद details to share your thoughts, bug reports, or feature ideas.
-          </p>
+        <div className="min-w-0 rounded-3xl border border-border bg-card/90 p-6 shadow-glow backdrop-blur-xl sm:p-9 relative">
+          <div className="text-center mb-6">
+            <Logo className="mx-auto mb-3.5 h-10 object-contain" />
+            <h3 className="font-display text-2xl sm:text-3xl font-semibold text-foreground">Share your feedback</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Enter your registered Samवाद details to share your thoughts, bug reports, or feature ideas.
+            </p>
+          </div>
 
           {isSubmitted ? (
             <div className="mt-8 space-y-5 text-center py-6" role="status">
@@ -1349,7 +1351,7 @@ function FeedbackSection() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 font-semibold text-primary-foreground shadow transition hover:opacity-95 disabled:opacity-50 cursor-pointer"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 font-semibold text-primary-foreground shadow-glow transition hover:opacity-95 active:scale-98 disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
