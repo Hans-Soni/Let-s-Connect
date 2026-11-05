@@ -1087,6 +1087,7 @@ function FeedbackSection() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const categories = [
     { label: "General", icon: "💭" },
@@ -1097,8 +1098,18 @@ function FeedbackSection() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
+
+    if (!formData.name.trim()) {
+      toast.error("Please enter your name.");
+      return;
+    }
+    if (!formData.email.trim()) {
+      toast.error("Please enter your registered email ID.");
+      return;
+    }
     if (!formData.message.trim()) {
-      toast.error("Please enter a feedback message.");
+      toast.error("Please enter your feedback message.");
       return;
     }
 
@@ -1106,16 +1117,13 @@ function FeedbackSection() {
     try {
       await axiosInstance.post("/feedback", formData);
       setIsSubmitted(true);
-      toast.success("Thank you! Your feedback has been received 🌸");
+      toast.success("Thank you! Your feedback has been verified and received 🌸");
     } catch (error) {
-      console.warn("Feedback API error, saving locally:", error);
-      try {
-        const local = JSON.parse(localStorage.getItem("samvaad_feedback") || "[]");
-        local.push({ ...formData, createdAt: new Date().toISOString() });
-        localStorage.setItem("samvaad_feedback", JSON.stringify(local));
-      } catch (err) {}
-      setIsSubmitted(true);
-      toast.success("Thank you! Your feedback has been received 🌸");
+      const msg =
+        error.response?.data?.message ||
+        "Email ID not found in our database. Please use the email registered with your Samवाद account first.";
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -1129,6 +1137,7 @@ function FeedbackSection() {
       rating: 5,
       message: "",
     });
+    setErrorMessage("");
     setIsSubmitted(false);
   };
 
@@ -1160,7 +1169,7 @@ function FeedbackSection() {
             <div className="flex items-start gap-3 border-l-2 border-primary/60 pl-4">
               <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-primary" />
               <p className="text-sm leading-relaxed text-muted-foreground">
-                <strong className="text-foreground font-semibold">Anonymous by default</strong> — providing your name or email is 100% optional.
+                <strong className="text-foreground font-semibold">Verified account required</strong> — email IDs are checked against our database to ensure genuine, authentic community feedback.
               </p>
             </div>
           </div>
@@ -1171,7 +1180,7 @@ function FeedbackSection() {
           <Logo className="mb-5 sm:mb-6 h-10 max-w-full object-contain object-left" />
           <h3 className="text-2xl font-semibold">Share your feedback</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            We’d love to hear your thoughts, bug reports, or feature ideas.
+            Enter your registered Samवाद details to share your thoughts, bug reports, or feature ideas.
           </p>
 
           {isSubmitted ? (
@@ -1182,7 +1191,7 @@ function FeedbackSection() {
               <div>
                 <h4 className="text-xl font-semibold">Thank you for your feedback! 🌸</h4>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground max-w-sm mx-auto">
-                  Your thoughts help us build a more thoughtful, private communication experience for everyone.
+                  Your feedback has been verified and stored. Thank you for helping build a more thoughtful, private communication experience.
                 </p>
               </div>
               <button
@@ -1252,27 +1261,31 @@ function FeedbackSection() {
                 </div>
               </div>
 
-              {/* Name & Email Grid */}
+              {/* Name & Email Grid (Compulsory) */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label htmlFor="feedback-name" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Name <span className="text-[10px] lowercase font-normal">(optional)</span>
+                    Full Name <span className="text-primary">*</span>
                   </label>
                   <div className="relative">
                     <User aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
                     <input
                       id="feedback-name"
                       name="name"
+                      required
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Your name"
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value });
+                        if (errorMessage) setErrorMessage("");
+                      }}
+                      placeholder="Your full name"
                       className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="feedback-email" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Email <span className="text-[10px] lowercase font-normal">(optional)</span>
+                    Registered Email <span className="text-primary">*</span>
                   </label>
                   <div className="relative">
                     <Mail aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
@@ -1280,16 +1293,40 @@ function FeedbackSection() {
                       id="feedback-email"
                       name="email"
                       type="email"
+                      required
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="you@example.com"
-                      className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (errorMessage) setErrorMessage("");
+                      }}
+                      placeholder="account@example.com"
+                      className={`h-11 w-full rounded-xl border bg-background pl-10 pr-3 text-sm outline-none transition focus:ring-1 ${
+                        errorMessage
+                          ? "border-destructive text-destructive focus:border-destructive focus:ring-destructive"
+                          : "border-input focus:border-primary focus:ring-primary"
+                      }`}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Feedback Message */}
+              {/* Error Message Alert Banner */}
+              {errorMessage && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-xs text-destructive animate-rise">
+                  <p className="font-semibold flex items-center gap-1.5">
+                    <span>⚠️</span> {errorMessage}
+                  </p>
+                  <p className="mt-1.5 text-muted-foreground">
+                    Don’t have an account yet?{" "}
+                    <a href={SIGNUP_URL} className="font-medium text-primary underline">
+                      Sign up for Samवाद first
+                    </a>{" "}
+                    to share feedback.
+                  </p>
+                </div>
+              )}
+
+              {/* Feedback Message (Compulsory) */}
               <div className="space-y-1.5">
                 <label htmlFor="feedback-message" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Your feedback <span className="text-primary">*</span>
@@ -1316,7 +1353,7 @@ function FeedbackSection() {
               >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="h-4 w-4 animate-spin" /> Sending…
+                    <RefreshCw className="h-4 w-4 animate-spin" /> Verifying & Sending…
                   </>
                 ) : (
                   <>
@@ -1326,7 +1363,7 @@ function FeedbackSection() {
               </button>
 
               <p className="text-center text-xs leading-relaxed text-muted-foreground">
-                Your feedback goes directly to our core engineering team. Thank you for helping build Samवाद!
+                Verified feedback is stored and reviewed directly by our engineering team. Thank you!
               </p>
             </form>
           )}
