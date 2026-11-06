@@ -49,6 +49,15 @@ function App() {
 
   const { theme } = useThemeStore();
 
+  // Global theme synchronization with html class, data-theme, and localStorage
+  useEffect(() => {
+    const isDark = theme === "dark";
+    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("chat-theme", theme);
+    localStorage.setItem("samvaad-theme", theme);
+  }, [theme]);
+
   if (isCheckingAuth) return <PageLoader />;
 
   const isStandalonePage =

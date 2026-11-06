@@ -10,13 +10,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=Tiro+Devanagari+Hindi&display=swap" />
-    <title>samवाद — Private Real-Time Chat & HD Calling</title>
-    <script type="module" crossorigin src="/Let-s-Connect/assets/index-BQR_mNhc.js"></script>
-    <link rel="modulepreload" crossorigin href="/Let-s-Connect/assets/vendor-react-BSQLSCW5.js">
+    <title>Samवाद — Private Real-Time Chat & HD Calling</title>
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem("chat-theme") || localStorage.getItem("samvaad-theme") || localStorage.getItem("samvad-theme");
+          if (saved === "light") {
+            document.documentElement.classList.remove("dark");
+            document.documentElement.setAttribute("data-theme", "light");
+          } else {
+            document.documentElement.classList.add("dark");
+            document.documentElement.setAttribute("data-theme", "dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/Let-s-Connect/assets/index-C2imfJh8.js"></script>
+    <link rel="modulepreload" crossorigin href="/Let-s-Connect/assets/vendor-react-Bgcns1j-.js">
     <link rel="modulepreload" crossorigin href="/Let-s-Connect/assets/vendor-network-DSfR7lmw.js">
-    <link rel="modulepreload" crossorigin href="/Let-s-Connect/assets/vendor-ui-6zVoilXD.js">
-    <link rel="modulepreload" crossorigin href="/Let-s-Connect/assets/vendor-state-CHharVhj.js">
-    <link rel="stylesheet" crossorigin href="/Let-s-Connect/assets/index-DBV9VJ4k.css">
+    <link rel="modulepreload" crossorigin href="/Let-s-Connect/assets/vendor-ui-CUAYlsbs.js">
+    <link rel="modulepreload" crossorigin href="/Let-s-Connect/assets/vendor-state-nwURf5sh.js">
+    <link rel="stylesheet" crossorigin href="/Let-s-Connect/assets/index-lc9UgoFl.css">
   </head>
   <body>
     <div id="root"></div>

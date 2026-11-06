@@ -23,6 +23,17 @@ import {
   Video,
   Download,
   Camera,
+  KeyRound,
+  FileText,
+  AlertTriangle,
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  Clock,
+  Shield,
+  Loader2,
+  User,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -30,6 +41,8 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useThemeStore } from "../store/useThemeStore";
 import { useCallStore } from "../store/useCallStore";
+import TermsContent from "../components/TermsContent";
+import { CURRENT_TERMS_VERSION, TERMS_LAST_UPDATED } from "../lib/terms";
 
 import logoLight from "../assets/samvaad_logo_light.png";
 import logoDark from "../assets/samvaad_logo_dark.png";
@@ -79,7 +92,7 @@ function LogoLink({ dark, className = "" }) {
   );
 }
 
-// Animated theme toggle button
+// Animated theme toggle button matching Lovable
 function ThemeToggle({ dark, toggle }) {
   return (
     <button
@@ -87,7 +100,7 @@ function ThemeToggle({ dark, toggle }) {
       onClick={toggle}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       className="group relative grid h-10 w-10 place-items-center overflow-hidden rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition cursor-pointer"
-      title={dark ? "Light mode" : "Dark mode"}
+      title={dark ? "Switch to light mode" : "Switch to dark mode"}
     >
       <span
         className={`absolute transition-all duration-500 ${
@@ -159,19 +172,30 @@ export default function ChatPage() {
     unsubscribeFromMessages,
   } = useChatStore();
 
-  const { authUser, logout, onlineUsers, updateProfile } = useAuthStore();
+  const {
+    authUser,
+    logout,
+    onlineUsers,
+    updateProfile,
+    changePassword,
+    getConsentRecord,
+    deleteAccount,
+    isDeletingAccount,
+  } = useAuthStore();
+
   const { theme, setTheme } = useThemeStore();
   const { startOutgoingCall, callState } = useCallStore();
 
   const dark = theme === "dark";
 
-  // State matching Lovable ChatWorkspace
+  // State matching Lovable ChatWorkspace + Full Profile Details
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeModal, setActiveModal] = useState(null); // null | 'contacts' | 'profile'
+  const [activeModal, setActiveModal] = useState(null); // null | 'contacts' | 'profile' | 'terms'
+  const [profileTab, setProfileTab] = useState("profile"); // 'profile' | 'security' | 'privacy' | 'danger'
   const [showDetails, setShowDetails] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState(null); // file
+  const [attachment, setAttachment] = useState(null);
   const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -179,7 +203,25 @@ export default function ChatPage() {
   // Profile modal edit states
   const [editName, setEditName] = useState("");
   const [editDesignation, setEditDesignation] = useState("");
+  const [selectedProfileImage, setSelectedProfileImage] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Password change state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPassword, setShowPassword] = useState({ current: false, next: false, confirm: false });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Consent & Terms record state
+  const [consentRecord, setConsentRecord] = useState(null);
+  const [isLoadingConsent, setIsLoadingConsent] = useState(false);
+
+  // Delete account safety state
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [deleteAckChecked, setDeleteAckChecked] = useState(false);
 
   // Refs
   const mediaRecorderRef = useRef(null);
@@ -194,8 +236,6 @@ export default function ChatPage() {
     const nextDark = !dark;
     const nextTheme = nextDark ? "dark" : "light";
     setTheme(nextTheme);
-    localStorage.setItem("samvaad-theme", nextTheme);
-    document.documentElement.classList.toggle("dark", nextDark);
   };
 
   useEffect(() => {
@@ -232,9 +272,10 @@ export default function ChatPage() {
   const filteredChats = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return chats;
-    return chats.filter((c) =>
-      (c.fullName || "").toLowerCase().includes(q) ||
-      (c.designation || "").toLowerCase().includes(q)
+    return chats.filter(
+      (c) =>
+        (c.fullName || "").toLowerCase().includes(q) ||
+        (c.designation || "").toLowerCase().includes(q)
     );
   }, [chats, searchQuery]);
 
@@ -250,11 +291,30 @@ export default function ChatPage() {
     );
   }, [allContacts, authUser, searchQuery]);
 
-  // Start a new conversation from contacts
+  // Open conversation from contacts
   const handleOpenContactChat = (contact) => {
     setSelectedUser(contact);
     setActiveModal(null);
     setSearchQuery("");
+  };
+
+  // Open profile modal with initial values
+  const handleOpenProfileModal = () => {
+    setEditName(authUser?.fullName || "");
+    setEditDesignation(authUser?.designation || "");
+    setSelectedProfileImage("");
+    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setDeleteConfirmationText("");
+    setDeleteAckChecked(false);
+    setProfileTab("profile");
+    setActiveModal("profile");
+
+    // Fetch consent record
+    setIsLoadingConsent(true);
+    getConsentRecord()
+      .then((record) => setConsentRecord(record))
+      .catch(() => {})
+      .finally(() => setIsLoadingConsent(false));
   };
 
   // Send message
@@ -350,15 +410,23 @@ export default function ChatPage() {
     e.target.value = "";
   };
 
-  // Save profile
-  const handleSaveProfile = async () => {
+  // Save profile details
+  const handleSaveProfile = async (e) => {
+    if (e) e.preventDefault();
+    const normalizedName = editName.trim();
+    if (!normalizedName) {
+      toast.error("Your name cannot be empty.");
+      return;
+    }
+
     setIsSavingProfile(true);
     try {
       await updateProfile({
-        fullName: editName.trim() || authUser?.fullName,
+        fullName: normalizedName,
         designation: editDesignation.trim() || "Samvād member",
+        ...(selectedProfileImage ? { profilePic: selectedProfileImage } : {}),
       });
-      setActiveModal(null);
+      setSelectedProfileImage("");
       toast.success("Profile saved.");
     } catch {
       toast.error("Profile could not be saved.");
@@ -368,40 +436,73 @@ export default function ChatPage() {
   };
 
   // Profile photo upload
-  const handleAvatarChange = async (e) => {
+  const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/") || file.size > 10 * 1024 * 1024) {
-      toast.error("Choose an image smaller than 10 MB.");
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose a valid image file.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Choose an image smaller than 3 MB.");
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        await updateProfile({ profilePic: reader.result });
-        toast.success("Profile photo updated.");
-      } catch {
-        toast.error("Profile photo could not be saved.");
-      }
+    reader.onload = () => {
+      setSelectedProfileImage(reader.result);
+      toast.success("New photo selected! Click 'Save Profile' to apply.");
     };
     reader.readAsDataURL(file);
   };
 
-  const isOnline = selectedUser?._id ? onlineUsers.includes(selectedUser._id) : false;
+  // Password change submission
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("New passwords do not match.");
+      return;
+    }
+    if (passwordForm.newPassword === passwordForm.currentPassword) {
+      toast.error("Choose a new password different from your current one.");
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
 
-  // Shared files in current conversation
+    setIsChangingPassword(true);
+    const changed = await changePassword(passwordForm);
+    setIsChangingPassword(false);
+    if (changed) {
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    }
+  };
+
+  // Permanent account deletion
+  const handleConfirmDeleteAccount = async () => {
+    if (deleteConfirmationText.trim().toUpperCase() !== "DELETE" || !deleteAckChecked || isDeletingAccount) {
+      return;
+    }
+    const success = await deleteAccount();
+    if (success) {
+      setActiveModal(null);
+    }
+  };
+
+  const isOnline = selectedUser?._id ? onlineUsers.includes(selectedUser._id) : false;
   const sharedFiles = messages.filter((m) => m.image || m.video || m.audio);
 
   return (
     <div className="chat-app bg-background text-foreground">
-      {/* 1. Chat Rail (Leftmost navigation icon bar) */}
-      <nav className="chat-rail flex flex-col items-center gap-5 border-r border-border bg-card py-6 select-none z-10">
+      {/* 1. Chat Rail (Leftmost navigation bar) */}
+      <nav className="chat-rail flex flex-col items-center gap-5 border-r border-border bg-card py-6 select-none z-10 shadow-xs">
         <Link to="/" aria-label="Samvād messages" title="Samvād home">
           <img
             src={dark ? emblemSilver : emblemGold}
             alt="Samvād"
-            className="h-9 w-auto transition-transform hover:scale-105"
+            className="h-9 w-auto transition-transform hover:scale-105 drop-shadow-sm dark:drop-shadow-none"
           />
         </Link>
 
@@ -419,7 +520,6 @@ export default function ChatPage() {
 
           <button
             type="button"
-            variant="ghost"
             title="Contacts"
             aria-label="Contacts"
             onClick={() => setActiveModal("contacts")}
@@ -435,13 +535,9 @@ export default function ChatPage() {
 
           <button
             type="button"
-            title="Profile settings"
-            aria-label="Profile settings"
-            onClick={() => {
-              setEditName(authUser?.fullName || "");
-              setEditDesignation(authUser?.designation || "");
-              setActiveModal("profile");
-            }}
+            title="Profile & Settings"
+            aria-label="Profile & Settings"
+            onClick={handleOpenProfileModal}
             className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition cursor-pointer"
           >
             <Settings size={20} />
@@ -483,7 +579,7 @@ export default function ChatPage() {
             </button>
           </div>
 
-          <label className="flex h-11 items-center gap-3 rounded-lg bg-secondary px-3 text-muted-foreground focus-within:ring-1 focus-within:ring-primary/40">
+          <label className="flex h-11 items-center gap-3 rounded-lg bg-secondary px-3 text-muted-foreground border border-border/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/40 transition">
             <Search size={16} />
             <input
               aria-label="Search conversations"
@@ -495,7 +591,7 @@ export default function ChatPage() {
           </label>
         </header>
 
-        {/* Filter Bar */}
+        {/* Filter Strip */}
         <div className="flex items-center gap-5 border-b border-border px-6 pb-4 text-sm select-none">
           <span className="font-semibold text-primary">
             All chats <span className="ml-1 text-xs">({filteredChats.length})</span>
@@ -518,7 +614,9 @@ export default function ChatPage() {
                 type="button"
                 onClick={() => setSelectedUser(chat)}
                 className={`mb-1 w-full justify-start whitespace-normal rounded-lg px-3 py-4 flex items-center gap-3 transition cursor-pointer text-left ${
-                  isSelected ? "bg-accent text-accent-foreground" : "hover:bg-secondary/50 text-foreground"
+                  isSelected
+                    ? "bg-accent text-accent-foreground border-l-2 border-primary"
+                    : "hover:bg-secondary/60 text-foreground"
                 }`}
               >
                 <Avatar user={chat} />
@@ -539,7 +637,7 @@ export default function ChatPage() {
                   </span>
                 </span>
                 {unread > 0 && (
-                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold shadow-xs">
                     {unread > 99 ? "99+" : unread}
                   </span>
                 )}
@@ -562,17 +660,24 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Sidebar Footer: Current User Status Bar */}
-        <div className="flex items-center gap-3 border-t border-border px-6 py-5 select-none bg-card/50">
+        {/* Sidebar Footer: Click to open full Profile & Settings */}
+        <button
+          type="button"
+          onClick={handleOpenProfileModal}
+          className="flex items-center gap-3 border-t border-border px-6 py-5 select-none bg-card/70 hover:bg-secondary/60 transition cursor-pointer text-left group"
+          title="Open Profile & Settings"
+        >
           <Avatar user={authUser} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">{authUser?.fullName}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+              {authUser?.fullName}
+            </p>
             <p className="truncate text-xs text-muted-foreground">
               {authUser?.designation || "Available"}
             </p>
           </div>
-          <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-online" title="Online" />
-        </div>
+          <span className="h-2 w-2 shrink-0 rounded-full bg-online" title="Online" />
+        </button>
       </aside>
 
       {/* 3. Chat Main Area */}
@@ -580,7 +685,7 @@ export default function ChatPage() {
         {selectedUser ? (
           <>
             {/* Header */}
-            <header className="flex h-24 shrink-0 items-center gap-3 border-b border-border bg-card/70 px-5 md:px-8 select-none">
+            <header className="flex h-24 shrink-0 items-center gap-3 border-b border-border bg-card/85 px-5 md:px-8 select-none">
               <button
                 type="button"
                 aria-label="Back to conversations"
@@ -590,19 +695,24 @@ export default function ChatPage() {
                 <ArrowLeft size={18} />
               </button>
 
-              <Avatar user={selectedUser} />
-
-              <div className="min-w-0">
-                <h2 className="truncate font-semibold text-foreground text-base sm:text-lg">
-                  {selectedUser.fullName}
-                </h2>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {selectedUser.designation || (isOnline ? "Online" : "Offline")}
-                </p>
+              <div
+                className="flex items-center gap-3 min-w-0 cursor-pointer group"
+                onClick={() => setShowDetails(!showDetails)}
+                title="View details"
+              >
+                <Avatar user={selectedUser} />
+                <div className="min-w-0">
+                  <h2 className="truncate font-semibold text-foreground text-base sm:text-lg group-hover:text-primary transition-colors">
+                    {selectedUser.fullName}
+                  </h2>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {selectedUser.designation || (isOnline ? "Online" : "Offline")}
+                  </p>
+                </div>
               </div>
 
-              {/* Call buttons (preserves real WebRTC audio/video call) */}
-              <div className="ml-auto flex items-center gap-1">
+              {/* Call buttons (preserves WebRTC calling) */}
+              <div className="ml-auto flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => startOutgoingCall(selectedUser, "audio")}
@@ -687,8 +797,8 @@ export default function ChatPage() {
                         </div>
 
                         <div
-                          className={`mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground select-none ${
-                            isMe ? "justify-end" : ""
+                          className={`mt-2 flex items-center gap-1.5 text-[10px] select-none ${
+                            isMe ? "justify-end text-muted-foreground" : "text-muted-foreground"
                           }`}
                         >
                           <span>
@@ -701,7 +811,7 @@ export default function ChatPage() {
                             (msg.isSeen ? (
                               <CheckCheck size={13} className="text-primary" />
                             ) : (
-                              <Check size={13} />
+                              <Check size={13} className="text-muted-foreground" />
                             ))}
                         </div>
                       </div>
@@ -714,7 +824,7 @@ export default function ChatPage() {
             </div>
 
             {/* Composer Box */}
-            <div className="shrink-0 border-t border-border bg-card/60 px-5 pb-5 pt-4 md:px-8">
+            <div className="shrink-0 border-t border-border bg-card/85 px-5 pb-5 pt-4 md:px-8">
               {/* Attachment Preview Banner */}
               {attachment && (
                 <div className="mb-3 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary animate-rise">
@@ -846,7 +956,7 @@ export default function ChatPage() {
             <img
               src={dark ? emblemSilver : emblemGold}
               alt="Samvād"
-              className="mb-8 w-28 animate-float object-contain"
+              className="mb-8 w-28 animate-float object-contain drop-shadow-sm dark:drop-shadow-none"
             />
             <p className="mb-3 font-deva text-xl text-muted-foreground">संवाद</p>
             <h2 className="font-display text-4xl sm:text-5xl font-bold leading-tight text-foreground">
@@ -920,7 +1030,7 @@ export default function ChatPage() {
                   deleteChatHistory(selectedUser._id);
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-destructive hover:bg-destructive/10 transition cursor-pointer border border-destructive/20"
             >
               <Trash2 size={14} /> Clear chat history
             </button>
@@ -928,11 +1038,10 @@ export default function ChatPage() {
         </aside>
       )}
 
-      {/* 5. Accessible Modals (Contacts & Profile Settings) matching Lovable */}
-      {activeModal && (
+      {/* 5. A New Conversation Modal */}
+      {activeModal === "contacts" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in-0">
-          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-background p-6 shadow-xl max-h-[85dvh] overflow-y-auto animate-rise">
-            {/* Modal Close Button */}
+          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[85dvh] overflow-y-auto animate-rise">
             <button
               type="button"
               onClick={() => setActiveModal(null)}
@@ -942,118 +1051,582 @@ export default function ChatPage() {
               <X size={18} />
             </button>
 
-            {/* Modal Header */}
             <h2 className="font-display text-2xl font-semibold text-foreground">
-              {activeModal === "profile" ? "Your profile" : "A new conversation"}
+              A new conversation
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {activeModal === "profile"
-                ? "Your name and designation are visible to other members."
-                : "Find a Samvād member."}
+              Find a Samvād member to connect privately.
             </p>
 
-            {/* Modal Body */}
-            {activeModal === "contacts" ? (
-              <div className="mt-6 space-y-4">
-                <label className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 p-3">
-                  <Search size={16} className="text-muted-foreground" />
-                  <input
-                    aria-label="Search members"
-                    placeholder="Search by name or designation"
-                    className="w-full bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    autoFocus
-                  />
-                </label>
+            <div className="mt-6 space-y-4">
+              <label className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 p-3">
+                <Search size={16} className="text-muted-foreground" />
+                <input
+                  aria-label="Search members"
+                  placeholder="Search by name or designation"
+                  className="w-full bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                />
+              </label>
 
-                <div className="space-y-1 max-h-80 overflow-y-auto">
-                  {filteredContacts.map((contact) => (
-                    <button
-                      key={contact._id}
-                      type="button"
-                      onClick={() => handleOpenContactChat(contact)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary text-left transition cursor-pointer group"
-                    >
-                      <Avatar user={contact} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
-                          {contact.fullName}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {contact.designation || "Available"}
-                        </span>
+              <div className="space-y-1 max-h-80 overflow-y-auto">
+                {filteredContacts.map((contact) => (
+                  <button
+                    key={contact._id}
+                    type="button"
+                    onClick={() => handleOpenContactChat(contact)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary text-left transition cursor-pointer group"
+                  >
+                    <Avatar user={contact} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                        {contact.fullName}
                       </span>
-                      <MessageCircle size={18} className="text-muted-foreground group-hover:text-primary transition-colors ml-auto" />
-                    </button>
-                  ))}
-
-                  {filteredContacts.length === 0 && (
-                    <p className="py-6 text-center text-sm text-muted-foreground">
-                      No other members found.
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* Profile Modal */
-              <div className="mt-6 space-y-5">
-                <div className="flex items-center gap-5">
-                  <Avatar user={authUser} large={true} />
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => avatarInputRef.current?.click()}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-secondary hover:bg-secondary/80 text-sm font-semibold text-foreground transition cursor-pointer"
-                    >
-                      <Camera size={16} />
-                      Change photo
-                    </button>
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarChange}
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {contact.designation || "Available"}
+                      </span>
+                    </span>
+                    <MessageCircle
+                      size={18}
+                      className="text-muted-foreground group-hover:text-primary transition-colors ml-auto"
                     />
+                  </button>
+                ))}
+
+                {filteredContacts.length === 0 && (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No members found.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Comprehensive Profile & Settings Modal */}
+      {activeModal === "profile" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 animate-in fade-in-0">
+          <div className="relative w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden animate-rise">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-border select-none">
+              <div>
+                <h2 className="font-display text-2xl font-semibold text-foreground">
+                  Profile &amp; Settings
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Manage your identity, security, terms consent, and private data.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="rounded-lg p-1.5 opacity-70 hover:opacity-100 hover:bg-secondary transition text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Segmented Navigation Tabs */}
+            <div className="flex items-center gap-1 border-b border-border p-1 bg-secondary/40 select-none overflow-x-auto text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setProfileTab("profile")}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${
+                  profileTab === "profile"
+                    ? "bg-card text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <User size={13} />
+                Profile &amp; Photo
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProfileTab("security")}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${
+                  profileTab === "security"
+                    ? "bg-card text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <KeyRound size={13} />
+                Security &amp; Password
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProfileTab("terms")}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${
+                  profileTab === "terms"
+                    ? "bg-card text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <FileText size={13} />
+                Terms &amp; Consent
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProfileTab("danger")}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 text-destructive ${
+                  profileTab === "danger"
+                    ? "bg-destructive/15 font-bold shadow-xs"
+                    : "hover:bg-destructive/10"
+                }`}
+              >
+                <AlertTriangle size={13} />
+                Danger Zone
+              </button>
+            </div>
+
+            {/* Modal Body with Scrollable View */}
+            <div className="flex-1 overflow-y-auto py-5 px-1 space-y-6">
+              {/* TAB 1: Profile & Identity */}
+              {profileTab === "profile" && (
+                <form onSubmit={handleSaveProfile} className="space-y-5">
+                  <div className="flex items-center gap-5 p-4 rounded-xl bg-secondary/40 border border-border/60">
+                    <div className="relative">
+                      {selectedProfileImage ? (
+                        <span className="chat-avatar h-20 w-20 text-2xl font-bold">
+                          <img
+                            src={selectedProfileImage}
+                            alt="Preview"
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                        </span>
+                      ) : (
+                        <Avatar user={authUser} large={true} />
+                      )}
+                      <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-card bg-online" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">Profile Picture</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                        Upload a photo up to 3 MB.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-border bg-card hover:bg-secondary text-xs font-semibold text-foreground transition cursor-pointer shadow-xs"
+                      >
+                        <Camera size={14} />
+                        {selectedProfileImage ? "Choose a different photo" : "Change photo"}
+                      </button>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                      />
+                    </div>
+                  </div>
+
+                  <label className="block space-y-2 text-sm text-foreground">
+                    <span className="font-medium">Full Name</span>
+                    <input
+                      type="text"
+                      value={editName}
+                      maxLength={80}
+                      required
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="h-11 w-full rounded-lg border border-border bg-secondary px-3.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+                      placeholder="Your full name"
+                    />
+                  </label>
+
+                  <label className="block space-y-2 text-sm text-foreground">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Designation / Role</span>
+                      <span className="text-[11px] text-primary font-medium">
+                        Replaces email ID publicly
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={editDesignation}
+                      maxLength={100}
+                      onChange={(e) => setEditDesignation(e.target.value)}
+                      className="h-11 w-full rounded-lg border border-border bg-secondary px-3.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+                      placeholder="e.g. Software Architect, Designer, Student"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Your designation is visible to other members across chats and directory instead of your email.
+                    </p>
+                  </label>
+
+                  <label className="block space-y-2 text-sm text-foreground opacity-80">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Registered Email</span>
+                      <span className="text-[11px] text-emerald-500 font-medium flex items-center gap-1">
+                        <Lock size={11} /> 100% Private
+                      </span>
+                    </div>
+                    <input
+                      type="email"
+                      value={authUser?.email || ""}
+                      readOnly
+                      disabled
+                      className="h-11 w-full rounded-lg border border-border bg-secondary/50 px-3.5 text-sm text-muted-foreground cursor-not-allowed"
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition cursor-pointer disabled:opacity-50 shadow-xs"
+                  >
+                    {isSavingProfile ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                    {isSavingProfile ? "Saving changes…" : "Save Profile"}
+                  </button>
+
+                  {/* Direct Shortcuts to Other Settings */}
+                  <div className="pt-4 border-t border-border space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Account &amp; Privacy Controls
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setProfileTab("security")}
+                        className="flex items-center justify-center gap-1.5 p-2.5 rounded-lg border border-border bg-card hover:bg-secondary text-xs font-medium text-foreground transition cursor-pointer"
+                      >
+                        <KeyRound size={13} className="text-primary" />
+                        <span>Security &amp; Password</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProfileTab("terms")}
+                        className="flex items-center justify-center gap-1.5 p-2.5 rounded-lg border border-border bg-card hover:bg-secondary text-xs font-medium text-foreground transition cursor-pointer"
+                      >
+                        <FileText size={13} className="text-primary" />
+                        <span>Terms &amp; Consent</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProfileTab("danger")}
+                        className="flex items-center justify-center gap-1.5 p-2.5 rounded-lg border border-destructive/30 bg-destructive/5 hover:bg-destructive/15 text-xs font-medium text-destructive transition cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                        <span>Danger Zone</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {/* TAB 2: Security & Password */}
+              {profileTab === "security" && (
+                <div className="space-y-6">
+                  {/* Change Password Form */}
+                  <form onSubmit={handleChangePassword} className="space-y-4 p-4 rounded-xl border border-border bg-secondary/30">
+                    <div className="flex items-center gap-2 text-foreground font-semibold text-sm">
+                      <KeyRound size={16} className="text-primary" />
+                      <span>Change Password</span>
+                    </div>
+
+                    <label className="block space-y-1.5 text-sm text-foreground">
+                      <span className="text-xs font-medium text-muted-foreground">Current Password</span>
+                      <div className="relative">
+                        <input
+                          type={showPassword.current ? "text" : "password"}
+                          value={passwordForm.currentPassword}
+                          required
+                          onChange={(e) =>
+                            setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))
+                          }
+                          className="h-10 w-full rounded-lg border border-border bg-card px-3 pr-10 text-sm text-foreground outline-none focus:border-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPassword((s) => ({ ...s, current: !s.current }))
+                          }
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                          {showPassword.current ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </label>
+
+                    <label className="block space-y-1.5 text-sm text-foreground">
+                      <span className="text-xs font-medium text-muted-foreground">New Password</span>
+                      <div className="relative">
+                        <input
+                          type={showPassword.next ? "text" : "password"}
+                          value={passwordForm.newPassword}
+                          required
+                          minLength={6}
+                          onChange={(e) =>
+                            setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))
+                          }
+                          className="h-10 w-full rounded-lg border border-border bg-card px-3 pr-10 text-sm text-foreground outline-none focus:border-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPassword((s) => ({ ...s, next: !s.next }))
+                          }
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                          {showPassword.next ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </label>
+
+                    <label className="block space-y-1.5 text-sm text-foreground">
+                      <span className="text-xs font-medium text-muted-foreground">Confirm New Password</span>
+                      <div className="relative">
+                        <input
+                          type={showPassword.confirm ? "text" : "password"}
+                          value={passwordForm.confirmPassword}
+                          required
+                          minLength={6}
+                          onChange={(e) =>
+                            setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))
+                          }
+                          className="h-10 w-full rounded-lg border border-border bg-card px-3 pr-10 text-sm text-foreground outline-none focus:border-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPassword((s) => ({ ...s, confirm: !s.confirm }))
+                          }
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        >
+                          {showPassword.confirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={isChangingPassword}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isChangingPassword ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                      {isChangingPassword ? "Updating password…" : "Update Password"}
+                    </button>
+                  </form>
+
+                  {/* Session & Privacy info */}
+                  <div className="p-4 rounded-xl border border-border bg-secondary/30 space-y-2">
+                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Clock size={14} className="text-primary" /> Session Security &amp; Auto-Logout
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Sessions automatically expire after 15 minutes of inactivity on unattended devices. Tokens are stored in secure session memory.
+                    </p>
                   </div>
                 </div>
+              )}
 
-                <label className="block space-y-2 text-sm text-foreground">
-                  <span className="font-medium">Full name</span>
-                  <input
-                    type="text"
-                    value={editName}
-                    maxLength={80}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="h-11 w-full rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:border-primary"
-                    placeholder="Your name"
-                  />
-                </label>
+              {/* TAB 3: Terms & Consent Status */}
+              {profileTab === "terms" && (
+                <div className="space-y-5">
+                  <div className="p-4 rounded-xl border border-border bg-secondary/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <ShieldCheck size={16} className="text-emerald-500" /> Terms &amp; Data Consent
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        Version {CURRENT_TERMS_VERSION} • {TERMS_LAST_UPDATED}
+                      </span>
+                    </div>
 
-                <label className="block space-y-2 text-sm text-foreground">
-                  <span className="font-medium">Designation</span>
-                  <input
-                    type="text"
-                    value={editDesignation}
-                    maxLength={100}
-                    onChange={(e) => setEditDesignation(e.target.value)}
-                    className="h-11 w-full rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:border-primary"
-                    placeholder="e.g. Software Architect, Designer"
-                  />
-                </label>
+                    {isLoadingConsent ? (
+                      <p className="text-xs text-muted-foreground">Loading consent status…</p>
+                    ) : consentRecord?.accepted ? (
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p className="flex items-center gap-1 text-emerald-500 font-medium">
+                          <CheckCircle2 size={13} /> You accepted Terms Version {consentRecord.termsVersion}
+                        </p>
+                        {consentRecord.acceptedAt && (
+                          <p>Consent timestamp: {new Date(consentRecord.acceptedAt).toLocaleString()}</p>
+                        )}
+                        {consentRecord.ipAddress && (
+                          <p className="font-mono text-[11px]">
+                            Recorded IP: <span className="text-foreground">{consentRecord.ipAddress}</span>
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Your account operates under Samvād Version {CURRENT_TERMS_VERSION} Terms &amp; Conditions.
+                      </p>
+                    )}
 
+                    <button
+                      type="button"
+                      onClick={() => setActiveModal("terms_view")}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card py-2.5 text-xs font-semibold text-foreground hover:bg-secondary transition cursor-pointer shadow-xs"
+                    >
+                      <FileText size={14} className="text-primary" />
+                      View Full Terms &amp; Data Authorization
+                    </button>
+                  </div>
+
+                  {/* 24h Ephemeral Policy */}
+                  <div className="p-4 rounded-xl border border-border bg-secondary/30 space-y-2">
+                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Clock size={14} className="text-primary" /> 24-Hour Ephemeral Message Sweep
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Every minute, an automated background job sweeps and permanently deletes all messages, voice notes, video clips, and images older than 24 hours. No historical chat logs are archived.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: Danger Zone (Delete Account & Clear History) */}
+              {profileTab === "danger" && (
+                <div className="space-y-6">
+                  {/* Clear History */}
+                  <div className="p-4 rounded-xl border border-border bg-secondary/30 space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Clear Conversation History</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        Purge all messages in your active conversations right now without deleting your account.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to clear conversation history?")) {
+                          if (selectedUser?._id) deleteChatHistory(selectedUser._id);
+                          else toast.success("Select a conversation from the sidebar to clear its history.");
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs font-semibold text-foreground transition cursor-pointer"
+                    >
+                      <Trash2 size={14} className="text-primary" />
+                      Clear Current Chat History
+                    </button>
+                  </div>
+
+                  {/* Permanent Account Deletion */}
+                  <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 space-y-4">
+                    <div className="flex items-center gap-2 text-destructive font-semibold text-sm">
+                      <AlertTriangle size={16} />
+                      <span>Delete My Account Permanently</span>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Permanently delete your account, authentication credentials, contacts, and personal profile. This action is irreversible.
+                    </p>
+
+                    <label className="flex items-start gap-2 text-xs text-foreground select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={deleteAckChecked}
+                        onChange={(e) => setDeleteAckChecked(e.target.checked)}
+                        className="mt-0.5 rounded border-border"
+                      />
+                      <span>I understand that this action is permanent and cannot be undone.</span>
+                    </label>
+
+                    {deleteAckChecked && (
+                      <div className="space-y-2 animate-rise">
+                        <p className="text-xs font-semibold text-foreground">
+                          Type <span className="font-mono text-destructive">DELETE</span> to confirm:
+                        </p>
+                        <input
+                          type="text"
+                          value={deleteConfirmationText}
+                          onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                          placeholder="DELETE"
+                          className="h-10 w-full rounded-lg border border-destructive/40 bg-card px-3 text-sm text-foreground outline-none uppercase font-mono"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={
+                        !deleteAckChecked ||
+                        deleteConfirmationText.trim().toUpperCase() !== "DELETE" ||
+                        isDeletingAccount
+                      }
+                      onClick={handleConfirmDeleteAccount}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-destructive py-2.5 text-xs font-semibold text-destructive-foreground hover:opacity-90 transition cursor-pointer disabled:opacity-40"
+                    >
+                      {isDeletingAccount ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      {isDeletingAccount ? "Deleting account…" : "Permanently Delete Account"}
+                    </button>
+                  </div>
+
+                  {/* Sign Out */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={logout}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-secondary/80 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary transition cursor-pointer"
+                    >
+                      <LogOut size={14} />
+                      Sign out of Samvād
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Dedicated Full Terms & Data Authorization Viewer Modal */}
+      {activeModal === "terms_view" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 animate-in fade-in-0">
+          <div className="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden animate-rise">
+            <div className="flex items-center justify-between pb-4 border-b border-border select-none">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleSaveProfile}
-                  disabled={isSavingProfile}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition cursor-pointer disabled:opacity-50"
+                  onClick={() => setActiveModal("profile")}
+                  className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Back to profile settings"
                 >
-                  <Check size={16} />
-                  {isSavingProfile ? "Saving…" : "Save profile"}
+                  <ArrowLeft size={18} />
                 </button>
+                <div>
+                  <h3 className="font-display text-xl font-semibold text-foreground">
+                    Terms &amp; Conditions
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Version {CURRENT_TERMS_VERSION} • {TERMS_LAST_UPDATED}
+                  </p>
+                </div>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="rounded-lg p-1.5 opacity-70 hover:opacity-100 hover:bg-secondary transition text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-5 pr-2">
+              <TermsContent />
+            </div>
+
+            <div className="pt-4 border-t border-border flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveModal("profile")}
+                className="px-5 py-2 rounded-lg bg-primary text-xs font-semibold text-primary-foreground hover:opacity-90 transition cursor-pointer"
+              >
+                Back to Settings
+              </button>
+            </div>
           </div>
         </div>
       )}

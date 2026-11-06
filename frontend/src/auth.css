@@ -3,31 +3,36 @@
 :root,
 .auth-page {
   --radius: 1rem;
-  --background: oklch(97.5% 0.008 85);
-  --foreground: oklch(22% 0.06 268);
-  --card: oklch(99% 0.004 85);
-  --card-foreground: oklch(22% 0.06 268);
-  --popover: oklch(99% 0.004 85);
-  --popover-foreground: oklch(22% 0.06 268);
-  --primary: oklch(38% 0.17 268);
+  --background: oklch(98.5% 0.005 85);
+  --foreground: oklch(20% 0.02 50);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(20% 0.02 50);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(20% 0.02 50);
+  --primary: oklch(60% 0.18 45);
   --primary-foreground: oklch(99% 0 0);
-  --primary-glow: oklch(72% 0.13 80);
-  --secondary: oklch(94% 0.012 85);
-  --secondary-foreground: oklch(22% 0.06 268);
-  --muted: oklch(94% 0.012 85);
-  --muted-foreground: oklch(48% 0.03 268);
-  --accent: oklch(92% 0.05 85);
-  --accent-foreground: oklch(38% 0.17 268);
+  --primary-glow: oklch(75% 0.14 55);
+  --secondary: oklch(95% 0.008 85);
+  --secondary-foreground: oklch(20% 0.02 50);
+  --muted: oklch(94% 0.008 85);
+  --muted-foreground: oklch(48% 0.02 50);
+  --accent: oklch(94% 0.035 50);
+  --accent-foreground: oklch(55% 0.18 45);
   --destructive: oklch(60% 0.2 25);
   --destructive-foreground: oklch(99% 0 0);
   --online: oklch(65% 0.17 150);
-  --border: oklch(22% 0.06 268 / 0.12);
-  --input: oklch(22% 0.06 268 / 0.15);
-  --ring: oklch(38% 0.17 268 / 0.45);
-  --gradient-text: linear-gradient(100deg, var(--primary), oklch(60% 0.13 75));
+  --border: oklch(20% 0.02 50 / 0.12);
+  --input: oklch(20% 0.02 50 / 0.15);
+  --ring: oklch(60% 0.18 45 / 0.45);
+  --gradient-text: linear-gradient(100deg, var(--primary), oklch(68% 0.15 50));
   --shadow-glow: 0 24px 60px -24px var(--primary);
   --dots: none;
   --logo-blend: multiply;
+  --chat-surface: oklch(97% 0.006 85);
+  --chat-peer: oklch(100% 0 0);
+  --chat-avatar: oklch(92% 0.035 50);
+  --chat-avatar-text: oklch(55% 0.18 45);
+  --chat-pattern: radial-gradient(var(--border) 0.7px, transparent 0.7px);
 }
 
 @supports (color: color-mix(in lab, red, red)) {
@@ -61,6 +66,11 @@
   --shadow-glow: 0 20px 60px -20px var(--primary);
   --dots: none;
   --logo-blend: lighten;
+  --chat-surface: oklch(18.5% 0.005 60);
+  --chat-peer: oklch(25.5% 0.008 60);
+  --chat-avatar: oklch(30% 0.025 55);
+  --chat-avatar-text: var(--primary-glow);
+  --chat-pattern: radial-gradient(var(--border) 0.7px, transparent 0.7px);
 }
 
 @supports (color: color-mix(in lab, red, red)) {
@@ -346,22 +356,6 @@
 }
 
 /* Lovable Authentic Chat Workspace Styles */
-:root {
-  --chat-surface: oklch(96% 0.009 85);
-  --chat-peer: var(--card);
-  --chat-avatar: oklch(88% 0.035 85);
-  --chat-avatar-text: var(--primary);
-  --chat-pattern: radial-gradient(var(--border) 0.7px, transparent 0.7px);
-}
-
-.dark {
-  --chat-surface: oklch(18.5% 0.005 60);
-  --chat-peer: oklch(25.5% 0.008 60);
-  --chat-avatar: oklch(30% 0.025 55);
-  --chat-avatar-text: var(--primary-glow);
-  --chat-pattern: radial-gradient(var(--border) 0.7px, transparent 0.7px);
-}
-
 .chat-app {
   grid-template-columns: 76px 340px minmax(0, 1fr);
   height: 100dvh;

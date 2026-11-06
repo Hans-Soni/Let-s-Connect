@@ -99,23 +99,8 @@ function SignUpPage() {
   const { theme, setTheme } = useThemeStore();
   const dark = theme === "dark";
 
-  // Sync theme with HTML class and localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("samvad-theme");
-    if (saved === "light" || saved === "dark") {
-      if (saved !== theme) setTheme(saved);
-      document.documentElement.classList.toggle("dark", saved === "dark");
-    } else {
-      document.documentElement.classList.toggle("dark", dark);
-    }
-  }, []);
-
   const toggleTheme = () => {
-    const nextDark = !dark;
-    const nextTheme = nextDark ? "dark" : "light";
-    setTheme(nextTheme);
-    localStorage.setItem("samvad-theme", nextTheme);
-    document.documentElement.classList.toggle("dark", nextDark);
+    setTheme(dark ? "light" : "dark");
   };
 
   // Detect genuine client device IP proactively
