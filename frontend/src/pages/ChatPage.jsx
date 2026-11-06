@@ -364,6 +364,8 @@ export default function ChatPage() {
     setSelectedUser,
     messages,
     sendMessage,
+    getMessagesByUserId,
+    isMessagesLoading,
     deleteChatHistory,
     markMessagesAsSeen,
     getMyChatPartners,
@@ -503,18 +505,33 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (selectedUser?._id) {
+      getMessagesByUserId(selectedUser._id);
       markMessagesAsSeen(selectedUser._id);
       setText("");
-      setAttachment(null);
-      setAttachmentPreviewUrl(null);
+      clearAttachment();
       setShowDetails(false);
       textareaRef.current?.focus();
     }
-  }, [selectedUser, markMessagesAsSeen]);
+  }, [selectedUser?._id, getMessagesByUserId, markMessagesAsSeen]);
+
+  // Window focus & active tab synchronization with backend
+  useEffect(() => {
+    const handleActive = () => {
+      if (document.visibilityState === "visible" && selectedUser?._id) {
+        markMessagesAsSeen(selectedUser._id);
+      }
+    };
+    window.addEventListener("focus", handleActive);
+    document.addEventListener("visibilitychange", handleActive);
+    return () => {
+      window.removeEventListener("focus", handleActive);
+      document.removeEventListener("visibilitychange", handleActive);
+    };
+  }, [selectedUser?._id, markMessagesAsSeen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, selectedUser]);
+  }, [messages.length, selectedUser?._id]);
 
   // Clean up media streams
   useEffect(() => {
@@ -1009,7 +1026,7 @@ export default function ChatPage() {
                     </span>
                   </span>
                   <span className="mt-1 block truncate text-xs text-muted-foreground">
-                    {lastMsg?.text || (lastMsg?.image ? "📷 Photo" : "Start a conversation")}
+                    {lastMsg?.text || (lastMsg?.image ? "📷 Photo" : lastMsg?.video ? "🎬 Video" : lastMsg?.audio ? "🎤 Voice note" : "Start a conversation")}
                   </span>
                 </span>
                 {unread > 0 && (
@@ -1146,11 +1163,16 @@ export default function ChatPage() {
                 <span className="h-px w-10 bg-border" />
               </div>
 
-              {messages.length === 0 && (
+              {isMessagesLoading ? (
+                <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-muted-foreground animate-rise">
+                  <Loader2 size={24} className="animate-spin text-primary" />
+                  <p className="text-xs">Loading conversation…</p>
+                </div>
+              ) : messages.length === 0 ? (
                 <p className="py-12 text-center font-display text-xl text-muted-foreground select-none">
                   Say hello to {selectedUser.fullName}.
                 </p>
-              )}
+              ) : null}
 
               {messages.map((msg, index) => {
                 const isMe = msg.senderId === authUser?._id;

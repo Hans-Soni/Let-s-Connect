@@ -135,6 +135,10 @@ export const useChatStore = create((set, get) => ({
           )
         : state.chats,
     }));
+    if (selectedUser?._id) {
+      get().getMessagesByUserId(selectedUser._id);
+      get().markMessagesAsSeen(selectedUser._id);
+    }
   },
   setViewingProfileUser: (viewingProfileUser) => set({ viewingProfileUser }),
 
@@ -276,6 +280,8 @@ export const useChatStore = create((set, get) => ({
           m._id === tempId ? { ...res.data, isDelivered: true, isSeen: Boolean(res.data.isSeen) } : m
         ),
       }));
+      // Auto-refresh chat list to update lastMessage and conversation ordering
+      get().getMyChatPartners();
       return true;
     } catch (error) {
       // remove optimistic message on failure

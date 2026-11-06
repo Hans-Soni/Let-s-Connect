@@ -348,41 +348,53 @@ export const getChatPartners = async (req, res) => {
     const loggedInUserId = req.user._id;
     const retentionCutoff = new Date(Date.now() - MESSAGE_RETENTION_MS);
 
-    // find all the messages where the logged-in user is either sender or receiver
+    // find all the messages where the logged-in user is either sender or receiver, sorted newest first
     const messages = await Message.find({
       $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
       createdAt: { $gte: retentionCutoff },
     })
-      .select("senderId receiverId isSeen")
+      .sort({ createdAt: -1 })
       .lean();
 
-    const chatPartnerIds = [
-      ...new Set(
-        messages.map((msg) =>
-          msg.senderId.toString() === loggedInUserId.toString()
-            ? msg.receiverId.toString()
-            : msg.senderId.toString()
-        )
-      ),
-    ];
-    const unreadCounts = messages.reduce((counts, msg) => {
-      if (msg.receiverId.toString() === loggedInUserId.toString() && !msg.isSeen) {
-        const senderId = msg.senderId.toString();
-        counts.set(senderId, (counts.get(senderId) || 0) + 1);
+    const lastMessageMap = new Map();
+    const chatPartnerIds = [];
+    const unreadCounts = new Map();
+
+    for (const msg of messages) {
+      const partnerId =
+        msg.senderId.toString() === loggedInUserId.toString()
+          ? msg.receiverId.toString()
+          : msg.senderId.toString();
+
+      if (!lastMessageMap.has(partnerId)) {
+        chatPartnerIds.push(partnerId);
+        lastMessageMap.set(partnerId, {
+          _id: msg._id,
+          text: msg.text ? decryptText(msg.text) : "",
+          image: Boolean(msg.image),
+          video: Boolean(msg.video),
+          audio: Boolean(msg.audio),
+          senderId: msg.senderId,
+          receiverId: msg.receiverId,
+          createdAt: msg.createdAt,
+          isSeen: msg.isSeen,
+        });
       }
-      return counts;
-    }, new Map());
+
+      if (msg.receiverId.toString() === loggedInUserId.toString() && !msg.isSeen) {
+        unreadCounts.set(partnerId, (unreadCounts.get(partnerId) || 0) + 1);
+      }
+    }
 
     const me = await User.findById(loggedInUserId).select("blockedUsers").lean();
     const myBlockedList = (me?.blockedUsers || []).map((id) => id.toString());
 
     const chatPartners = await User.find({ _id: { $in: chatPartnerIds } })
       .select("-password")
-      .collation({ locale: "en", strength: 2 })
-      .sort({ email: 1 })
       .lean();
 
     const sanitizedChatPartners = chatPartners.map((u) => {
+      const uIdStr = u._id.toString();
       const hasBlockedMe = u.blockedUsers?.some(
         (bId) => bId.toString() === loggedInUserId.toString()
       );
@@ -391,10 +403,18 @@ export const getChatPartners = async (req, res) => {
         uObj.profilePic = "";
         uObj.isBlockedByThem = true;
       }
-      uObj.isBlockedByMe = myBlockedList.includes(u._id.toString());
-      uObj.unreadCount = unreadCounts.get(u._id.toString()) || 0;
+      uObj.isBlockedByMe = myBlockedList.includes(uIdStr);
+      uObj.unreadCount = unreadCounts.get(uIdStr) || 0;
+      uObj.lastMessage = lastMessageMap.get(uIdStr) || null;
       delete uObj.blockedUsers;
       return uObj;
+    });
+
+    // Sort conversations: newest activity at top
+    sanitizedChatPartners.sort((a, b) => {
+      const timeA = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
+      const timeB = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
+      return timeB - timeA;
     });
 
     res.status(200).json(sanitizedChatPartners);
