@@ -48,6 +48,14 @@ import {
   Volume2,
   VolumeX,
   ArrowDown,
+  Pin,
+  PinOff,
+  Copy,
+  Command,
+  Keyboard,
+  ZoomIn,
+  ZoomOut,
+  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -187,6 +195,15 @@ function AudioMessagePlayer({ src, isMe }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
+
+  const cyclePlaybackRate = () => {
+    const nextRate = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : 1;
+    setPlaybackRate(nextRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextRate;
+    }
+  };
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -305,6 +322,20 @@ function AudioMessagePlayer({ src, isMe }) {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={cyclePlaybackRate}
+        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-tight transition cursor-pointer select-none shrink-0 ${
+          isMe
+            ? "bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground"
+            : "bg-secondary hover:bg-secondary/80 text-foreground"
+        }`}
+        title="Playback speed (1x, 1.5x, 2x)"
+        aria-label="Change playback speed"
+      >
+        {playbackRate}x
+      </button>
+
       <a
         href={src}
         download="voice-note"
@@ -416,6 +447,10 @@ export default function ChatPage() {
     sendStopTypingStatus,
     isSoundEnabled,
     toggleSound,
+    pinnedChats,
+    togglePinChat,
+    messageReactions,
+    addMessageReaction,
   } = useChatStore();
 
   const {
@@ -440,7 +475,9 @@ export default function ChatPage() {
   const [showInChatSearch, setShowInChatSearch] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
-  const [activeModal, setActiveModal] = useState(null); // null | 'contacts' | 'profile' | 'terms'
+  const [activeModal, setActiveModal] = useState(null); // null | 'contacts' | 'profile' | 'terms' | 'command' | 'shortcuts'
+  const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
+  const [isZoomed, setIsZoomed] = useState(false);
   const [profileTab, setProfileTab] = useState("profile"); // 'profile' | 'security' | 'privacy' | 'danger'
   const [showDetails, setShowDetails] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -630,6 +667,63 @@ export default function ChatPage() {
     );
   }, [chats, searchQuery]);
 
+  // Sort pinned chats to the top, then preserve order
+  const sortedChats = useMemo(() => {
+    return [...filteredChats].sort((a, b) => {
+      const aPinned = pinnedChats.includes(String(a._id));
+      const bPinned = pinnedChats.includes(String(b._id));
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+  }, [filteredChats, pinnedChats]);
+
+  // Global keyboard shortcuts (Ctrl+K, Esc, Ctrl+M, ?)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+K or Cmd+K: Open Command Palette
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setActiveModal((prev) => (prev === "command" ? null : "command"));
+        setCommandPaletteQuery("");
+        return;
+      }
+      // Ctrl+M or Cmd+M: Toggle Mute
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        toggleSound();
+        return;
+      }
+      // ? or Ctrl+/ (when not typing in an input/textarea): Open Shortcuts
+      if (
+        (e.key === "?" || ((e.ctrlKey || e.metaKey) && e.key === "/")) &&
+        e.target.tagName !== "INPUT" &&
+        e.target.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        setActiveModal((prev) => (prev === "shortcuts" ? null : "shortcuts"));
+        return;
+      }
+      // Esc: Close active modal, image lightbox, or search
+      if (e.key === "Escape") {
+        if (activeModal) {
+          setActiveModal(null);
+        } else if (viewingImage) {
+          setViewingImage(null);
+          setIsZoomed(false);
+        } else if (showDetails) {
+          setShowDetails(false);
+        } else if (showInChatSearch) {
+          setShowInChatSearch(false);
+          setInChatSearch("");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeModal, viewingImage, showDetails, showInChatSearch, toggleSound]);
+
   // Filter contacts matching search
   const filteredContacts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -668,10 +762,15 @@ export default function ChatPage() {
       .finally(() => setIsLoadingConsent(false));
   };
 
-  // Typing indicator input change handler
+  // Typing indicator input change handler with auto-expanding height
   const handleTextChange = (e) => {
     const val = e.target.value;
     setText(val);
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
+    }
 
     if (!selectedUser?._id) return;
     sendTypingStatus(selectedUser._id);
@@ -1081,10 +1180,33 @@ export default function ChatPage() {
           >
             <Users size={20} />
           </button>
+
+          <button
+            type="button"
+            title="Quick Switcher & Command Palette (Ctrl+K)"
+            aria-label="Quick Switcher"
+            onClick={() => {
+              setActiveModal("command");
+              setCommandPaletteQuery("");
+            }}
+            className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition cursor-pointer"
+          >
+            <Command size={19} />
+          </button>
         </div>
 
         {/* Bottom rail actions */}
         <div className="mt-auto flex flex-col items-center gap-4">
+          <button
+            type="button"
+            title="Keyboard Shortcuts (? or Ctrl+/)"
+            aria-label="Keyboard Shortcuts"
+            onClick={() => setActiveModal("shortcuts")}
+            className="hidden md:grid h-10 w-10 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition cursor-pointer"
+          >
+            <Keyboard size={19} />
+          </button>
+
           <button
             type="button"
             title={isSoundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
@@ -1148,38 +1270,56 @@ export default function ChatPage() {
             <input
               aria-label="Search conversations"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
-              placeholder="Search conversations"
+              placeholder="Search conversations…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <button
+              type="button"
+              onClick={() => {
+                setActiveModal("command");
+                setCommandPaletteQuery("");
+              }}
+              title="Quick command palette (Ctrl+K)"
+              className="hidden lg:inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono bg-card border border-border text-muted-foreground hover:text-foreground transition cursor-pointer shadow-2xs"
+            >
+              <span>⌘K</span>
+            </button>
           </label>
         </header>
 
-        {/* Filter Strip */}
-        <div className="flex items-center gap-5 border-b border-border px-6 pb-4 text-sm select-none">
+        {/* Filter Strip with Pinned Indicator */}
+        <div className="flex items-center gap-3 border-b border-border px-6 pb-4 text-sm select-none">
           <span className="font-semibold text-primary">
             All chats <span className="ml-1 text-xs">({filteredChats.length})</span>
           </span>
+          {pinnedChats.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-amber-500 font-medium">
+              <Pin size={11} className="fill-amber-500" />
+              <span>{pinnedChats.length} pinned</span>
+            </span>
+          )}
           <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck size={13} className="text-emerald-500" /> Members only
           </span>
         </div>
 
-        {/* Conversation Items List */}
+        {/* Conversation Items List (sorted with pinned on top) */}
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-          {filteredChats.map((chat) => {
+          {sortedChats.map((chat) => {
             const isSelected = selectedUser?._id === chat._id;
             const unread = Number(chat.unreadCount) || 0;
             const lastMsg = chat.lastMessage;
             const isPartnerOnline = onlineUsers.includes(chat._id);
             const isPartnerTyping = Boolean(typingUsers[chat._id]);
+            const isPinned = pinnedChats.includes(String(chat._id));
 
             return (
               <button
                 key={chat._id}
                 type="button"
                 onClick={() => setSelectedUser(chat)}
-                className={`mb-1 w-full justify-start whitespace-normal rounded-lg px-3 py-4 flex items-center gap-3 transition cursor-pointer text-left ${
+                className={`group mb-1 w-full justify-start whitespace-normal rounded-lg px-3 py-4 flex items-center gap-3 transition cursor-pointer text-left ${
                   isSelected
                     ? "bg-accent text-accent-foreground border-l-2 border-primary"
                     : "hover:bg-secondary text-foreground"
@@ -1187,8 +1327,13 @@ export default function ChatPage() {
               >
                 <Avatar user={chat} isOnline={isPartnerOnline} />
                 <span className="min-w-0 flex-1 text-left">
-                  <span className="flex justify-between gap-2">
-                    <span className="truncate font-semibold text-sm">{chat.fullName}</span>
+                  <span className="flex justify-between items-center gap-2">
+                    <span className="truncate font-semibold text-sm flex items-center gap-1">
+                      <span>{chat.fullName}</span>
+                      {isPinned && (
+                        <Pin size={11} className="text-amber-500 fill-amber-500 shrink-0" title="Pinned conversation" />
+                      )}
+                    </span>
                     <span className="shrink-0 text-[10px] text-muted-foreground">
                       {isPartnerTyping
                         ? "typing..."
@@ -1215,11 +1360,41 @@ export default function ChatPage() {
                     )}
                   </span>
                 </span>
-                {unread > 0 && (
-                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold shadow-xs">
-                    {unread > 99 ? "99+" : unread}
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePinChat(chat._id);
+                      toast(isPinned ? "Unpinned conversation" : "Pinned conversation to top", {
+                        icon: isPinned ? "📌" : "⭐",
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        togglePinChat(chat._id);
+                      }
+                    }}
+                    className={`p-1 rounded-md transition cursor-pointer ${
+                      isPinned
+                        ? "text-amber-500 opacity-100"
+                        : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground hover:bg-card"
+                    }`}
+                    title={isPinned ? "Unpin chat" : "Pin chat to top"}
+                    aria-label={isPinned ? "Unpin chat" : "Pin chat to top"}
+                  >
+                    {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
                   </span>
-                )}
+
+                  {unread > 0 && (
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold shadow-xs">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -1459,27 +1634,100 @@ export default function ChatPage() {
                     <div className={`group mb-5 flex items-end gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
                       {!isMe && <Avatar user={selectedUser} isOnline={isOnline} />}
 
-                      <div className={`max-w-[82%] md:max-w-[70%] ${isMe ? "text-right" : ""}`}>
-                        <div
-                          className={`chat-bubble text-left ${
-                            isMe ? "chat-bubble-own" : "chat-bubble-peer"
-                          } ${msg.image && !msg.text ? "!p-1.5 overflow-hidden" : ""}`}
-                        >
-                          <AttachmentPreview
-                            msg={msg}
-                            onOpenImage={(imgUrl) => setViewingImage(imgUrl)}
-                            isMe={isMe}
-                          />
-                          {msg.text && (
-                            <FormattedMessageText text={msg.text} isMe={isMe} />
-                          )}
-                        </div>
+                      {(() => {
+                        const msgReactions = messageReactions[msg._id] || [];
+                        const reactionMap = {};
+                        for (const r of msgReactions) {
+                          if (!reactionMap[r.emoji]) reactionMap[r.emoji] = { count: 0, hasMine: false };
+                          reactionMap[r.emoji].count += 1;
+                          if (r.userId === String(authUser?._id || "me")) {
+                            reactionMap[r.emoji].hasMine = true;
+                          }
+                        }
+                        const reactionList = Object.entries(reactionMap).map(([emoji, data]) => ({ emoji, ...data }));
 
-                        <div
-                          className={`mt-2 flex items-center gap-1.5 text-[10px] select-none ${
-                            isMe ? "justify-end text-muted-foreground" : "text-muted-foreground"
-                          }`}
-                        >
+                        return (
+                          <div className={`max-w-[85%] sm:max-w-[80%] md:max-w-[70%] ${isMe ? "text-right" : ""}`}>
+                            <div className="relative group/msg">
+                              {/* Floating quick reaction and copy bar on hover */}
+                              <div
+                                className={`absolute -top-3 z-10 hidden group-hover/msg:flex items-center gap-0.5 p-0.5 rounded-full border border-border bg-card shadow-sm animate-rise select-none ${
+                                  isMe ? "right-2" : "left-2"
+                                }`}
+                              >
+                                {["❤️", "👍", "😂", "🔥", "🙏"].map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => addMessageReaction(msg._id, selectedUser._id, emoji)}
+                                    className="h-6 w-6 grid place-items-center rounded-full hover:bg-secondary text-xs transition cursor-pointer select-none"
+                                    title={`React ${emoji}`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                                {msg.text && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(msg.text);
+                                      toast.success("Message copied to clipboard", { id: "msg-copy", duration: 1500 });
+                                    }}
+                                    className="h-6 w-6 grid place-items-center rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition cursor-pointer"
+                                    title="Copy text"
+                                    aria-label="Copy message text"
+                                  >
+                                    <Copy size={11} />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div
+                                className={`chat-bubble text-left ${
+                                  isMe ? "chat-bubble-own" : "chat-bubble-peer"
+                                } ${msg.image && !msg.text ? "!p-1.5 overflow-hidden" : ""}`}
+                              >
+                                <AttachmentPreview
+                                  msg={msg}
+                                  onOpenImage={(imgUrl) => {
+                                    setViewingImage(imgUrl);
+                                    setIsZoomed(false);
+                                  }}
+                                  isMe={isMe}
+                                />
+                                {msg.text && (
+                                  <FormattedMessageText text={msg.text} isMe={isMe} />
+                                )}
+                              </div>
+
+                              {/* Interactive reaction pill chips */}
+                              {reactionList.length > 0 && (
+                                <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                                  {reactionList.map(({ emoji, count, hasMine }) => (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={() => addMessageReaction(msg._id, selectedUser._id, emoji)}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border transition cursor-pointer shadow-2xs select-none ${
+                                        hasMine
+                                          ? "bg-primary/20 border-primary/50 text-primary font-bold"
+                                          : "bg-card border-border hover:bg-secondary text-foreground"
+                                      }`}
+                                      title="Toggle reaction"
+                                    >
+                                      <span>{emoji}</span>
+                                      {count > 1 && <span className="text-[10px] opacity-80">{count}</span>}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <div
+                              className={`mt-1.5 flex items-center gap-1.5 text-[10px] select-none ${
+                                isMe ? "justify-end text-muted-foreground" : "text-muted-foreground"
+                              }`}
+                            >
                           <span>
                             {new Date(msg.createdAt).toLocaleTimeString([], {
                               hour: "2-digit",
@@ -1512,10 +1760,12 @@ export default function ChatPage() {
                           )}
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })()}
+                </div>
+              </div>
+            );
+          })}
 
               {/* Typing indicator bubble */}
               {typingUsers[selectedUser._id] && (
@@ -2748,17 +2998,29 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* 9. Image Lightbox Modal */}
+      {/* 9. Image Lightbox Modal with Zoom Toggle */}
       {viewingImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 animate-in fade-in-0"
-          onClick={() => setViewingImage(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xs animate-in fade-in-0"
+          onClick={() => {
+            setViewingImage(null);
+            setIsZoomed(false);
+          }}
         >
           <div
-            className="relative max-w-5xl max-h-[92dvh] flex flex-col items-center"
+            className="relative max-w-5xl max-h-[92dvh] flex flex-col items-center overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute -top-12 right-0 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsZoomed(!isZoomed)}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                title={isZoomed ? "Zoom out" : "Zoom in"}
+                aria-label={isZoomed ? "Zoom out" : "Zoom in"}
+              >
+                {isZoomed ? <ZoomOut size={18} /> : <ZoomIn size={18} />}
+              </button>
               <a
                 href={viewingImage}
                 download="shared-photo"
@@ -2771,7 +3033,10 @@ export default function ChatPage() {
               </a>
               <button
                 type="button"
-                onClick={() => setViewingImage(null)}
+                onClick={() => {
+                  setViewingImage(null);
+                  setIsZoomed(false);
+                }}
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
                 title="Close preview"
               >
@@ -2781,8 +3046,205 @@ export default function ChatPage() {
             <img
               src={viewingImage}
               alt="Shared preview"
-              className="max-h-[85dvh] max-w-full rounded-xl object-contain shadow-2xl"
+              className={`rounded-xl object-contain shadow-2xl transition-all duration-200 select-none ${
+                isZoomed
+                  ? "scale-150 cursor-zoom-out max-h-[130dvh] max-w-none"
+                  : "max-h-[85dvh] max-w-full cursor-zoom-in"
+              }`}
+              onClick={() => setIsZoomed(!isZoomed)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* 10. Spotlight Command Palette & Quick Switcher (Ctrl+K) */}
+      {activeModal === "command" && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 sm:pt-24 bg-slate-900/40 dark:bg-black/75 animate-in fade-in-0"
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden animate-rise flex flex-col max-h-[80dvh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Search Input Bar */}
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-secondary/50">
+              <Command size={18} className="text-primary shrink-0" />
+              <input
+                type="text"
+                value={commandPaletteQuery}
+                onChange={(e) => setCommandPaletteQuery(e.target.value)}
+                placeholder="Search conversations, members, or actions…"
+                autoFocus
+                className="flex-1 min-w-0 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+              />
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-card border border-border text-muted-foreground">
+                ESC to close
+              </kbd>
+            </div>
+
+            {/* Results List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Conversations &amp; Members
+              </div>
+              {filteredContacts
+                .filter((c) =>
+                  commandPaletteQuery
+                    ? c.fullName.toLowerCase().includes(commandPaletteQuery.toLowerCase()) ||
+                      (c.designation && c.designation.toLowerCase().includes(commandPaletteQuery.toLowerCase()))
+                    : true
+                )
+                .slice(0, 5)
+                .map((contact) => (
+                  <button
+                    key={contact._id}
+                    type="button"
+                    onClick={() => {
+                      handleOpenContactChat(contact);
+                      setActiveModal(null);
+                    }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group"
+                  >
+                    <Avatar user={contact} isOnline={onlineUsers.includes(contact._id)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {contact.fullName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {contact.designation || "Available"}
+                      </p>
+                    </div>
+                    <ArrowRight size={14} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition" />
+                  </button>
+                ))}
+
+              {/* Quick Actions */}
+              <div className="px-3 pt-3 pb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-t border-border mt-2">
+                Quick Shortcuts
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModal("contacts");
+                  setSearchQuery("");
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
+              >
+                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                  <Plus size={15} />
+                </div>
+                <span>Start New Conversation</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  toggleTheme();
+                  setActiveModal(null);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
+              >
+                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                  <Sparkles size={15} />
+                </div>
+                <span>Toggle {dark ? "Light" : "Dark"} Mode</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  toggleSound();
+                  setActiveModal(null);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
+              >
+                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                  {isSoundEnabled ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                </div>
+                <span>{isSoundEnabled ? "Mute Notification Sounds" : "Unmute Notification Sounds"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleOpenProfileModal();
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
+              >
+                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                  <Settings size={15} />
+                </div>
+                <span>Profile &amp; Security Settings</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveModal("shortcuts");
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
+              >
+                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                  <Keyboard size={15} />
+                </div>
+                <span>Keyboard Shortcuts Cheat Sheet</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. Keyboard Shortcuts Cheat Sheet Modal */}
+      {activeModal === "shortcuts" && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 animate-in fade-in-0"
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                  <Keyboard size={18} />
+                </div>
+                <h3 className="font-semibold text-base text-foreground">Keyboard Shortcuts</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              {[
+                { key: "Ctrl + K / ⌘K", desc: "Quick Command Palette & Contact Switcher" },
+                { key: "Esc", desc: "Close modals, search bar, or lightbox" },
+                { key: "Ctrl + M", desc: "Toggle audio notification sounds" },
+                { key: "Enter", desc: "Send draft message in conversation" },
+                { key: "Shift + Enter", desc: "Add new line in message composer" },
+                { key: "Ctrl + V", desc: "Paste screenshot or image directly into chat" },
+                { key: "? or Ctrl + /", desc: "Open this keyboard shortcuts cheat sheet" },
+              ].map(({ key, desc }) => (
+                <div key={key} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/60 border border-border/50">
+                  <span className="text-muted-foreground">{desc}</span>
+                  <kbd className="px-2 py-1 rounded font-mono font-bold text-[11px] bg-card border border-border text-foreground shadow-2xs">
+                    {key}
+                  </kbd>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 text-center text-[11px] text-muted-foreground">
+              Tip: Drag and drop any image, video, or audio directly into the conversation to attach it.
+            </div>
           </div>
         </div>
       )}

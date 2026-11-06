@@ -143,6 +143,19 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("messageReaction", ({ messageId, receiverId, emoji }) => {
+    try {
+      if (!receiverId || !messageId || !emoji) return;
+      io.to(receiverId.toString()).emit("messageReaction", {
+        messageId,
+        emoji,
+        userId: socket.userId.toString(),
+      });
+    } catch (err) {
+      console.log("Error in messageReaction socket event:", err);
+    }
+  });
+
   // =========================================================================
   // WEBRTC CALL SIGNALING EVENTS
   // =========================================================================

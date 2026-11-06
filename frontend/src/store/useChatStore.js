@@ -47,6 +47,15 @@ export const useChatStore = create((set, get) => ({
   chats: [],
   messages: [],
   typingUsers: {},
+  messageReactions: {},
+  pinnedChats: (() => {
+    try {
+      const stored = localStorage.getItem("samvaad_pinned_chats");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  })(),
   activeTab: "chats",
   selectedUser: null,
   viewingProfileUser: null,
@@ -139,6 +148,50 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (socket && receiverId) {
       socket.emit("stopTyping", { receiverId: String(receiverId) });
+    }
+  },
+
+  togglePinChat: (chatId) => {
+    if (!chatId) return;
+    const strId = String(chatId);
+    set((state) => {
+      const isPinned = state.pinnedChats.includes(strId);
+      const updated = isPinned
+        ? state.pinnedChats.filter((id) => id !== strId)
+        : [strId, ...state.pinnedChats];
+      try {
+        localStorage.setItem("samvaad_pinned_chats", JSON.stringify(updated));
+      } catch {}
+      return { pinnedChats: updated };
+    });
+  },
+
+  addMessageReaction: (messageId, receiverId, emoji) => {
+    if (!messageId || !emoji) return;
+    const myId = String(useAuthStore.getState().authUser?._id || "me");
+
+    set((state) => {
+      const current = state.messageReactions[messageId] || [];
+      const hasReacted = current.some((r) => r.emoji === emoji && r.userId === myId);
+      const nextReactions = hasReacted
+        ? current.filter((r) => !(r.emoji === emoji && r.userId === myId))
+        : [...current, { emoji, userId: myId }];
+
+      return {
+        messageReactions: {
+          ...state.messageReactions,
+          [messageId]: nextReactions,
+        },
+      };
+    });
+
+    const socket = useAuthStore.getState().socket;
+    if (socket && receiverId) {
+      socket.emit("messageReaction", {
+        messageId: String(messageId),
+        receiverId: String(receiverId),
+        emoji,
+      });
     }
   },
   setSelectedUser: (selectedUser) => {
@@ -608,6 +661,25 @@ export const useChatStore = create((set, get) => ({
         typingUsers: { ...state.typingUsers, [String(senderId)]: false },
       }));
     });
+
+    socket.off("messageReaction");
+    socket.on("messageReaction", ({ messageId, emoji, userId }) => {
+      if (!messageId || !emoji) return;
+      const strUserId = String(userId);
+      set((state) => {
+        const current = state.messageReactions[messageId] || [];
+        const hasReacted = current.some((r) => r.emoji === emoji && r.userId === strUserId);
+        const next = hasReacted
+          ? current.filter((r) => !(r.emoji === emoji && r.userId === strUserId))
+          : [...current, { emoji, userId: strUserId }];
+        return {
+          messageReactions: {
+            ...state.messageReactions,
+            [messageId]: next,
+          },
+        };
+      });
+    });
   },
 
   blockUser: async (userId) => {
@@ -731,6 +803,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("userUnblocked");
     socket.off("typing");
     socket.off("stopTyping");
+    socket.off("messageReaction");
   },
 
   subscribeToUsers: () => {
