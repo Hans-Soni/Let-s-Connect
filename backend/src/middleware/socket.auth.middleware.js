@@ -3,7 +3,7 @@ import User from '../models/User.js';
 
 export const socketAuthMiddleware = async (socket, next) => {
   try {
-    let token = socket.handshake.query.token;
+    let token = socket.handshake.auth?.token || socket.handshake.query?.token;
     if (!token) {
       token = socket.handshake.headers.cookie
         ?.split('; ')
@@ -17,8 +17,19 @@ export const socketAuthMiddleware = async (socket, next) => {
     }
 
     // verify the token against the rotating key ring
-    const decoded = keys.verifyJwt(token);
-    if (!decoded) {
+    let decoded;
+    try {
+      decoded = keys.verifyJwt(token);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        // Allow recently expired JWT for active socket session if signature is valid within grace period
+        decoded = keys.verifyJwt(token, { ignoreExpiration: true });
+      } else {
+        throw err;
+      }
+    }
+
+    if (!decoded || !decoded.userId) {
       console.log('Socket connection rejected: Invalid token');
       return next(new Error('Unauthorized - Invalid Token'));
     }

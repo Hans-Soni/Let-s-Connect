@@ -377,6 +377,7 @@ export default function ChatPage() {
     isUserBlocked,
     isBlockedByUser,
     blockedUsers,
+    fetchBlockedUsers,
   } = useChatStore();
 
   const {
@@ -499,9 +500,10 @@ export default function ChatPage() {
   useEffect(() => {
     getMyChatPartners();
     getAllContacts();
+    fetchBlockedUsers();
     subscribeToMessages();
     return () => unsubscribeFromMessages();
-  }, [getMyChatPartners, getAllContacts, subscribeToMessages, unsubscribeFromMessages]);
+  }, [getMyChatPartners, getAllContacts, fetchBlockedUsers, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     if (selectedUser?._id) {
@@ -517,8 +519,18 @@ export default function ChatPage() {
   // Window focus & active tab synchronization with backend
   useEffect(() => {
     const handleActive = () => {
-      if (document.visibilityState === "visible" && selectedUser?._id) {
-        markMessagesAsSeen(selectedUser._id);
+      if (document.visibilityState === "visible") {
+        const socket = useAuthStore.getState().socket;
+        if (socket && !socket.connected) {
+          socket.connect();
+        } else if (!socket) {
+          useAuthStore.getState().connectSocket();
+        }
+        getMyChatPartners();
+        if (selectedUser?._id) {
+          getMessagesByUserId(selectedUser._id, true);
+          markMessagesAsSeen(selectedUser._id);
+        }
       }
     };
     window.addEventListener("focus", handleActive);
@@ -527,7 +539,28 @@ export default function ChatPage() {
       window.removeEventListener("focus", handleActive);
       document.removeEventListener("visibilitychange", handleActive);
     };
-  }, [selectedUser?._id, markMessagesAsSeen]);
+  }, [selectedUser?._id, getMessagesByUserId, markMessagesAsSeen, getMyChatPartners]);
+
+  // Adaptive background sync poll (every 3.5s when active chat is open, ensuring zero lost messages)
+  useEffect(() => {
+    if (!selectedUser?._id) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible" && selectedUser?._id) {
+        getMessagesByUserId(selectedUser._id, true);
+      }
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [selectedUser?._id, getMessagesByUserId]);
+
+  // Periodic poll to keep conversations list, unread badges, and last messages fresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        getMyChatPartners();
+      }
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [getMyChatPartners]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1175,7 +1208,9 @@ export default function ChatPage() {
               ) : null}
 
               {messages.map((msg, index) => {
-                const isMe = msg.senderId === authUser?._id;
+                const sId = String(msg.senderId?._id || msg.senderId);
+                const myId = String(authUser?._id || "");
+                const isMe = sId === myId;
                 const prevMsg = messages[index - 1];
                 const msgDate = new Date(msg.createdAt).toDateString();
                 const prevDate = prevMsg ? new Date(prevMsg.createdAt).toDateString() : null;
@@ -1222,12 +1257,30 @@ export default function ChatPage() {
                               minute: "2-digit",
                             })}
                           </span>
-                          {isMe &&
-                            (msg.isSeen ? (
-                              <CheckCheck size={13} className="text-primary" />
-                            ) : (
-                              <Check size={13} className="text-muted-foreground" />
-                            ))}
+                          {isMe && (
+                            <span
+                              className="inline-flex items-center ml-0.5"
+                              title={
+                                msg.isOptimistic
+                                  ? "Sending..."
+                                  : msg.isSeen
+                                  ? "Seen"
+                                  : msg.isDelivered
+                                  ? "Delivered"
+                                  : "Sent"
+                              }
+                            >
+                              {msg.isOptimistic ? (
+                                <Clock size={12} className="text-muted-foreground animate-pulse" />
+                              ) : msg.isSeen ? (
+                                <CheckCheck size={13} className="text-primary" />
+                              ) : msg.isDelivered ? (
+                                <CheckCheck size={13} className="text-muted-foreground" />
+                              ) : (
+                                <Check size={13} className="text-muted-foreground" />
+                              )}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1665,7 +1718,7 @@ export default function ChatPage() {
                       <AttachmentPreview
                         msg={m}
                         onOpenImage={(imgUrl) => setViewingImage(imgUrl)}
-                        isMe={m.senderId === authUser?._id}
+                        isMe={String(m.senderId?._id || m.senderId) === String(authUser?._id || "")}
                       />
                       <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
                         <span>

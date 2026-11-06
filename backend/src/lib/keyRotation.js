@@ -159,11 +159,11 @@ function signJwt(payload, options = {}) {
   });
 }
 
-function verifyJwt(token) {
+function verifyJwt(token, options = {}) {
   const decoded = jwt.decode(token, { complete: true });
   const v = Number(decoded && decoded.header && decoded.header.kid);
   if (!isAcceptable(v)) throw new Error('JWT key version expired or unknown');
-  return jwt.verify(token, ring.get(v).jwtSecret, { algorithms: ['HS256'] });
+  return jwt.verify(token, ring.get(v).jwtSecret, { algorithms: ['HS256'], ...options });
 }
 
 /* ------------------------- message encryption (AES-256-GCM) ------------------------- */

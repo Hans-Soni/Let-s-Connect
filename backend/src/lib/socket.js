@@ -22,8 +22,10 @@ export const isOriginAllowed = (origin, callback) => {
 
   if (
     allowedOrigins.includes(origin) ||
-    (origin.startsWith("http://localhost:") && ENV.NODE_ENV !== "production") ||
-    (origin.startsWith("http://127.0.0.1:") && ENV.NODE_ENV !== "production")
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:") ||
+    origin.endsWith(".github.io") ||
+    origin.endsWith(".onrender.com")
   ) {
     return callback(null, true);
   }
@@ -41,24 +43,39 @@ const io = new Server(server, {
 // apply authentication middleware to all socket connections
 io.use(socketAuthMiddleware);
 
-// we will use this function to check if the user is online or not
+// Map of userId -> Set of socket IDs (supports multiple tabs / devices per user)
+const userSocketsMap = new Map();
+const userActiveCallMap = {}; // {userId: partnerUserId}
+
+// Helper to get any active socket ID for this user (used for WebRTC signaling)
 export function getReceiverSocketId(userId) {
   if (!userId) return null;
-  return userSocketMap[String(userId)];
+  const sockets = userSocketsMap.get(String(userId));
+  if (!sockets || sockets.size === 0) return null;
+  return Array.from(sockets)[0];
 }
 
-// this is for storig online users
-const userSocketMap = {}; // {userId:socketId}
-const userActiveCallMap = {}; // {userId:partnerUserId}
+// Check if a user has at least one active connected socket
+export function isUserOnline(userId) {
+  if (!userId) return false;
+  const sockets = userSocketsMap.get(String(userId));
+  return Boolean(sockets && sockets.size > 0);
+}
 
 io.on("connection", (socket) => {
-  console.log("A user connected", socket.user.fullName);
-
   const userId = socket.userId;
-  userSocketMap[userId] = socket.id;
+  // Automatically join private room for targeted broadcasts (delivers to all tabs of this user)
+  socket.join(userId);
 
-  // io.emit() is used to send events to all connected clients
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  if (!userSocketsMap.has(userId)) {
+    userSocketsMap.set(userId, new Set());
+  }
+  userSocketsMap.get(userId).add(socket.id);
+
+  console.log(`User connected: ${socket.user.fullName} (${userId}), sockets: ${userSocketsMap.get(userId).size}`);
+
+  // Broadcast list of currently online user IDs to all clients
+  io.emit("getOnlineUsers", Array.from(userSocketsMap.keys()));
 
   // with socket.on we listen for events from clients
   socket.on("markMessagesSeen", async ({ senderId }) => {
@@ -71,13 +88,11 @@ io.on("connection", (socket) => {
         { $set: { isSeen: true, seenAt: new Date() } }
       ).catch(() => {});
 
-      const senderSocketId = getReceiverSocketId(senderId?.toString());
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("messagesSeen", {
-          chatPartnerId: receiverId.toString(),
-          seenBy: receiverId.toString(),
-        });
-      }
+      // Emit to sender's room so all sender sockets update
+      io.to(senderId.toString()).emit("messagesSeen", {
+        chatPartnerId: receiverId.toString(),
+        seenBy: receiverId.toString(),
+      });
     } catch (err) {
       console.log("Error in markMessagesSeen socket event:", err);
     }
@@ -85,12 +100,10 @@ io.on("connection", (socket) => {
 
   socket.on("blockUser", ({ targetUserId }) => {
     try {
-      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("userBlocked", {
-          blockerId: socket.userId.toString(),
-        });
-      }
+      if (!targetUserId) return;
+      io.to(targetUserId.toString()).emit("userBlocked", {
+        blockerId: socket.userId.toString(),
+      });
     } catch (err) {
       console.log("Error in blockUser socket event:", err);
     }
@@ -98,12 +111,10 @@ io.on("connection", (socket) => {
 
   socket.on("unblockUser", ({ targetUserId }) => {
     try {
-      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("userUnblocked", {
-          blockerId: socket.userId.toString(),
-        });
-      }
+      if (!targetUserId) return;
+      io.to(targetUserId.toString()).emit("userUnblocked", {
+        blockerId: socket.userId.toString(),
+      });
     } catch (err) {
       console.log("Error in unblockUser socket event:", err);
     }
@@ -228,10 +239,18 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("A user disconnected", socket.user.fullName);
+    console.log(`Socket disconnected: ${socket.user?.fullName || userId} (${socket.id})`);
+
+    const sockets = userSocketsMap.get(userId);
+    if (sockets) {
+      sockets.delete(socket.id);
+      if (sockets.size === 0) {
+        userSocketsMap.delete(userId);
+      }
+    }
 
     const partnerId = userActiveCallMap[userId];
-    if (partnerId) {
+    if (partnerId && (!userSocketsMap.has(userId) || userSocketsMap.get(userId).size === 0)) {
       const partnerSocketId = getReceiverSocketId(partnerId);
       if (partnerSocketId) {
         io.to(partnerSocketId).emit("call:ended", {
@@ -242,8 +261,8 @@ io.on("connection", (socket) => {
       delete userActiveCallMap[userId];
       delete userActiveCallMap[partnerId];
     }
-    delete userSocketMap[userId];
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+    io.emit("getOnlineUsers", Array.from(userSocketsMap.keys()));
   });
 });
 

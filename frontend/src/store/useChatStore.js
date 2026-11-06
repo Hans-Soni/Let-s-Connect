@@ -199,24 +199,48 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  getMessagesByUserId: async (userId) => {
-    set({ isMessagesLoading: true });
+  _fetchingUserId: null,
+  getMessagesByUserId: async (userId, isSilent = false) => {
+    if (!userId) return;
+    if (get()._fetchingUserId === String(userId) && !isSilent) return;
+    set({ _fetchingUserId: String(userId) });
+    if (!isSilent) set({ isMessagesLoading: true });
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
       const authUser = useAuthStore.getState().authUser;
       const normalizedMessages = (res.data || []).map((m) => {
-        // Any message sent by the partner to me is seen because I am viewing the chat right now
-        const isReceivedByMe = m.senderId === userId || (authUser && m.receiverId === authUser._id);
+        const isReceivedByMe =
+          String(m.senderId) === String(userId) ||
+          (authUser && String(m.receiverId) === String(authUser._id));
         return {
           ...m,
           isDelivered: true,
           isSeen: isReceivedByMe ? true : Boolean(m.isSeen),
         };
       });
-      set({ messages: normalizedMessages, isMessagesLoading: false });
+
+      set((state) => {
+        // If user changed while request was in-flight, discard
+        if (state.selectedUser?._id && String(state.selectedUser._id) !== String(userId)) {
+          return { isMessagesLoading: false, _fetchingUserId: null };
+        }
+
+        // Keep any in-flight optimistic message so it doesn't flicker away
+        const inFlightOptimistic = state.messages.filter((m) => m.isOptimistic);
+        const merged = [...normalizedMessages];
+        for (const opt of inFlightOptimistic) {
+          if (!merged.some((m) => m._id === opt._id)) {
+            merged.push(opt);
+          }
+        }
+
+        return { messages: merged, isMessagesLoading: false, _fetchingUserId: null };
+      });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
-      set({ isMessagesLoading: false });
+      if (!isSilent) {
+        toast.error(error.response?.data?.message || "Something went wrong");
+      }
+      set({ isMessagesLoading: false, _fetchingUserId: null });
     }
   },
 
@@ -275,11 +299,19 @@ export const useChatStore = create((set, get) => ({
         toast.error("The server did not save the voice message. Please try again.");
         return false;
       }
-      set((state) => ({
-        messages: state.messages.map((m) =>
-          m._id === tempId ? { ...res.data, isDelivered: true, isSeen: Boolean(res.data.isSeen) } : m
-        ),
-      }));
+      set((state) => {
+        const alreadyHasRealId = state.messages.some((m) => m._id === res.data._id);
+        if (alreadyHasRealId) {
+          return {
+            messages: state.messages.filter((m) => m._id !== tempId),
+          };
+        }
+        return {
+          messages: state.messages.map((m) =>
+            m._id === tempId ? { ...res.data, isDelivered: true, isSeen: Boolean(res.data.isSeen) } : m
+          ),
+        };
+      });
       // Auto-refresh chat list to update lastMessage and conversation ordering
       get().getMyChatPartners();
       return true;
@@ -298,23 +330,26 @@ export const useChatStore = create((set, get) => ({
 
   markMessagesAsSeen: async (userId) => {
     if (!userId) return;
+    const strUserId = String(userId);
     // Immediately mark received messages from this user as seen in local state
     set((state) => ({
       messages: state.messages.map((m) =>
-        m.senderId === userId ? { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() } : m
+        String(m.senderId?._id || m.senderId) === strUserId
+          ? { ...m, isSeen: true, seenAt: m.seenAt || new Date().toISOString() }
+          : m
       ),
       chats: state.chats.map((chat) =>
-        String(chat._id) === String(userId) ? { ...chat, unreadCount: 0 } : chat
+        String(chat._id) === strUserId ? { ...chat, unreadCount: 0 } : chat
       ),
     }));
 
     const socket = useAuthStore.getState().socket;
     if (socket) {
-      socket.emit("markMessagesSeen", { senderId: userId });
+      socket.emit("markMessagesSeen", { senderId: strUserId });
     }
 
     try {
-      await axiosInstance.put(`/messages/seen/${userId}`);
+      await axiosInstance.put(`/messages/seen/${strUserId}`);
     } catch (error) {
       console.log("markMessagesAsSeen status:", error?.message);
     }
@@ -335,7 +370,11 @@ export const useChatStore = create((set, get) => ({
     socket.off("newMessage");
     socket.on("newMessage", (newMessage) => {
       const { selectedUser, isSoundEnabled, allContacts, chats, getMyChatPartners } = get();
-      const isCurrentChat = selectedUser?._id && selectedUser._id === newMessage.senderId;
+      const authUser = useAuthStore.getState().authUser;
+      const isCurrentChat =
+        selectedUser?._id &&
+        (String(selectedUser._id) === String(newMessage.senderId) ||
+          (authUser && String(authUser._id) === String(newMessage.senderId) && String(selectedUser._id) === String(newMessage.receiverId)));
       const isDocumentActive = typeof document !== "undefined" && document.visibilityState === "visible";
 
       if (isCurrentChat) {
@@ -347,6 +386,21 @@ export const useChatStore = create((set, get) => ({
 
         set((state) => {
           if (state.messages.some((m) => m._id === messageToAdd._id)) return state;
+
+          // If this is my own message arriving via socket, replace any matching optimistic message
+          const optIndex = state.messages.findIndex(
+            (m) =>
+              m.isOptimistic &&
+              String(m.senderId) === String(messageToAdd.senderId) &&
+              String(m.receiverId) === String(messageToAdd.receiverId) &&
+              m.text === messageToAdd.text
+          );
+          if (optIndex !== -1) {
+            const updated = [...state.messages];
+            updated[optIndex] = messageToAdd;
+            return { messages: updated };
+          }
+
           return { messages: [...state.messages, messageToAdd] };
         });
 
@@ -356,16 +410,17 @@ export const useChatStore = create((set, get) => ({
         }
       }
 
-      // Always play notification sound if sound is enabled
-      if (isSoundEnabled) {
+      // Play notification sound only for incoming messages from others
+      const isFromMe = authUser && String(newMessage.senderId) === String(authUser._id);
+      if (isSoundEnabled && !isFromMe) {
         const soundPath = `${import.meta.env.BASE_URL}sounds/notification.mp3`;
         const notificationSound = new Audio(soundPath);
         notificationSound.currentTime = 0;
         notificationSound.play().catch((e) => console.log("Audio play failed:", e));
       }
 
-      // Vibrate mobile device if supported
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      // Vibrate mobile device for incoming message
+      if (!isFromMe && typeof navigator !== "undefined" && "vibrate" in navigator) {
         try {
           navigator.vibrate([100, 50, 100]);
         } catch {
@@ -394,8 +449,8 @@ export const useChatStore = create((set, get) => ({
               : "Sent you a message");
       const senderPic = sender.profilePic || `${import.meta.env.BASE_URL}avatar.png`;
 
-      // 1. In-App Notification Toast (if receiver is not currently in this chat)
-      if (!isCurrentChat) {
+      // 1. In-App Notification Toast (if receiver is not currently in this chat and not sent by me)
+      if (!isCurrentChat && !isFromMe) {
         showInAppNotification({
           sender,
           senderName,
@@ -406,8 +461,8 @@ export const useChatStore = create((set, get) => ({
         });
       }
 
-      // 2. Device / System Web Notification (when tab is in background OR receiver is not in this chat)
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      // 2. Device / System Web Notification (when tab is in background OR receiver is not in this chat and not sent by me)
+      if (!isFromMe && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
         if (document.hidden || !isCurrentChat) {
           try {
             const notif = new Notification(senderName, {
@@ -450,6 +505,9 @@ export const useChatStore = create((set, get) => ({
           }
           return m;
         }),
+        chats: state.chats.map((c) =>
+          String(c._id) === String(partnerId) ? { ...c, unreadCount: 0 } : c
+        ),
       }));
     });
 
@@ -486,7 +544,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("chatHistoryDeleted");
     socket.on("chatHistoryDeleted", ({ chatPartnerId }) => {
       const { selectedUser, getMyChatPartners } = get();
-      if (selectedUser?._id && selectedUser._id === chatPartnerId) {
+      if (selectedUser?._id && String(selectedUser._id) === String(chatPartnerId)) {
         set({ messages: [] });
       }
       getMyChatPartners();
@@ -605,10 +663,11 @@ export const useChatStore = create((set, get) => ({
 
   deleteChatHistory: async (userId) => {
     if (!userId) return false;
+    const strUserId = String(userId);
     try {
-      await axiosInstance.delete(`/messages/history/${userId}`);
+      await axiosInstance.delete(`/messages/history/${strUserId}`);
       const { selectedUser, getMyChatPartners } = get();
-      if (selectedUser?._id === userId) {
+      if (selectedUser?._id && String(selectedUser._id) === strUserId) {
         set({ messages: [], selectedUser: null });
       }
       await getMyChatPartners();
@@ -617,7 +676,7 @@ export const useChatStore = create((set, get) => ({
     } catch (error) {
       console.log("Delete chat history API error:", error?.message);
       const { selectedUser, getMyChatPartners } = get();
-      if (selectedUser?._id === userId) {
+      if (selectedUser?._id && String(selectedUser._id) === strUserId) {
         set({ messages: [], selectedUser: null });
       }
       try {
@@ -677,3 +736,16 @@ export const useChatStore = create((set, get) => ({
     socket.off("userDeleted");
   },
 }));
+
+// Auto-sync conversations and messages when socket reconnects
+if (typeof window !== "undefined") {
+  window.addEventListener("socket:connected", () => {
+    try {
+      useChatStore.getState().getMyChatPartners();
+      const currentSelected = useChatStore.getState().selectedUser;
+      if (currentSelected?._id) {
+        useChatStore.getState().getMessagesByUserId(currentSelected._id, true);
+      }
+    } catch {}
+  });
+}

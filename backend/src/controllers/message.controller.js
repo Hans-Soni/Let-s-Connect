@@ -22,11 +22,17 @@ const parseMediaPayload = (payload) => {
     return { isUrl: true, url: trimmed };
   }
 
-  const match = trimmed.match(/^data:([a-zA-Z0-9.+/-]+)(?:;[a-zA-Z0-9.=+/_"-]+)*;base64,(.+)$/s);
-  if (!match) return null;
+  const base64Marker = ";base64,";
+  const markerIndex = trimmed.indexOf(base64Marker);
+  if (!trimmed.startsWith("data:") || markerIndex === -1) {
+    return null;
+  }
 
-  const mimeType = match[1].toLowerCase();
-  const rawBase64 = match[2].replace(/[\s\r\n]+/g, "");
+  const header = trimmed.slice(5, markerIndex);
+  const rawBase64 = trimmed.slice(markerIndex + base64Marker.length).replace(/[\s\r\n]+/g, "");
+  if (!rawBase64) return null;
+
+  const mimeType = header.split(";")[0].toLowerCase().trim();
   try {
     const buffer = Buffer.from(rawBase64, "base64");
     if (!buffer || buffer.length === 0) return null;
@@ -111,13 +117,10 @@ export const getMessagesByUserId = async (req, res) => {
       { $set: { isSeen: true, seenAt: new Date() } }
     ).catch(() => {});
 
-    const senderSocketId = getReceiverSocketId(userToChatId?.toString());
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("messagesSeen", {
-        chatPartnerId: myId.toString(),
-        seenBy: myId.toString(),
-      });
-    }
+    io.to(userToChatId.toString()).emit("messagesSeen", {
+      chatPartnerId: myId.toString(),
+      seenBy: myId.toString(),
+    });
 
     const messages = await Message.find({
       $or: [
@@ -167,13 +170,10 @@ export const markMessagesAsSeen = async (req, res) => {
       { $set: { isSeen: true, seenAt: new Date() } }
     ).catch(() => ({ modifiedCount: 0 }));
 
-    const senderSocketId = getReceiverSocketId(senderId?.toString());
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("messagesSeen", {
-        chatPartnerId: myId.toString(),
-        seenBy: myId.toString(),
-      });
-    }
+    io.to(senderId.toString()).emit("messagesSeen", {
+      chatPartnerId: myId.toString(),
+      seenBy: myId.toString(),
+    });
 
     res.status(200).json({ success: true, count: updateResult?.modifiedCount || 0 });
   } catch (error) {
@@ -327,10 +327,11 @@ export const sendMessage = async (req, res) => {
       },
     };
 
-    const receiverSocketId = getReceiverSocketId(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", messageResponse);
-    }
+    // Broadcast to receiver's user room (delivers to all active devices/tabs of receiver)
+    io.to(receiverId.toString()).emit("newMessage", messageResponse);
+
+    // Broadcast to sender's user room (syncs multi-device / other tabs of sender)
+    io.to(senderId.toString()).emit("newMessage", messageResponse);
 
     res.status(201).json(messageResponse);
   } catch (error) {
@@ -565,12 +566,9 @@ export const deleteChatHistory = async (req, res) => {
       _id: { $in: conversationMessages.map((message) => message._id) },
     });
 
-    const receiverSocketId = getReceiverSocketId(userToChatId?.toString());
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("chatHistoryDeleted", {
-        chatPartnerId: myId.toString(),
-      });
-    }
+    io.to(userToChatId.toString()).emit("chatHistoryDeleted", {
+      chatPartnerId: myId.toString(),
+    });
 
     res.status(200).json({
       message: "Chat history deleted successfully",

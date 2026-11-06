@@ -7,9 +7,9 @@ export const axiosInstance = axios.create({
   withCredentials: true,
 });
 
-// Attach the session-storage token to every request.
+// Attach token from sessionStorage or localStorage to every request.
 axiosInstance.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("jwt");
+  const token = sessionStorage.getItem("jwt") || localStorage.getItem("jwt");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -63,9 +63,13 @@ axiosInstance.interceptors.response.use(
       const { data } = await axiosInstance.post("/auth/refresh");
       const newToken = data.token;
       sessionStorage.setItem("jwt", newToken);
+      localStorage.setItem("jwt", newToken);
       axiosInstance.defaults.headers.common.Authorization = `Bearer ${newToken}`;
       processQueue(null, newToken);
       originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("auth:token-refreshed", { detail: { token: newToken } }));
+      }
       return axiosInstance(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);

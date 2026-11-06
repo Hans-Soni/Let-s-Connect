@@ -79,4 +79,5 @@ export const createRateLimitMiddleware = ({
 export const rateLimitMiddleware = createRateLimitMiddleware({
   redisClient: redis,
   fallbackRateLimiter: arcjetRateLimitFallback,
+  maxRequests: 1000,
 });

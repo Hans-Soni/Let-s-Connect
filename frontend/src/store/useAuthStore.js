@@ -18,13 +18,13 @@ export const useAuthStore = create((set, get) => ({
   onlineUsers: [],
 
   checkAuth: async () => {
-    // If user left/closed the website, sessionStorage is empty
-    const token = sessionStorage.getItem("jwt");
+    const token = sessionStorage.getItem("jwt") || localStorage.getItem("jwt");
     if (!token) {
-      localStorage.removeItem("jwt");
       set({ authUser: null, isCheckingAuth: false });
       return;
     }
+    sessionStorage.setItem("jwt", token);
+    localStorage.setItem("jwt", token);
 
     try {
       const res = await axiosInstance.get("/auth/check");
@@ -47,7 +47,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post("/auth/signup", data);
       sessionStorage.setItem("jwt", res.data.token);
-      localStorage.removeItem("jwt");
+      localStorage.setItem("jwt", res.data.token);
       set({ authUser: res.data });
 
       toast.success("Account created successfully!");
@@ -66,7 +66,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post("/auth/login", data);
       sessionStorage.setItem("jwt", res.data.token);
-      localStorage.removeItem("jwt");
+      localStorage.setItem("jwt", res.data.token);
       set({ authUser: res.data });
 
       toast.success("Logged in successfully");
@@ -89,7 +89,7 @@ export const useAuthStore = create((set, get) => ({
       }
 
       sessionStorage.setItem("jwt", res.data.token);
-      localStorage.removeItem("jwt");
+      localStorage.setItem("jwt", res.data.token);
       set({ authUser: res.data });
 
       toast.success(
@@ -191,12 +191,32 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
 
+    const token = sessionStorage.getItem("jwt") || localStorage.getItem("jwt");
     const socket = io(BASE_URL, {
-      query: { token: sessionStorage.getItem("jwt") },
-      withCredentials: true, // this ensures cookies are sent with the connection
+      auth: (cb) => {
+        cb({ token: sessionStorage.getItem("jwt") || localStorage.getItem("jwt") });
+      },
+      query: { token },
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
     });
 
     socket.connect();
+
+    socket.on("connect", () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("socket:connected"));
+      }
+    });
+
+    socket.on("connect_error", (err) => {
+      console.warn("Socket connection warning:", err.message);
+    });
 
     set({ socket });
 
@@ -219,10 +239,18 @@ export const useAuthStore = create((set, get) => ({
   },
 }));
 
-// Listen for the custom event dispatched by the axios interceptor when
-// a silent token refresh fails, so users are never silently left broken.
+// Listen for custom events dispatched by the axios interceptor
 if (typeof window !== "undefined") {
   window.addEventListener("auth:session-expired", () => {
     useAuthStore.getState().handleSessionExpired();
+  });
+  window.addEventListener("auth:token-refreshed", (e) => {
+    const socket = useAuthStore.getState().socket;
+    if (socket && e.detail?.token) {
+      socket.auth = { token: e.detail.token };
+      if (!socket.connected) {
+        socket.connect();
+      }
+    }
   });
 }
