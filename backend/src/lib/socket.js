@@ -120,6 +120,28 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("typing", ({ receiverId }) => {
+    try {
+      if (!receiverId) return;
+      io.to(receiverId.toString()).emit("typing", {
+        senderId: socket.userId.toString(),
+      });
+    } catch (err) {
+      console.log("Error in typing socket event:", err);
+    }
+  });
+
+  socket.on("stopTyping", ({ receiverId }) => {
+    try {
+      if (!receiverId) return;
+      io.to(receiverId.toString()).emit("stopTyping", {
+        senderId: socket.userId.toString(),
+      });
+    } catch (err) {
+      console.log("Error in stopTyping socket event:", err);
+    }
+  });
+
   // =========================================================================
   // WEBRTC CALL SIGNALING EVENTS
   // =========================================================================

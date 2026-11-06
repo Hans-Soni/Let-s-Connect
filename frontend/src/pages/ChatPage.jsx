@@ -45,6 +45,9 @@ import {
   FileAudio,
   FileVideo,
   Image as ImageIcon,
+  Volume2,
+  VolumeX,
+  ArrowDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -71,13 +74,13 @@ function getInitials(name) {
 }
 
 // Avatar component matching Lovable's exact .chat-avatar
-function Avatar({ user, large = false }) {
+function Avatar({ user, large = false, isOnline = false }) {
   const pic = user?.profilePic;
   const name = user?.fullName || "Member";
 
   return (
     <span
-      className={`chat-avatar select-none ${
+      className={`chat-avatar relative select-none ${
         large ? "h-20 w-20 text-2xl font-bold" : "h-11 w-11 text-sm font-semibold"
       }`}
     >
@@ -85,6 +88,14 @@ function Avatar({ user, large = false }) {
         <img src={pic} alt={name} className="h-full w-full rounded-full object-cover" />
       ) : (
         getInitials(name)
+      )}
+      {isOnline && (
+        <span
+          className={`absolute bottom-0 right-0 rounded-full bg-emerald-500 border-2 border-card ring-1 ring-emerald-500/30 ${
+            large ? "h-4 w-4" : "h-3.5 w-3.5"
+          }`}
+          title="Online"
+        />
       )}
     </span>
   );
@@ -256,7 +267,29 @@ function AudioMessagePlayer({ src, isMe }) {
         )}
       </button>
 
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+        <div className="flex items-center gap-0.5 h-4 px-0.5 select-none">
+          {[14, 8, 18, 12, 22, 16, 24, 10, 20, 14, 18, 8, 16, 12].map((height, idx) => {
+            const progressRatio = duration ? currentTime / duration : 0;
+            const barRatio = idx / 14;
+            const isPassed = barRatio <= progressRatio;
+            return (
+              <span
+                key={idx}
+                className={`flex-1 rounded-full transition-all duration-150 ${
+                  isPassed
+                    ? isMe
+                      ? "bg-primary-foreground"
+                      : "bg-primary"
+                    : isMe
+                    ? "bg-primary-foreground/35"
+                    : "bg-muted-foreground/35"
+                } ${isPlaying && isPassed ? "animate-pulse" : ""}`}
+                style={{ height: `${height}px` }}
+              />
+            );
+          })}
+        </div>
         <input
           type="range"
           min="0"
@@ -378,6 +411,11 @@ export default function ChatPage() {
     isBlockedByUser,
     blockedUsers,
     fetchBlockedUsers,
+    typingUsers,
+    sendTypingStatus,
+    sendStopTypingStatus,
+    isSoundEnabled,
+    toggleSound,
   } = useChatStore();
 
   const {
@@ -398,6 +436,10 @@ export default function ChatPage() {
 
   // State matching Lovable ChatWorkspace + Full Profile Details
   const [searchQuery, setSearchQuery] = useState("");
+  const [inChatSearch, setInChatSearch] = useState("");
+  const [showInChatSearch, setShowInChatSearch] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // null | 'contacts' | 'profile' | 'terms'
   const [profileTab, setProfileTab] = useState("profile"); // 'profile' | 'security' | 'privacy' | 'danger'
   const [showDetails, setShowDetails] = useState(false);
@@ -411,6 +453,7 @@ export default function ChatPage() {
   const [viewingImage, setViewingImage] = useState(null);
   const [mediaFilter, setMediaFilter] = useState("all");
   const recordingTimerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Clear attachment helper
   const clearAttachment = () => {
@@ -510,6 +553,8 @@ export default function ChatPage() {
       getMessagesByUserId(selectedUser._id);
       markMessagesAsSeen(selectedUser._id);
       setText("");
+      setInChatSearch("");
+      setShowInChatSearch(false);
       clearAttachment();
       setShowDetails(false);
       textareaRef.current?.focus();
@@ -623,10 +668,88 @@ export default function ChatPage() {
       .finally(() => setIsLoadingConsent(false));
   };
 
+  // Typing indicator input change handler
+  const handleTextChange = (e) => {
+    const val = e.target.value;
+    setText(val);
+
+    if (!selectedUser?._id) return;
+    sendTypingStatus(selectedUser._id);
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      sendStopTypingStatus(selectedUser._id);
+    }, 1800);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingOver) setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      const isMedia =
+        file.type.startsWith("image/") ||
+        file.type.startsWith("video/") ||
+        file.type.startsWith("audio/") ||
+        /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|mp3|wav|ogg|m4a)$/i.test(file.name);
+
+      if (!isMedia) {
+        toast.error("Please drop an image, video, or audio file.");
+        return;
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        toast.error("File exceeds 25 MB limit.");
+        return;
+      }
+      setAttachment(file);
+      setAttachmentPreviewUrl(URL.createObjectURL(file));
+      toast.success(`Attached ${file.name}`);
+    }
+  };
+
+  // Scroll tracking for scroll-to-bottom button
+  const handleScroll = (e) => {
+    const target = e.currentTarget;
+    const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    setShowScrollBottom(distanceToBottom > 220);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Filter messages within active conversation matching in-chat search
+  const displayedMessages = useMemo(() => {
+    if (!inChatSearch.trim()) return messages;
+    const query = inChatSearch.trim().toLowerCase();
+    return messages.filter(
+      (m) => m.text && m.text.toLowerCase().includes(query)
+    );
+  }, [messages, inChatSearch]);
+
   // Send message
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!selectedUser || isSending || (!text.trim() && !attachment)) return;
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    sendStopTypingStatus(selectedUser._id);
 
     setIsSending(true);
     try {
@@ -677,6 +800,7 @@ export default function ChatPage() {
         setText("");
         clearAttachment();
         textareaRef.current?.focus();
+        scrollToBottom();
       }
     } catch {
       toast.error("Message not sent. Your draft is still here—try again.");
@@ -923,7 +1047,11 @@ export default function ChatPage() {
   return (
     <div className="chat-app bg-background text-foreground">
       {/* 1. Chat Rail (Leftmost navigation bar) */}
-      <nav className="chat-rail flex flex-col items-center gap-5 border-r border-border bg-card py-6 select-none z-10 shadow-xs">
+      <nav
+        className={`chat-rail flex flex-col items-center gap-5 border-r border-border bg-card py-6 select-none z-10 shadow-xs ${
+          selectedUser ? "hidden md:flex" : "flex"
+        }`}
+      >
         <Link to="/" aria-label="Samvād messages" title="Samvād home">
           <img
             src={dark ? emblemSilver : emblemGold}
@@ -957,6 +1085,16 @@ export default function ChatPage() {
 
         {/* Bottom rail actions */}
         <div className="mt-auto flex flex-col items-center gap-4">
+          <button
+            type="button"
+            title={isSoundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
+            aria-label="Toggle notification sounds"
+            onClick={toggleSound}
+            className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition cursor-pointer"
+          >
+            {isSoundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+          </button>
+
           <ThemeToggle dark={dark} toggle={toggleTheme} />
 
           <button
@@ -1033,6 +1171,8 @@ export default function ChatPage() {
             const isSelected = selectedUser?._id === chat._id;
             const unread = Number(chat.unreadCount) || 0;
             const lastMsg = chat.lastMessage;
+            const isPartnerOnline = onlineUsers.includes(chat._id);
+            const isPartnerTyping = Boolean(typingUsers[chat._id]);
 
             return (
               <button
@@ -1045,12 +1185,14 @@ export default function ChatPage() {
                     : "hover:bg-secondary text-foreground"
                 }`}
               >
-                <Avatar user={chat} />
+                <Avatar user={chat} isOnline={isPartnerOnline} />
                 <span className="min-w-0 flex-1 text-left">
                   <span className="flex justify-between gap-2">
                     <span className="truncate font-semibold text-sm">{chat.fullName}</span>
                     <span className="shrink-0 text-[10px] text-muted-foreground">
-                      {lastMsg?.createdAt
+                      {isPartnerTyping
+                        ? "typing..."
+                        : lastMsg?.createdAt
                         ? new Date(lastMsg.createdAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -1059,7 +1201,18 @@ export default function ChatPage() {
                     </span>
                   </span>
                   <span className="mt-1 block truncate text-xs text-muted-foreground">
-                    {lastMsg?.text || (lastMsg?.image ? "📷 Photo" : lastMsg?.video ? "🎬 Video" : lastMsg?.audio ? "🎤 Voice note" : "Start a conversation")}
+                    {isPartnerTyping ? (
+                      <span className="text-primary font-medium inline-flex items-center gap-1 animate-pulse">
+                        typing
+                        <span className="inline-flex gap-0.5">
+                          <span className="h-1 w-1 rounded-full bg-primary animate-bounce"></span>
+                          <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:0.2s]"></span>
+                          <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:0.4s]"></span>
+                        </span>
+                      </span>
+                    ) : (
+                      lastMsg?.text || (lastMsg?.image ? "📷 Photo" : lastMsg?.video ? "🎬 Video" : lastMsg?.audio ? "🎤 Voice note" : "Start a conversation")
+                    )}
                   </span>
                 </span>
                 {unread > 0 && (
@@ -1126,7 +1279,7 @@ export default function ChatPage() {
                 onClick={() => setShowDetails(!showDetails)}
                 title="Conversation settings & info"
               >
-                <Avatar user={selectedUser} />
+                <Avatar user={selectedUser} isOnline={isOnline} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="truncate font-semibold text-foreground text-base sm:text-lg group-hover:text-primary transition-colors">
@@ -1139,17 +1292,42 @@ export default function ChatPage() {
                     )}
                   </div>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {isUserBlocked(selectedUser._id)
-                      ? "Contact is blocked"
-                      : isBlockedByUser(selectedUser._id)
-                      ? "Contact is unavailable"
-                      : selectedUser.designation || (isOnline ? "Online" : "Offline")}
+                    {isUserBlocked(selectedUser._id) ? (
+                      "Contact is blocked"
+                    ) : isBlockedByUser(selectedUser._id) ? (
+                      "Contact is unavailable"
+                    ) : typingUsers[selectedUser._id] ? (
+                      <span className="text-primary font-medium inline-flex items-center gap-1 animate-pulse">
+                        typing
+                        <span className="inline-flex gap-0.5">
+                          <span className="h-1 w-1 rounded-full bg-primary animate-bounce"></span>
+                          <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:0.2s]"></span>
+                          <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:0.4s]"></span>
+                        </span>
+                      </span>
+                    ) : (
+                      selectedUser.designation || (isOnline ? "Online" : "Offline")
+                    )}
                   </p>
                 </div>
               </div>
 
-              {/* Call buttons (preserves WebRTC calling) */}
+              {/* Header Action buttons */}
               <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowInChatSearch(!showInChatSearch)}
+                  aria-label="Search messages in this conversation"
+                  title="Search conversation"
+                  className={`grid h-9 w-9 place-items-center rounded-lg transition cursor-pointer ${
+                    showInChatSearch
+                      ? "bg-secondary text-primary"
+                      : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Search size={18} />
+                </button>
+
                 <button
                   type="button"
                   onClick={() => startOutgoingCall(selectedUser, "audio")}
@@ -1188,8 +1366,54 @@ export default function ChatPage() {
               </div>
             </header>
 
+            {/* In-Chat Search Bar */}
+            {showInChatSearch && (
+              <div className="flex items-center gap-2 border-b border-border bg-card/95 px-5 md:px-8 py-2.5 animate-rise">
+                <Search size={16} className="text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search in this conversation..."
+                  value={inChatSearch}
+                  onChange={(e) => setInChatSearch(e.target.value)}
+                  autoFocus
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+                />
+                {inChatSearch && (
+                  <span className="text-xs text-muted-foreground shrink-0 font-medium">
+                    {displayedMessages.length} {displayedMessages.length === 1 ? "result" : "results"}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInChatSearch(false);
+                    setInChatSearch("");
+                  }}
+                  className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Close search"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
             {/* Messages Transcript */}
-            <div className="chat-transcript min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-10">
+            <div
+              className="chat-transcript min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-10 relative"
+              onScroll={handleScroll}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {/* Drag and Drop File Overlay */}
+              {isDraggingOver && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-card/95 border-2 border-dashed border-primary text-primary pointer-events-none animate-rise">
+                  <ImagePlus size={44} className="mb-2 animate-bounce" />
+                  <p className="font-semibold text-base">Drop media file to attach</p>
+                  <p className="text-xs text-muted-foreground mt-1">Images, videos, or audio up to 25 MB</p>
+                </div>
+              )}
+
               <div className="mb-8 flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground select-none">
                 <span className="h-px w-10 bg-border" />
                 The start of something good
@@ -1205,13 +1429,18 @@ export default function ChatPage() {
                 <p className="py-12 text-center font-display text-xl text-muted-foreground select-none">
                   Say hello to {selectedUser.fullName}.
                 </p>
+              ) : displayedMessages.length === 0 && inChatSearch.trim() ? (
+                <div className="py-12 text-center text-muted-foreground select-none animate-rise">
+                  <Search className="mx-auto mb-2 opacity-50" size={28} />
+                  <p className="text-sm">No messages found matching &ldquo;{inChatSearch}&rdquo;</p>
+                </div>
               ) : null}
 
-              {messages.map((msg, index) => {
+              {displayedMessages.map((msg, index) => {
                 const sId = String(msg.senderId?._id || msg.senderId);
                 const myId = String(authUser?._id || "");
                 const isMe = sId === myId;
-                const prevMsg = messages[index - 1];
+                const prevMsg = displayedMessages[index - 1];
                 const msgDate = new Date(msg.createdAt).toDateString();
                 const prevDate = prevMsg ? new Date(prevMsg.createdAt).toDateString() : null;
                 const isNewDay = msgDate !== prevDate;
@@ -1228,7 +1457,7 @@ export default function ChatPage() {
                     )}
 
                     <div className={`group mb-5 flex items-end gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
-                      {!isMe && <Avatar user={selectedUser} />}
+                      {!isMe && <Avatar user={selectedUser} isOnline={isOnline} />}
 
                       <div className={`max-w-[82%] md:max-w-[70%] ${isMe ? "text-right" : ""}`}>
                         <div
@@ -1273,7 +1502,7 @@ export default function ChatPage() {
                               {msg.isOptimistic ? (
                                 <Clock size={12} className="text-muted-foreground animate-pulse" />
                               ) : msg.isSeen ? (
-                                <CheckCheck size={13} className="text-primary" />
+                                <CheckCheck size={13} className="text-sky-500 dark:text-sky-400 font-bold" />
                               ) : msg.isDelivered ? (
                                 <CheckCheck size={13} className="text-muted-foreground" />
                               ) : (
@@ -1287,6 +1516,36 @@ export default function ChatPage() {
                   </div>
                 );
               })}
+
+              {/* Typing indicator bubble */}
+              {typingUsers[selectedUser._id] && (
+                <div className="group mb-5 flex items-end gap-3 animate-rise">
+                  <Avatar user={selectedUser} isOnline={isOnline} />
+                  <div className="chat-bubble chat-bubble-peer flex items-center gap-2 py-3 px-4">
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {selectedUser.fullName.split(" ")[0]} is typing
+                    </span>
+                    <span className="inline-flex gap-1 items-center">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce"></span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]"></span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]"></span>
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Scroll to bottom floating button */}
+              {showScrollBottom && (
+                <button
+                  type="button"
+                  onClick={scrollToBottom}
+                  title="Scroll to latest messages"
+                  aria-label="Scroll to bottom"
+                  className="sticky bottom-4 float-right z-10 mr-2 flex h-10 w-10 items-center justify-center rounded-full bg-card border border-border shadow-lg hover:bg-secondary text-foreground hover:text-primary transition-all duration-200 cursor-pointer animate-rise"
+                >
+                  <ArrowDown size={18} />
+                </button>
+              )}
 
               <div ref={messagesEndRef} />
             </div>
@@ -1462,7 +1721,7 @@ export default function ChatPage() {
                       onPaste={handlePaste}
                       className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                       value={text}
-                      onChange={(e) => setText(e.target.value)}
+                      onChange={handleTextChange}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -1804,12 +2063,13 @@ export default function ChatPage() {
               <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
                 {filteredContacts.map((contact) => {
                   const isBlocked = isUserBlocked(contact._id);
+                  const isContactOnline = onlineUsers.includes(contact._id);
                   return (
                     <div
                       key={contact._id}
                       className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary hover:bg-card text-left transition group"
                     >
-                      <Avatar user={contact} />
+                      <Avatar user={contact} isOnline={isContactOnline} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="block truncate font-semibold text-sm text-foreground group-hover:text-primary transition-colors">

@@ -46,6 +46,7 @@ export const useChatStore = create((set, get) => ({
   allContacts: [],
   chats: [],
   messages: [],
+  typingUsers: {},
   activeTab: "chats",
   selectedUser: null,
   viewingProfileUser: null,
@@ -126,6 +127,20 @@ export const useChatStore = create((set, get) => ({
   },
 
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  sendTypingStatus: (receiverId) => {
+    const socket = useAuthStore.getState().socket;
+    if (socket && receiverId) {
+      socket.emit("typing", { receiverId: String(receiverId) });
+    }
+  },
+
+  sendStopTypingStatus: (receiverId) => {
+    const socket = useAuthStore.getState().socket;
+    if (socket && receiverId) {
+      socket.emit("stopTyping", { receiverId: String(receiverId) });
+    }
+  },
   setSelectedUser: (selectedUser) => {
     set((state) => ({
       selectedUser,
@@ -577,6 +592,22 @@ export const useChatStore = create((set, get) => ({
       get().getAllContacts();
       get().getMyChatPartners();
     });
+
+    socket.off("typing");
+    socket.on("typing", ({ senderId }) => {
+      if (!senderId) return;
+      set((state) => ({
+        typingUsers: { ...state.typingUsers, [String(senderId)]: true },
+      }));
+    });
+
+    socket.off("stopTyping");
+    socket.on("stopTyping", ({ senderId }) => {
+      if (!senderId) return;
+      set((state) => ({
+        typingUsers: { ...state.typingUsers, [String(senderId)]: false },
+      }));
+    });
   },
 
   blockUser: async (userId) => {
@@ -698,6 +729,8 @@ export const useChatStore = create((set, get) => ({
     socket.off("chatHistoryDeleted");
     socket.off("userBlocked");
     socket.off("userUnblocked");
+    socket.off("typing");
+    socket.off("stopTyping");
   },
 
   subscribeToUsers: () => {
