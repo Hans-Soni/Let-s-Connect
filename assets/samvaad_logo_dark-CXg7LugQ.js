@@ -1,1 +1,0 @@
-const s="/Let-s-Connect/assets/emblem_gold-sNN9olCf-sNN9olCf.png",e="/Let-s-Connect/assets/emblem_silver-CXs3LN2i-CXs3LN2i.png",o="/Let-s-Connect/assets/samvaad_logo_light-Dewsuw0W.png",t="/Let-s-Connect/assets/samvaad_logo_dark-BuUKXHLj.png";export{s as a,o as b,e,t as l};
