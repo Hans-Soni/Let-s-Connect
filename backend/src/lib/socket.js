@@ -11,6 +11,8 @@ export const isOriginAllowed = (origin, callback) => {
   // Allow requests with no origin (e.g. mobile apps, curl)
   if (!origin) return callback(null, true);
 
+  const cleanOrigin = origin.replace(/\/+$/, "");
+
   const allowedOrigins = [
     ENV.CLIENT_URL,
     "https://hans-soni.github.io",
@@ -18,14 +20,13 @@ export const isOriginAllowed = (origin, callback) => {
     "http://localhost:5002",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5002",
-  ].filter(Boolean);
+  ]
+    .filter(Boolean)
+    .map((o) => o.replace(/\/+$/, ""));
 
   if (
-    allowedOrigins.includes(origin) ||
-    origin.startsWith("http://localhost:") ||
-    origin.startsWith("http://127.0.0.1:") ||
-    origin.endsWith(".github.io") ||
-    origin.endsWith(".onrender.com")
+    allowedOrigins.includes(cleanOrigin) ||
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin)
   ) {
     return callback(null, true);
   }

@@ -19,6 +19,12 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# User Data & Feedback Logs (protects user privacy / PII)
+backend/feedback
+backend/feedback.json
+feedback
+feedback.json
+
 # OS files
 .DS_Store
 Thumbs.db

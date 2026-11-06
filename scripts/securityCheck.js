@@ -114,7 +114,28 @@ try {
 } catch (e) {
   expiredValid = false;
 }
-assert(!expiredValid, "Expired JWT token strictly rejected by verification");
+assert(!expiredValid, "Expired JWT token strictly rejected by standard verification");
+
+// Expired token with ignoreExpiration verifies cryptographic signature correctly
+let expiredSignatureValid = false;
+try {
+  const verified = jwt.verify(expiredToken, ephemeralSecret, { ignoreExpiration: true });
+  expiredSignatureValid = verified.userId === testPayload.userId;
+} catch (e) {
+  expiredSignatureValid = false;
+}
+assert(expiredSignatureValid, "Expired token verifies signature with ignoreExpiration for safe refresh");
+
+// Forged token rejected even with ignoreExpiration: true (Account Takeover Defense)
+const forgedToken = jwt.sign({ userId: new mongoose.Types.ObjectId().toString() }, "attacker-secret-key", { expiresIn: "15m" });
+let forgedBypassed = false;
+try {
+  jwt.verify(forgedToken, ephemeralSecret, { ignoreExpiration: true });
+  forgedBypassed = true;
+} catch (e) {
+  forgedBypassed = false;
+}
+assert(!forgedBypassed, "Forged token signed with wrong key strictly rejected even with ignoreExpiration: true (Anti-Takeover)");
 
 // ----------------------------------------------------
 // 4. MONGODB OBJECTID SANITIZATION & INPUT VALIDATION
