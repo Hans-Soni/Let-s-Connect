@@ -322,7 +322,7 @@ function MessageInput() {
 
   if (isBlocked) {
     return (
-      <div className="p-3.5 sm:p-4 border-t border-border/70 bg-card/80 backdrop-blur-md shrink-0 w-full text-center">
+      <div className="p-3.5 sm:p-4 border-t border-border bg-card shrink-0 w-full text-center">
         <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-destructive font-medium">
           <Ban className="h-4 w-4 shrink-0" />
           <span>You blocked this user.</span>
@@ -343,7 +343,7 @@ function MessageInput() {
 
   if (isBlockedBy) {
     return (
-      <div className="p-3.5 sm:p-4 border-t border-border/70 bg-card/80 backdrop-blur-md shrink-0 w-full text-center">
+      <div className="p-3.5 sm:p-4 border-t border-border bg-card shrink-0 w-full text-center">
         <div className="max-w-md mx-auto flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <ShieldAlert className="h-4 w-4 shrink-0" />
           <span>You cannot send messages to this contact.</span>
@@ -353,7 +353,7 @@ function MessageInput() {
   }
 
   return (
-    <div className="p-2.5 sm:p-4 border-t border-border/70 bg-card/85 backdrop-blur-xl shrink-0 w-full">
+    <div className="p-2.5 sm:p-4 border-t border-border bg-card shrink-0 w-full">
       {(imagePreview || videoPreviewUrl) && (
         <div className="max-w-3xl mx-auto mb-2 sm:mb-3 flex items-center">
           <div className="relative max-w-full">
@@ -426,7 +426,7 @@ function MessageInput() {
 
       <form
         onSubmit={handleSendMessage}
-        className="max-w-3xl mx-auto flex items-center gap-1.5 rounded-full border border-border bg-secondary/80 p-1.5 sm:p-2 backdrop-blur-xl transition focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 shadow-xs"
+        className="max-w-3xl mx-auto flex items-center gap-1.5 rounded-full border border-border bg-secondary p-1.5 sm:p-2 transition focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 shadow-xs"
       >
         <input
           type="file"

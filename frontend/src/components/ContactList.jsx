@@ -102,7 +102,7 @@ function ContactList() {
   return (
     <>
       {/* Sticky Search Header */}
-      <div className="sticky -top-3 md:-top-4 z-10 bg-card/95 backdrop-blur-md pt-1 pb-2.5">
+      <div className="sticky -top-3 md:-top-4 z-10 bg-card pt-1 pb-2.5">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <input

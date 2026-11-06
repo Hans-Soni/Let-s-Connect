@@ -56,7 +56,7 @@ function ChatHeader() {
   };
 
   return (
-    <div className="flex justify-between items-center bg-card/75 backdrop-blur-xl border-b border-border/70 h-16 md:h-18 px-3 sm:px-5 shrink-0 z-20 w-full relative select-none">
+    <div className="flex justify-between items-center bg-card border-b border-border h-16 md:h-18 px-3 sm:px-5 shrink-0 z-20 w-full relative select-none">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Back Button */}
         <button

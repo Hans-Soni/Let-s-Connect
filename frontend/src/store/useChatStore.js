@@ -250,18 +250,25 @@ export const useChatStore = create((set, get) => ({
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+      if (messageData.image && !res.data?.image) {
+        set((state) => ({
+          messages: state.messages.filter((m) => m._id !== tempId),
+        }));
+        toast.error("The server did not save the image. Please try again.");
+        return false;
+      }
       if (messageData.video && !res.data?.video) {
         set((state) => ({
           messages: state.messages.filter((m) => m._id !== tempId),
         }));
-        toast.error("The server did not save this video. Please check that the backend is updated and try again.");
+        toast.error("The server did not save this video. Please check file format and size.");
         return false;
       }
       if (messageData.audio && !res.data?.audio) {
         set((state) => ({
           messages: state.messages.filter((m) => m._id !== tempId),
         }));
-        toast.error("The server did not save the voice message. Please restart or update the backend.");
+        toast.error("The server did not save the voice message. Please try again.");
         return false;
       }
       set((state) => ({
@@ -275,7 +282,10 @@ export const useChatStore = create((set, get) => ({
       set((state) => ({
         messages: state.messages.filter((m) => m._id !== tempId),
       }));
-      toast.error(error.response?.data?.message || "Something went wrong");
+      const errorMsg =
+        error.response?.data?.message ||
+        (error.response?.status === 413 ? "File is too large to send." : "Could not send message. Please try again.");
+      toast.error(errorMsg);
       return false;
     }
   },

@@ -31,12 +31,12 @@ app.set("trust proxy", true);
 
 // Security Middleware
 app.use(helmet());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(mongoSanitize());
 app.use(xss());
 
 app.use("/api", rateLimitMiddleware);
-
-app.use(express.json({ limit: "5mb" })); // req.body
 app.use(cors({ origin: isOriginAllowed, credentials: true }));
 app.use(cookieParser());
 

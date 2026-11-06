@@ -7,17 +7,43 @@ import { encryptText, decryptText } from "../lib/encryption.js";
 import { deleteMessageMedia } from "../lib/messageRetention.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-const MAX_AUDIO_BYTES = 3 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
-const AUDIO_DATA_URI_PATTERN =
-  /^data:(audio\/(?:webm|mp4|ogg|wav|mpeg))(?:;codecs=[a-z0-9._-]+)?;base64,([A-Za-z0-9+/]+={0,2})$/i;
-const VIDEO_DATA_URI_PATTERN =
-  /^data:(video\/(?:mp4|webm|quicktime));base64,([A-Za-z0-9+/]+={0,2})$/i;
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
+const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // 20 MB
+const MAX_VIDEO_BYTES = 25 * 1024 * 1024; // 25 MB
 
-const uploadMediaBuffer = (buffer, folder) =>
+/**
+ * Extracts mimeType and binary buffer from a base64 data URI or accepts an existing HTTPS url.
+ * Handles whitespace, codecs parameters, linebreaks, and various audio/video/image formats.
+ */
+const parseMediaPayload = (payload) => {
+  if (!payload || typeof payload !== "string") return null;
+  const trimmed = payload.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return { isUrl: true, url: trimmed };
+  }
+
+  const match = trimmed.match(/^data:([a-zA-Z0-9.+/-]+)(?:;[a-zA-Z0-9.=+/_"-]+)*;base64,(.+)$/s);
+  if (!match) return null;
+
+  const mimeType = match[1].toLowerCase();
+  const rawBase64 = match[2].replace(/[\s\r\n]+/g, "");
+  try {
+    const buffer = Buffer.from(rawBase64, "base64");
+    if (!buffer || buffer.length === 0) return null;
+    return { isUrl: false, mimeType, buffer, rawBase64, dataUri: `data:${mimeType};base64,${rawBase64}` };
+  } catch {
+    return null;
+  }
+};
+
+const uploadMediaBuffer = (buffer, folder, resourceType = "video") =>
   new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: "video", folder },
+      {
+        resource_type: resourceType,
+        folder,
+        chunk_size: 6000000,
+      },
       (error, result) => {
         if (error) {
           reject(error);
@@ -174,41 +200,36 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ message: "Message cannot exceed 2000 characters." });
     }
 
-    let audioBuffer;
-    if (audio !== undefined) {
-      const audioMatch = typeof audio === "string" ? audio.match(AUDIO_DATA_URI_PATTERN) : null;
-      const audioBase64 = audioMatch?.[2];
-      audioBuffer = audioBase64 ? Buffer.from(audioBase64, "base64") : null;
-      if (
-        !audioMatch ||
-        !audioBase64 ||
-        audioBase64.length % 4 !== 0 ||
-        !audioBuffer?.length ||
-        audioBuffer.length > MAX_AUDIO_BYTES ||
-        audioBuffer.toString("base64") !== audioBase64
-      ) {
-        return res.status(400).json({
-          message: "Audio must be a supported recording no larger than 3 MB.",
-        });
+    let parsedImage = null;
+    if (image !== undefined && image !== null && image !== "") {
+      parsedImage = parseMediaPayload(image);
+      if (!parsedImage) {
+        return res.status(400).json({ message: "Invalid image format. Supported formats: JPG, PNG, WebP, GIF, SVG, etc." });
+      }
+      if (!parsedImage.isUrl && parsedImage.buffer.length > MAX_IMAGE_BYTES) {
+        return res.status(400).json({ message: "Image must be 15 MB or smaller." });
       }
     }
 
-    let videoBuffer;
-    if (video !== undefined) {
-      const videoMatch = typeof video === "string" ? video.match(VIDEO_DATA_URI_PATTERN) : null;
-      const videoBase64 = videoMatch?.[2];
-      videoBuffer = videoBase64 ? Buffer.from(videoBase64, "base64") : null;
-      if (
-        !videoMatch ||
-        !videoBase64 ||
-        videoBase64.length % 4 !== 0 ||
-        !videoBuffer?.length ||
-        videoBuffer.length > MAX_VIDEO_BYTES ||
-        videoBuffer.toString("base64") !== videoBase64
-      ) {
-        return res.status(400).json({
-          message: "Video must be an MP4, WebM, or MOV recording no larger than 3 MB.",
-        });
+    let parsedAudio = null;
+    if (audio !== undefined && audio !== null && audio !== "") {
+      parsedAudio = parseMediaPayload(audio);
+      if (!parsedAudio) {
+        return res.status(400).json({ message: "Invalid audio format. Supported formats: MP3, WAV, WebM, OGG, M4A, AAC, etc." });
+      }
+      if (!parsedAudio.isUrl && parsedAudio.buffer.length > MAX_AUDIO_BYTES) {
+        return res.status(400).json({ message: "Audio must be 20 MB or smaller." });
+      }
+    }
+
+    let parsedVideo = null;
+    if (video !== undefined && video !== null && video !== "") {
+      parsedVideo = parseMediaPayload(video);
+      if (!parsedVideo) {
+        return res.status(400).json({ message: "Invalid video format. Supported formats: MP4, WebM, MOV, MKV, AVI, etc." });
+      }
+      if (!parsedVideo.isUrl && parsedVideo.buffer.length > MAX_VIDEO_BYTES) {
+        return res.status(400).json({ message: "Video must be 25 MB or smaller." });
       }
     }
 
@@ -237,27 +258,38 @@ export const sendMessage = async (req, res) => {
 
     let imageUrl;
     let imagePublicId;
-    if (image) {
-      // upload base64 image to cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
-      imagePublicId = uploadResponse.public_id;
+    if (parsedImage) {
+      if (parsedImage.isUrl) {
+        imageUrl = parsedImage.url;
+      } else {
+        const uploadResponse = await uploadMediaBuffer(parsedImage.buffer, "chat-images", "image");
+        imageUrl = uploadResponse.secure_url;
+        imagePublicId = uploadResponse.public_id;
+      }
     }
 
     let audioUrl;
     let audioPublicId;
-    if (audioBuffer) {
-      const uploadResponse = await uploadMediaBuffer(audioBuffer, "voice-messages");
-      audioUrl = uploadResponse.secure_url;
-      audioPublicId = uploadResponse.public_id;
+    if (parsedAudio) {
+      if (parsedAudio.isUrl) {
+        audioUrl = parsedAudio.url;
+      } else {
+        const uploadResponse = await uploadMediaBuffer(parsedAudio.buffer, "voice-messages", "video");
+        audioUrl = uploadResponse.secure_url;
+        audioPublicId = uploadResponse.public_id;
+      }
     }
 
     let videoUrl;
     let videoPublicId;
-    if (videoBuffer) {
-      const uploadResponse = await uploadMediaBuffer(videoBuffer, "video-messages");
-      videoUrl = uploadResponse.secure_url;
-      videoPublicId = uploadResponse.public_id;
+    if (parsedVideo) {
+      if (parsedVideo.isUrl) {
+        videoUrl = parsedVideo.url;
+      } else {
+        const uploadResponse = await uploadMediaBuffer(parsedVideo.buffer, "video-messages", "video");
+        videoUrl = uploadResponse.secure_url;
+        videoPublicId = uploadResponse.public_id;
+      }
     }
 
     const newMessage = new Message({

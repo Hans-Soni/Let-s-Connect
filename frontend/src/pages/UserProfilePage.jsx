@@ -350,7 +350,7 @@ function UserProfilePage({ profileUser, onClose }) {
       : user.profilePic || `${import.meta.env.BASE_URL}avatar.png`);
 
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden bg-base-200/60 backdrop-blur-md">
+    <div className="relative w-full h-full flex flex-col overflow-hidden bg-background">
       {/* TOP NAVIGATION BAR */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-base-100/50 shrink-0 z-10">
         <button
@@ -415,7 +415,7 @@ function UserProfilePage({ profileUser, onClose }) {
             {/* ZOOM HINT OVERLAY ON HOVER */}
             {!isBlockedByThem && (
               <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                <span className="text-white text-xs font-medium flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm shadow-md">
+                <span className="text-white text-xs font-medium flex items-center gap-1.5 bg-black/80 px-3 py-1.5 rounded-full shadow-md">
                   <ZoomIn className="size-3.5" /> View Photo
                 </span>
               </div>
@@ -819,7 +819,7 @@ function UserProfilePage({ profileUser, onClose }) {
 
       {/* CONFIRMATION MODAL FOR DELETING CHAT HISTORY */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 animate-fade-in">
           <div className="bg-base-100 border border-base-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-error">
               <div className="p-3 bg-error/10 rounded-xl">
@@ -870,7 +870,7 @@ function UserProfilePage({ profileUser, onClose }) {
 
       {/* CONFIRMATION MODAL FOR BLOCKING USER */}
       {showBlockModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 animate-fade-in">
           <div className="bg-base-100 border border-base-200 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-warning">
               <div className="p-3 bg-warning/10 rounded-xl">
@@ -982,7 +982,7 @@ function UserProfilePage({ profileUser, onClose }) {
       {/* 2-STEP ACCOUNT DELETION CONFIRMATION MODAL */}
       {showDeleteAccountModal && isMe && (
         createPortal(
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/75 backdrop-blur-sm p-3 sm:p-6 animate-fade-in">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-slate-900/40 dark:bg-black/75 p-3 sm:p-6 animate-fade-in">
             <div
               role="dialog"
               aria-modal="true"
@@ -1127,7 +1127,7 @@ function UserProfilePage({ profileUser, onClose }) {
       {/* LIGHTBOX MODAL FOR BIG PROFILE PICTURE */}
       {showImageLightbox && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/75 animate-fade-in"
           onClick={() => setShowImageLightbox(false)}
         >
           <div

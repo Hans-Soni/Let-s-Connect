@@ -11,7 +11,7 @@ function ProfileHeader() {
   if (!authUser) return null;
 
   return (
-    <div className="px-4 py-3 border-b border-border bg-card/40 backdrop-blur-sm shrink-0 w-full select-none">
+    <div className="px-4 py-3 border-b border-border bg-card shrink-0 w-full select-none">
       <div className="flex items-center justify-between gap-3 min-w-0">
         {/* User Card */}
         <button
