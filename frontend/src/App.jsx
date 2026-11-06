@@ -13,6 +13,7 @@ const LoginPage = lazy(() => import("./pages/LoginPage"));
 const SignUpPage = lazy(() => import("./pages/SignUpPage"));
 const UserProfilePage = lazy(() => import("./pages/UserProfilePage"));
 const WelcomePage = lazy(() => import("./pages/WelcomePage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function App() {
   const { checkAuth, isCheckingAuth, authUser, logout } = useAuthStore();
@@ -60,61 +61,18 @@ function App() {
 
   if (isCheckingAuth) return <PageLoader />;
 
-  const isStandalonePage =
-    location.pathname === "/" ||
-    location.pathname === "/welcome" ||
-    location.pathname === "/signup" ||
-    location.pathname === "/login" ||
-    location.pathname === "/signin" ||
-    location.pathname.startsWith("/profile/") ||
-    location.pathname.startsWith("/user/");
-
-  if (isStandalonePage) {
-    return (
-      <div className="min-h-screen w-full relative">
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={authUser ? <ChatPage /> : <WelcomePage />} />
-            <Route path="/welcome" element={<WelcomePage />} />
-            <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
-            <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
-            <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
-            <Route path="/signin" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
-            <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
-          </Routes>
-        </Suspense>
-        <CallModal />
-        <Toaster position="top-right" containerClassName="z-[99999]" toastOptions={{ duration: 4000 }} />
-      </div>
-    );
-  }
-
   return (
-    <div
-      data-theme={theme}
-      className={`min-h-[100dvh] w-full bg-base-300 relative flex items-center justify-center p-0 md:p-4 ${
-        authUser
-          ? "h-[100dvh] md:h-auto md:min-h-screen overflow-hidden md:overflow-y-auto"
-          : "overflow-y-auto"
-      }`}
-    >
-      <div className="absolute top-0 -left-4 size-96 bg-primary opacity-20 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-0 -right-4 size-96 bg-secondary opacity-20 blur-[100px] pointer-events-none" />
-
-      {/* Global theme toggle visible on login/signup or desktop chat */}
-      <div className={authUser ? "hidden md:block" : "block"}>
-        <GlobalThemeToggle />
-      </div>
-
+    <div className="min-h-screen w-full relative bg-background text-foreground selection:bg-primary/20 selection:text-primary">
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={authUser ? <ChatPage /> : <WelcomePage />} />
           <Route path="/welcome" element={<WelcomePage />} />
-          <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
-          <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to={"/login"} />} />
-          <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
-          <Route path="/signin" element={!authUser ? <LoginPage /> : <Navigate to={"/"} />} />
-          <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to={"/"} />} />
+          <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to="/login" />} />
+          <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to="/login" />} />
+          <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
+          <Route path="/signin" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
+          <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
 
@@ -123,4 +81,5 @@ function App() {
     </div>
   );
 }
+
 export default App;
