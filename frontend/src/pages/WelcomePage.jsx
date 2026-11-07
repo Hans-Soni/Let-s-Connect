@@ -165,30 +165,48 @@ function Header({ dark, toggle }) {
   }, []);
 
   const navLinks = [
-    ["Features", "#features"],
-    ["Calling", "#calling"],
-    ["How it works", "#how"],
-    ["Compare", "#compare"],
-    ["Security", "#security"],
-    ["FAQ", "#faq"],
-    ["Feedback", "#feedback"],
+    { label: "Features", targetId: "features" },
+    { label: "How it works", targetId: "how" },
+    { label: "Calling", targetId: "calling" },
+    { label: "Security", targetId: "security" },
+    { label: "Compare", targetId: "compare" },
+    { label: "FAQ", targetId: "faq" },
+    { label: "Feedback", targetId: "feedback" },
   ];
+
+  const handleNavClick = (e, targetId) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${isScrolled ? "glass border-b border-border py-2" : "py-3 sm:py-4"
-        }`}
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+        isScrolled ? "glass border-b border-border py-2" : "py-3 sm:py-4"
+      }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-5">
-        <a href="#top" className="shrink-0 flex items-center">
+        <a
+          href="#top"
+          onClick={(e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="shrink-0 flex items-center cursor-pointer"
+        >
           <Logo className="h-8 w-auto sm:h-10" />
         </a>
         <nav className="hidden items-center gap-1 lg:flex">
-          {navLinks.map(([label, href]) => (
+          {navLinks.map(({ label, targetId }) => (
             <a
-              key={href}
-              href={href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+              key={targetId}
+              href={`#${targetId}`}
+              onClick={(e) => handleNavClick(e, targetId)}
+              className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground"
             >
               {label}
             </a>
@@ -198,7 +216,7 @@ function Header({ dark, toggle }) {
           <button
             onClick={toggle}
             aria-label="Toggle theme"
-            className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border border-border transition hover:rotate-12 hover:bg-secondary"
+            className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border border-border transition hover:rotate-12 hover:bg-secondary cursor-pointer"
           >
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
@@ -218,7 +236,7 @@ function Header({ dark, toggle }) {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-expanded={mobileMenuOpen}
             aria-label="Menu"
-            className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border border-border md:hidden"
+            className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border border-border md:hidden cursor-pointer"
           >
             {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -226,12 +244,12 @@ function Header({ dark, toggle }) {
       </div>
       {mobileMenuOpen && (
         <div className="glass mx-4 mt-3 animate-pop rounded-2xl border border-border p-3 lg:hidden">
-          {navLinks.map(([label, href]) => (
+          {navLinks.map(({ label, targetId }) => (
             <a
-              key={href}
-              href={href}
-              onClick={() => setMobileMenuOpen(false)}
-              className="block rounded-xl px-4 py-3 font-medium hover:bg-secondary"
+              key={targetId}
+              href={`#${targetId}`}
+              onClick={(e) => handleNavClick(e, targetId)}
+              className="block cursor-pointer rounded-xl px-4 py-3 font-medium hover:bg-secondary"
             >
               {label}
             </a>
@@ -450,7 +468,7 @@ function Features() {
   ];
 
   return (
-    <section id="features" className="relative py-16 sm:py-24 md:py-28">
+    <section id="features" className="relative scroll-mt-24 py-16 sm:py-24 md:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-5">
         <SectionHeading
           kicker="Crafted for modern dialogue"
@@ -520,7 +538,7 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how" className="py-16 sm:py-24 md:py-28">
+    <section id="how" className="scroll-mt-24 py-16 sm:py-24 md:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker="How it works"
@@ -581,7 +599,7 @@ function CallingSection() {
   const [isMuted, setIsMuted] = useState(false);
 
   return (
-    <section id="calling" className="relative overflow-hidden bg-secondary py-16 sm:py-24 md:py-28">
+    <section id="calling" className="relative scroll-mt-24 overflow-hidden bg-secondary py-16 sm:py-24 md:py-28">
       <EmblemOrbit className="absolute -right-40 top-1/2 w-[520px] -translate-y-1/2 opacity-40" />
       <div className="relative mx-auto grid max-w-7xl items-center gap-10 sm:gap-14 px-4 sm:px-5 lg:grid-cols-2">
         <div className="reveal">
@@ -668,7 +686,7 @@ function PrivacySection() {
   const dashOffset = circumference * (1 - hoursLeft / 24);
 
   return (
-    <section id="privacy" className="bg-secondary py-28">
+    <section id="privacy" className="scroll-mt-24 bg-secondary py-28">
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 lg:grid-cols-2">
         <div className="reveal order-2 lg:order-1">
           <div className="relative mx-auto grid aspect-square max-w-sm place-items-center">
@@ -762,7 +780,7 @@ function SecuritySection() {
   ];
 
   return (
-    <section id="security" className="relative overflow-hidden bg-secondary py-16 sm:py-24 md:py-28">
+    <section id="security" className="relative scroll-mt-24 overflow-hidden bg-secondary py-16 sm:py-24 md:py-28">
       <Emblem className="hidden md:block absolute -left-16 top-16 h-48 w-64 -rotate-12 opacity-30 dark:opacity-10 animate-float" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-5">
         <SectionHeading
@@ -813,7 +831,7 @@ function CompareSection() {
   ];
 
   return (
-    <section id="compare" className="py-16 sm:py-24 md:py-28">
+    <section id="compare" className="scroll-mt-24 py-16 sm:py-24 md:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <SectionHeading
           kicker="Honest comparison"
@@ -892,7 +910,7 @@ function BenefitsSection() {
   ];
 
   return (
-    <section id="benefits" className="py-28">
+    <section id="benefits" className="scroll-mt-24 py-28">
       <div className="mx-auto max-w-7xl px-5">
         <SectionHeading
           kicker="Why people choose us"
@@ -935,7 +953,7 @@ function StackSection() {
   ];
 
   return (
-    <section id="stack" className="py-16 sm:py-24 md:py-28">
+    <section id="stack" className="scroll-mt-24 py-16 sm:py-24 md:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-5">
         <SectionHeading
           kicker="The technology"
@@ -974,33 +992,41 @@ function FaqSection() {
 
   const faqs = [
     [
-      "Do I need to install anything?",
-      "No. Samवाद runs entirely in your browser — Chrome, Safari, Firefox, Edge or mobile. Calls and screen sharing work without plugins.",
+      "Do I need to install an app or plugin?",
+      "No downloads or installations needed! Samवाद runs natively inside any modern desktop or mobile browser (Chrome, Safari, Firefox, Edge, Brave). HD voice calls, video calls, and screen sharing all function directly in-browser via standard WebRTC without third-party plugins.",
     ],
     [
-      "Can other users see my email address?",
-      "Never. Other people only see your name and the designation you choose.",
+      "Can other people see my email address or phone number?",
+      "Never. Your email address and phone number are strictly confidential and never displayed to other users. Only your display name and professional designation (e.g., 'Software Architect', 'Product Designer') are shown across contacts and active chats.",
     ],
     [
       "What exactly happens after 24 hours?",
-      "A cleanup job runs every minute. Messages older than 24 hours are deleted, along with any images or voice notes attached to them.",
+      "To protect your privacy and eliminate storage bloat, a background cron job runs every minute on the server. Any message older than 24 hours is automatically and permanently purged from the database, along with its attached images, videos, and voice notes from Cloudinary storage.",
     ],
     [
-      "Are my messages encrypted?",
-      "Yes. Messages are stored with AES-256-GCM encryption using keys that rotate twice a day. Calls travel directly between devices over WebRTC.",
+      "How do voice, video, and screen sharing work?",
+      "Calls are established using peer-to-peer WebRTC with STUN and TURN relay fallback. Media streams travel directly between participants with DTLS-SRTP encryption. You can seamlessly swap between your camera and screen share mid-call without interrupting the audio stream.",
     ],
     [
-      "Will calls work on mobile data or office Wi-Fi?",
-      "Yes. STUN and TURN relay servers help calls connect across 4G/5G carriers and strict corporate firewalls.",
+      "What file types and media sizes can I share?",
+      "You can send crisp voice notes with live audio waveforms and variable speed playback (1x, 1.5x, 2x). You can also share images (JPEG, PNG, WebP up to 15MB) with click-to-zoom fullscreen lightboxes, and video clips (MP4, WebM up to 25MB) with inline playback.",
     ],
     [
-      "Can I block someone?",
-      "Yes. Blocking hides your profile picture from them immediately, and you can clear a chat history or mute sounds anytime.",
+      "Can I block someone or mute conversations?",
+      "Yes. You can block any user directly from contact settings. Blocking immediately conceals your profile picture from them and stops all incoming messages and calls. You can also mute message notification sounds or purge chat history with one click.",
+    ],
+    [
+      "How are messages secured and encrypted?",
+      "Every message is encrypted at rest using AES-256-GCM authenticated encryption. Each message includes a unique IV and authentication tag that instantly flags any unauthorized tampering. Furthermore, server encryption keys rotate twice daily (at 00:00 and 12:00 IST).",
+    ],
+    [
+      "Are there keyboard shortcuts for power users?",
+      "Yes! Press Ctrl+K (or Cmd+K on macOS) anytime to open the instant contact search modal, press Enter to send a message (or Shift+Enter for a new line), and press Escape to quickly dismiss any open modal or image preview.",
     ],
   ];
 
   return (
-    <section id="faq" className="py-16 sm:py-24 md:py-28">
+    <section id="faq" className="scroll-mt-24 py-16 sm:py-24 md:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-5">
         <SectionHeading
           kicker="Questions"
@@ -1401,9 +1427,21 @@ function Footer() {
 }
 
 // Main WelcomePage Component
-export default function WelcomePage() {
+export default function WelcomePage({ scrollTarget }) {
   const { dark, toggle } = useSamvaadTheme();
   useReveal();
+
+  useEffect(() => {
+    if (scrollTarget) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(scrollTarget);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollTarget]);
 
   return (
     <div className={`welcome-page w-full max-w-full min-h-screen overflow-x-hidden ${dark ? "dark" : ""}`}>

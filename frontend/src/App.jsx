@@ -67,6 +67,14 @@ function App() {
         <Routes>
           <Route path="/" element={authUser ? <ChatPage /> : <WelcomePage />} />
           <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/features" element={<WelcomePage scrollTarget="features" />} />
+          <Route path="/how" element={<WelcomePage scrollTarget="how" />} />
+          <Route path="/how-it-works" element={<WelcomePage scrollTarget="how" />} />
+          <Route path="/calling" element={<WelcomePage scrollTarget="calling" />} />
+          <Route path="/security" element={<WelcomePage scrollTarget="security" />} />
+          <Route path="/compare" element={<WelcomePage scrollTarget="compare" />} />
+          <Route path="/faq" element={<WelcomePage scrollTarget="faq" />} />
+          <Route path="/feedback" element={<WelcomePage scrollTarget="feedback" />} />
           <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to="/login" />} />
           <Route path="/user/:id" element={authUser ? <UserProfilePage /> : <Navigate to="/login" />} />
           <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
