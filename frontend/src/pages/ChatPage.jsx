@@ -9,6 +9,7 @@ import {
   Search,
   ShieldCheck,
   ArrowLeft,
+  ArrowRight,
   Info,
   CheckCheck,
   Check,
@@ -155,11 +156,33 @@ function ThemeToggle({ dark, toggle }) {
   );
 }
 
-// Formatted text message renderer with auto-link detection
-function FormattedMessageText({ text, isMe }) {
+// Formatted text message renderer with auto-link detection and search query highlighting
+function FormattedMessageText({ text, isMe, highlightQuery = "" }) {
   if (!text) return null;
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
   const parts = text.split(urlRegex);
+
+  const renderHighlighted = (segment, keyPrefix) => {
+    if (!highlightQuery || !segment || typeof segment !== "string") {
+      return segment;
+    }
+    const escaped = highlightQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${escaped})`, "gi");
+    const subParts = segment.split(regex);
+    if (subParts.length === 1) return segment;
+    return subParts.map((sub, idx) =>
+      regex.test(sub) ? (
+        <mark
+          key={`${keyPrefix}-${idx}`}
+          className="bg-amber-300/80 dark:bg-amber-400/40 text-black dark:text-white px-0.5 rounded font-semibold"
+        >
+          {sub}
+        </mark>
+      ) : (
+        sub
+      )
+    );
+  };
 
   return (
     <p className="whitespace-pre-wrap break-words text-sm leading-6">
@@ -183,7 +206,7 @@ function FormattedMessageText({ text, isMe }) {
             </a>
           );
         }
-        return part;
+        return <span key={i}>{renderHighlighted(part, i)}</span>;
       })}
     </p>
   );
@@ -192,6 +215,7 @@ function FormattedMessageText({ text, isMe }) {
 // Custom interactive audio player for voice notes & recordings
 function AudioMessagePlayer({ src, isMe }) {
   const audioRef = useRef(null);
+  const waveformRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -231,6 +255,18 @@ function AudioMessagePlayer({ src, isMe }) {
     setCurrentTime(time);
     if (audioRef.current) {
       audioRef.current.currentTime = time;
+    }
+  };
+
+  const onWaveformClick = (e) => {
+    if (!waveformRef.current || !duration) return;
+    const rect = waveformRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+    const newTime = ratio * duration;
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
     }
   };
 
@@ -285,7 +321,12 @@ function AudioMessagePlayer({ src, isMe }) {
       </button>
 
       <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-        <div className="flex items-center gap-0.5 h-4 px-0.5 select-none">
+        <div
+          ref={waveformRef}
+          onClick={onWaveformClick}
+          className="flex items-center gap-0.5 h-4 px-0.5 select-none cursor-pointer group/wave hover:opacity-90 transition-opacity"
+          title="Click to seek anywhere"
+        >
           {[14, 8, 18, 12, 22, 16, 24, 10, 20, 14, 18, 8, 16, 12].map((height, idx) => {
             const progressRatio = duration ? currentTime / duration : 0;
             const barRatio = idx / 14;
@@ -562,13 +603,18 @@ export default function ChatPage() {
     }
   };
 
-  // Refs
+  // Refs & state for drafts, scroll, mobile touch, and keyboard nav
   const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
+  const draftsRef = useRef({});
+  const prevSelectedUserIdRef = useRef(null);
+  const isNearBottomRef = useRef(true);
+  const [activeReactionMsgId, setActiveReactionMsgId] = useState(null);
+  const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
 
   // Sync theme
   const toggleTheme = () => {
@@ -586,15 +632,32 @@ export default function ChatPage() {
   }, [getMyChatPartners, getAllContacts, fetchBlockedUsers, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
+    const prevId = prevSelectedUserIdRef.current;
+    if (prevId && prevId !== selectedUser?._id) {
+      draftsRef.current[prevId] = text;
+    }
+    prevSelectedUserIdRef.current = selectedUser?._id;
+
     if (selectedUser?._id) {
       getMessagesByUserId(selectedUser._id);
       markMessagesAsSeen(selectedUser._id);
-      setText("");
+      // Restore previously typed draft for this user if available
+      const savedDraft = draftsRef.current[selectedUser._id] || "";
+      setText(savedDraft);
       setInChatSearch("");
       setShowInChatSearch(false);
       clearAttachment();
       setShowDetails(false);
-      textareaRef.current?.focus();
+      setActiveReactionMsgId(null);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
+          textareaRef.current.focus();
+        }
+      }, 50);
+    } else {
+      setText("");
     }
   }, [selectedUser?._id, getMessagesByUserId, markMessagesAsSeen]);
 
@@ -645,8 +708,12 @@ export default function ChatPage() {
   }, [getMyChatPartners]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, selectedUser?._id]);
+    const lastMsg = messages[messages.length - 1];
+    const isMe = lastMsg && String(lastMsg.senderId?._id || lastMsg.senderId) === String(authUser?._id || "");
+    if (isNearBottomRef.current || isMe) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length, selectedUser?._id, authUser?._id]);
 
   // Clean up media streams
   useEffect(() => {
@@ -736,6 +803,155 @@ export default function ChatPage() {
     );
   }, [allContacts, authUser, searchQuery]);
 
+  // Command palette unified items list (Contacts & Quick Actions)
+  const commandPaletteItems = useMemo(() => {
+    const q = commandPaletteQuery.trim().toLowerCase();
+    const items = [];
+
+    // Filter contacts
+    const matchingContacts = allContacts
+      .filter((c) =>
+        c._id !== authUser?._id &&
+        (q
+          ? (c.fullName || "").toLowerCase().includes(q) ||
+            (c.designation || "").toLowerCase().includes(q)
+          : true)
+      )
+      .slice(0, 6);
+
+    matchingContacts.forEach((contact) => {
+      items.push({
+        id: `contact-${contact._id}`,
+        category: "Contacts & Members",
+        contact,
+        title: contact.fullName,
+        subtitle: contact.designation || "Available",
+        onSelect: () => {
+          handleOpenContactChat(contact);
+          setActiveModal(null);
+        },
+      });
+    });
+
+    // Quick actions
+    const allActions = [
+      ...(selectedUser
+        ? [
+            {
+              id: "act-voice-call",
+              category: "Conversation Actions",
+              title: `Voice Call ${selectedUser.fullName}`,
+              subtitle: "Start high-definition voice call",
+              icon: Phone,
+              keywords: ["call", "phone", "voice", "audio"],
+              onSelect: () => {
+                setActiveModal(null);
+                startOutgoingCall(selectedUser, "audio");
+              },
+            },
+            {
+              id: "act-video-call",
+              category: "Conversation Actions",
+              title: `Video Call ${selectedUser.fullName}`,
+              subtitle: "Start peer-to-peer video call",
+              icon: Video,
+              keywords: ["video", "camera", "cam"],
+              onSelect: () => {
+                setActiveModal(null);
+                startOutgoingCall(selectedUser, "video");
+              },
+            },
+            {
+              id: "act-in-chat-search",
+              category: "Conversation Actions",
+              title: "Search Messages in Conversation",
+              subtitle: "Quick search words in current conversation",
+              icon: Search,
+              keywords: ["search", "find", "in chat"],
+              onSelect: () => {
+                setActiveModal(null);
+                setShowInChatSearch(true);
+              },
+            },
+          ]
+        : []),
+      {
+        id: "act-new-chat",
+        category: "Shortcuts",
+        title: "Start New Conversation",
+        subtitle: "Find and message any member",
+        icon: Plus,
+        keywords: ["new", "conversation", "contact", "chat", "message", "find"],
+        onSelect: () => {
+          setActiveModal("contacts");
+          setSearchQuery("");
+        },
+      },
+      {
+        id: "act-theme",
+        category: "Shortcuts",
+        title: `Switch to ${dark ? "Light" : "Dark"} Mode`,
+        subtitle: `Switch current theme to ${dark ? "Light" : "Dark"} mode`,
+        icon: Sparkles,
+        keywords: ["theme", "dark", "light", "mode", "color"],
+        onSelect: () => {
+          toggleTheme();
+          setActiveModal(null);
+        },
+      },
+      {
+        id: "act-sound",
+        category: "Shortcuts",
+        title: isSoundEnabled ? "Mute Notification Sounds" : "Unmute Notification Sounds",
+        subtitle: isSoundEnabled ? "Disable message notification chime" : "Enable message notification chime",
+        icon: isSoundEnabled ? VolumeX : Volume2,
+        keywords: ["sound", "mute", "audio", "notifications", "volume"],
+        onSelect: () => {
+          toggleSound();
+          setActiveModal(null);
+        },
+      },
+      {
+        id: "act-profile",
+        category: "Shortcuts",
+        title: "Profile & Security Settings",
+        subtitle: "Update name, photo, password, or view terms consent",
+        icon: Settings,
+        keywords: ["profile", "settings", "password", "security", "terms", "delete", "account"],
+        onSelect: () => {
+          handleOpenProfileModal();
+        },
+      },
+      {
+        id: "act-shortcuts",
+        category: "Shortcuts",
+        title: "Keyboard Shortcuts Cheat Sheet",
+        subtitle: "View all keyboard combinations and shortcuts",
+        icon: Keyboard,
+        keywords: ["shortcuts", "keys", "keyboard", "help"],
+        onSelect: () => {
+          setActiveModal("shortcuts");
+        },
+      },
+    ];
+
+    allActions.forEach((act) => {
+      const matchTitle = act.title.toLowerCase().includes(q);
+      const matchSub = act.subtitle.toLowerCase().includes(q);
+      const matchKeywords = act.keywords?.some((k) => k.includes(q));
+      if (!q || matchTitle || matchSub || matchKeywords) {
+        items.push(act);
+      }
+    });
+
+    return items;
+  }, [allContacts, authUser, commandPaletteQuery, selectedUser, dark, isSoundEnabled]);
+
+  // Reset selectedIndex whenever query changes
+  useEffect(() => {
+    setCommandSelectedIndex(0);
+  }, [commandPaletteQuery]);
+
   // Open conversation from contacts
   const handleOpenContactChat = (contact) => {
     setSelectedUser(contact);
@@ -762,10 +978,13 @@ export default function ChatPage() {
       .finally(() => setIsLoadingConsent(false));
   };
 
-  // Typing indicator input change handler with auto-expanding height
+  // Typing indicator input change handler with auto-expanding height & draft persistence
   const handleTextChange = (e) => {
     const val = e.target.value;
     setText(val);
+    if (selectedUser?._id) {
+      draftsRef.current[selectedUser._id] = val;
+    }
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -822,11 +1041,13 @@ export default function ChatPage() {
     }
   };
 
-  // Scroll tracking for scroll-to-bottom button
+  // Scroll tracking for scroll-to-bottom button & smart auto-scroll
   const handleScroll = (e) => {
     const target = e.currentTarget;
     const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
-    setShowScrollBottom(distanceToBottom > 220);
+    const isNear = distanceToBottom < 130;
+    isNearBottomRef.current = isNear;
+    setShowScrollBottom(!isNear);
   };
 
   const scrollToBottom = () => {
@@ -897,6 +1118,9 @@ export default function ChatPage() {
 
       if (success) {
         setText("");
+        if (selectedUser?._id) {
+          draftsRef.current[selectedUser._id] = "";
+        }
         clearAttachment();
         textareaRef.current?.focus();
         scrollToBottom();
@@ -1649,17 +1873,20 @@ export default function ChatPage() {
                         return (
                           <div className={`max-w-[85%] sm:max-w-[80%] md:max-w-[70%] ${isMe ? "text-right" : ""}`}>
                             <div className="relative group/msg">
-                              {/* Floating quick reaction and copy bar on hover */}
+                              {/* Floating quick reaction and copy bar on hover or mobile tap */}
                               <div
-                                className={`absolute -top-3 z-10 hidden group-hover/msg:flex items-center gap-0.5 p-0.5 rounded-full border border-border bg-card shadow-sm animate-rise select-none ${
+                                className={`absolute -top-3.5 z-10 items-center gap-0.5 p-0.5 rounded-full border border-border bg-card shadow-sm animate-rise select-none ${
                                   isMe ? "right-2" : "left-2"
-                                }`}
+                                } ${activeReactionMsgId === msg._id ? "flex" : "hidden group-hover/msg:flex"}`}
                               >
                                 {["❤️", "👍", "😂", "🔥", "🙏"].map((emoji) => (
                                   <button
                                     key={emoji}
                                     type="button"
-                                    onClick={() => addMessageReaction(msg._id, selectedUser._id, emoji)}
+                                    onClick={() => {
+                                      addMessageReaction(msg._id, selectedUser._id, emoji);
+                                      setActiveReactionMsgId(null);
+                                    }}
                                     className="h-6 w-6 grid place-items-center rounded-full hover:bg-secondary text-xs transition cursor-pointer select-none"
                                     title={`React ${emoji}`}
                                   >
@@ -1672,6 +1899,7 @@ export default function ChatPage() {
                                     onClick={() => {
                                       navigator.clipboard.writeText(msg.text);
                                       toast.success("Message copied to clipboard", { id: "msg-copy", duration: 1500 });
+                                      setActiveReactionMsgId(null);
                                     }}
                                     className="h-6 w-6 grid place-items-center rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition cursor-pointer"
                                     title="Copy text"
@@ -1683,6 +1911,11 @@ export default function ChatPage() {
                               </div>
 
                               <div
+                                onClick={() => {
+                                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                                    setActiveReactionMsgId((curr) => (curr === msg._id ? null : msg._id));
+                                  }
+                                }}
                                 className={`chat-bubble text-left ${
                                   isMe ? "chat-bubble-own" : "chat-bubble-peer"
                                 } ${msg.image && !msg.text ? "!p-1.5 overflow-hidden" : ""}`}
@@ -1696,7 +1929,7 @@ export default function ChatPage() {
                                   isMe={isMe}
                                 />
                                 {msg.text && (
-                                  <FormattedMessageText text={msg.text} isMe={isMe} />
+                                  <FormattedMessageText text={msg.text} isMe={isMe} highlightQuery={inChatSearch} />
                                 )}
                               </div>
 
@@ -1728,6 +1961,16 @@ export default function ChatPage() {
                                 isMe ? "justify-end text-muted-foreground" : "text-muted-foreground"
                               }`}
                             >
+                              {/* Mobile tap-to-react button */}
+                              <button
+                                type="button"
+                                onClick={() => setActiveReactionMsgId((curr) => (curr === msg._id ? null : msg._id))}
+                                className="sm:hidden p-0.5 rounded text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 transition"
+                                title="React"
+                                aria-label="React to message"
+                              >
+                                <Smile size={11} />
+                              </button>
                           <span>
                             {new Date(msg.createdAt).toLocaleTimeString([], {
                               hour: "2-digit",
@@ -1974,6 +2217,11 @@ export default function ChatPage() {
                       onChange={handleTextChange}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
+                          // Allow natural newlines on mobile keyboards
+                          const isMobileScreen = typeof window !== "undefined" && window.innerWidth < 768;
+                          if (isMobileScreen) {
+                            return;
+                          }
                           e.preventDefault();
                           handleSendMessage();
                         }
@@ -2276,8 +2524,14 @@ export default function ChatPage() {
 
       {/* 5. A New Conversation / Contacts Modal */}
       {activeModal === "contacts" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75">
-          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[85dvh] flex flex-col overflow-hidden animate-rise">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75"
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[85dvh] flex flex-col overflow-hidden animate-rise"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-4 border-b border-border select-none">
               <div>
                 <h2 className="font-display text-2xl font-semibold text-foreground">
@@ -2374,8 +2628,14 @@ export default function ChatPage() {
 
       {/* 6. Comprehensive Profile & Settings Modal */}
       {activeModal === "profile" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75">
-          <div className="relative w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden animate-rise">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75"
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="relative w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden animate-rise"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-border select-none">
               <div>
@@ -2905,8 +3165,14 @@ export default function ChatPage() {
 
       {/* 7. Dedicated Full Terms & Data Authorization Viewer Modal */}
       {activeModal === "terms_view" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75">
-          <div className="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden animate-rise">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75"
+          onClick={() => setActiveModal(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden animate-rise"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-4 border-b border-border select-none">
               <div className="flex items-center gap-2">
                 <button
@@ -2955,8 +3221,14 @@ export default function ChatPage() {
 
       {/* 8. Block Contact Confirmation Modal */}
       {confirmBlockTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75">
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise space-y-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in-0 bg-slate-900/40 dark:bg-black/75"
+          onClick={() => setConfirmBlockTarget(null)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-rise space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-destructive/15 text-destructive shrink-0">
                 <ShieldAlert size={20} />
@@ -3074,7 +3346,27 @@ export default function ChatPage() {
                 type="text"
                 value={commandPaletteQuery}
                 onChange={(e) => setCommandPaletteQuery(e.target.value)}
-                placeholder="Search conversations, members, or actions…"
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setCommandSelectedIndex((idx) =>
+                      commandPaletteItems.length > 0 ? (idx + 1) % commandPaletteItems.length : 0
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setCommandSelectedIndex((idx) =>
+                      commandPaletteItems.length > 0
+                        ? (idx - 1 + commandPaletteItems.length) % commandPaletteItems.length
+                        : 0
+                    );
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (commandPaletteItems[commandSelectedIndex]) {
+                      commandPaletteItems[commandSelectedIndex].onSelect();
+                    }
+                  }
+                }}
+                placeholder="Search conversations, members, or actions… (↑↓ navigate, Enter select)"
                 autoFocus
                 className="flex-1 min-w-0 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
               />
@@ -3085,112 +3377,67 @@ export default function ChatPage() {
 
             {/* Results List */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Conversations &amp; Members
-              </div>
-              {filteredContacts
-                .filter((c) =>
-                  commandPaletteQuery
-                    ? c.fullName.toLowerCase().includes(commandPaletteQuery.toLowerCase()) ||
-                      (c.designation && c.designation.toLowerCase().includes(commandPaletteQuery.toLowerCase()))
-                    : true
-                )
-                .slice(0, 5)
-                .map((contact) => (
+              {commandPaletteItems.map((item, idx) => {
+                const isSelected = idx === commandSelectedIndex;
+                if (item.contact) {
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => item.onSelect()}
+                      onMouseEnter={() => setCommandSelectedIndex(idx)}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition cursor-pointer group ${
+                        isSelected
+                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          : "hover:bg-secondary text-foreground"
+                      }`}
+                    >
+                      <Avatar user={item.contact} isOnline={onlineUsers.includes(item.contact._id)} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`truncate text-sm font-semibold transition-colors ${isSelected ? "text-primary" : "text-foreground"}`}>
+                          {item.title}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {item.subtitle}
+                        </p>
+                      </div>
+                      <ArrowRight size={14} className={`text-primary transition ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
+                    </button>
+                  );
+                }
+
+                const IconComponent = item.icon;
+                return (
                   <button
-                    key={contact._id}
+                    key={item.id}
                     type="button"
-                    onClick={() => {
-                      handleOpenContactChat(contact);
-                      setActiveModal(null);
-                    }}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group"
+                    onClick={() => item.onSelect()}
+                    onMouseEnter={() => setCommandSelectedIndex(idx)}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition cursor-pointer group text-xs font-medium ${
+                      isSelected
+                        ? "bg-primary/10 text-primary border-l-2 border-primary"
+                        : "hover:bg-secondary text-foreground"
+                    }`}
                   >
-                    <Avatar user={contact} isOnline={onlineUsers.includes(contact._id)} />
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {contact.fullName}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {contact.designation || "Available"}
-                      </p>
+                    <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                      <IconComponent size={15} />
                     </div>
-                    <ArrowRight size={14} className="text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition" />
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-semibold text-xs ${isSelected ? "text-primary" : "text-foreground"}`}>
+                        {item.title}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">{item.subtitle}</p>
+                    </div>
+                    <ArrowRight size={14} className={`text-primary transition ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
                   </button>
-                ))}
+                );
+              })}
 
-              {/* Quick Actions */}
-              <div className="px-3 pt-3 pb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-t border-border mt-2">
-                Quick Shortcuts
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal("contacts");
-                  setSearchQuery("");
-                }}
-                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
-              >
-                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                  <Plus size={15} />
+              {commandPaletteItems.length === 0 && (
+                <div className="py-8 text-center text-xs text-muted-foreground">
+                  No matching members or actions for &ldquo;{commandPaletteQuery}&rdquo;.
                 </div>
-                <span>Start New Conversation</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  toggleTheme();
-                  setActiveModal(null);
-                }}
-                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
-              >
-                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                  <Sparkles size={15} />
-                </div>
-                <span>Toggle {dark ? "Light" : "Dark"} Mode</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  toggleSound();
-                  setActiveModal(null);
-                }}
-                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
-              >
-                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                  {isSoundEnabled ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                </div>
-                <span>{isSoundEnabled ? "Mute Notification Sounds" : "Unmute Notification Sounds"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  handleOpenProfileModal();
-                }}
-                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
-              >
-                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                  <Settings size={15} />
-                </div>
-                <span>Profile &amp; Security Settings</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal("shortcuts");
-                }}
-                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary text-left transition cursor-pointer group text-xs font-medium text-foreground"
-              >
-                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                  <Keyboard size={15} />
-                </div>
-                <span>Keyboard Shortcuts Cheat Sheet</span>
-              </button>
+              )}
             </div>
           </div>
         </div>

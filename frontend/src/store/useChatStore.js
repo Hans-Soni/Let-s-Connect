@@ -47,7 +47,14 @@ export const useChatStore = create((set, get) => ({
   chats: [],
   messages: [],
   typingUsers: {},
-  messageReactions: {},
+  messageReactions: (() => {
+    try {
+      const stored = localStorage.getItem("samvaad_message_reactions");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  })(),
   pinnedChats: (() => {
     try {
       const stored = localStorage.getItem("samvaad_pinned_chats");
@@ -177,11 +184,16 @@ export const useChatStore = create((set, get) => ({
         ? current.filter((r) => !(r.emoji === emoji && r.userId === myId))
         : [...current, { emoji, userId: myId }];
 
+      const updatedMap = {
+        ...state.messageReactions,
+        [messageId]: nextReactions,
+      };
+      try {
+        localStorage.setItem("samvaad_message_reactions", JSON.stringify(updatedMap));
+      } catch {}
+
       return {
-        messageReactions: {
-          ...state.messageReactions,
-          [messageId]: nextReactions,
-        },
+        messageReactions: updatedMap,
       };
     });
 
@@ -672,11 +684,15 @@ export const useChatStore = create((set, get) => ({
         const next = hasReacted
           ? current.filter((r) => !(r.emoji === emoji && r.userId === strUserId))
           : [...current, { emoji, userId: strUserId }];
+        const updatedMap = {
+          ...state.messageReactions,
+          [messageId]: next,
+        };
+        try {
+          localStorage.setItem("samvaad_message_reactions", JSON.stringify(updatedMap));
+        } catch {}
         return {
-          messageReactions: {
-            ...state.messageReactions,
-            [messageId]: next,
-          },
+          messageReactions: updatedMap,
         };
       });
     });
