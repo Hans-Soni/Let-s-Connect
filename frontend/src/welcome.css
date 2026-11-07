@@ -212,5 +212,14 @@
   background-image: none !important;
 }
 
+/* ==========================================================================
+   FAQ Section Stability & Visibility Guarantee
+   ========================================================================== */
+.welcome-page .faq-item {
+  opacity: 1 !important;
+  transform: none !important;
+  visibility: visible !important;
+}
+
 
 

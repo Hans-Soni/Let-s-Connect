@@ -1042,24 +1042,33 @@ function FaqSection() {
             return (
               <div
                 key={q}
-                className={`reveal overflow-hidden rounded-2xl border bg-card transition ${isOpen ? "border-primary shadow-card" : "border-border"
-                  }`}
+                className={`faq-item overflow-hidden rounded-2xl border bg-card transition-all duration-300 ${
+                  isOpen ? "border-primary shadow-card" : "border-border hover:border-border/80"
+                }`}
               >
                 <button
+                  type="button"
                   onClick={() => setActiveFaq(isOpen ? null : idx)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold"
+                  className="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold cursor-pointer select-none"
                 >
-                  <span>{q}</span>
-                  <Plus className={`h-5 w-5 shrink-0 text-primary transition duration-300 ${isOpen ? "rotate-45" : ""}`} />
+                  <span className="text-base sm:text-lg text-foreground font-medium">{q}</span>
+                  <Plus
+                    className={`h-5 w-5 shrink-0 text-primary transition-transform duration-300 ${
+                      isOpen ? "rotate-45" : ""
+                    }`}
+                  />
                 </button>
                 <div
-                  className={`grid transition-all duration-300 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                    }`}
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  }`}
                 >
-                  <p className="overflow-hidden px-5 text-muted-foreground">
-                    <span className="block pb-5">{a}</span>
-                  </p>
+                  <div className="overflow-hidden min-h-0">
+                    <p className="px-5 pb-5 text-sm sm:text-base leading-relaxed text-muted-foreground">
+                      {a}
+                    </p>
+                  </div>
                 </div>
               </div>
             );
