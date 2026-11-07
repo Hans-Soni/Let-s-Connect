@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { Eye, EyeOff, Loader2, User, X } from "lucide-react";
+import { Clock, Eye, EyeOff, Loader2, RefreshCw, User, X } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import toast from "react-hot-toast";
 
@@ -94,14 +94,64 @@ function SignUpPage() {
   const [pendingGoogleAuth, setPendingGoogleAuth] = useState(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [clientIp, setClientIp] = useState("");
+  const [googleTimeLeft, setGoogleTimeLeft] = useState(null);
+  const googleTimerRef = useRef(null);
 
-  const { signup, googleLogin, isSigningUp, isLoggingIn } = useAuthStore();
+  const { signup, googleLogin, isSigningUp, isLoggingIn, authUser } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
   const dark = theme === "dark";
 
   const toggleTheme = () => {
     setTheme(dark ? "light" : "dark");
   };
+
+  const stopGoogleTimer = () => {
+    if (googleTimerRef.current) {
+      clearInterval(googleTimerRef.current);
+      googleTimerRef.current = null;
+    }
+    setGoogleTimeLeft(null);
+  };
+
+  const startGoogleTimer = (initialSeconds = 120) => {
+    stopGoogleTimer();
+    setGoogleTimeLeft(initialSeconds);
+
+    googleTimerRef.current = setInterval(() => {
+      setGoogleTimeLeft((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          if (googleTimerRef.current) {
+            clearInterval(googleTimerRef.current);
+            googleTimerRef.current = null;
+          }
+          toast.error("Google authentication session timed out. Refreshing page...", {
+            id: "google-auth-timeout",
+          });
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // If user is already authenticated or completes sign-up, clean up timer
+  useEffect(() => {
+    if (authUser) {
+      stopGoogleTimer();
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    return () => {
+      if (googleTimerRef.current) {
+        clearInterval(googleTimerRef.current);
+      }
+    };
+  }, []);
 
   // Detect genuine client device IP proactively
   useEffect(() => {
@@ -142,6 +192,7 @@ function SignUpPage() {
       const accessToken = tokenResponse?.access_token;
       if (!accessToken) {
         toast.error("Failed to retrieve Google token");
+        stopGoogleTimer();
         return;
       }
       const resolvedIp =
@@ -165,10 +216,13 @@ function SignUpPage() {
         setHasAcceptedConsent(false);
         setConsentDeclined(false);
         setIsConsentOpen(true);
+      } else if (result?.success || !result?.requiresConsent) {
+        stopGoogleTimer();
       }
     } catch (err) {
       console.error("Google sign up error:", err);
       toast.error("Google sign up failed. Please try again.");
+      stopGoogleTimer();
     } finally {
       setGoogleLoading(false);
     }
@@ -180,6 +234,7 @@ function SignUpPage() {
       console.error("Google signup prompt error:", err);
       toast.error("Google Sign-In was cancelled or failed");
       setGoogleLoading(false);
+      stopGoogleTimer();
     },
   });
 
@@ -200,6 +255,7 @@ function SignUpPage() {
         dataConsent: true,
       });
       if (result?.success) {
+        stopGoogleTimer();
         setIsConsentOpen(false);
         setPendingGoogleAuth(null);
       }
@@ -213,6 +269,7 @@ function SignUpPage() {
     setHasAcceptedConsent(false);
     setConsentDeclined(true);
     setPendingGoogleAuth(null);
+    stopGoogleTimer();
   };
 
   return (
@@ -518,6 +575,7 @@ function SignUpPage() {
                 type="button"
                 onClick={() => {
                   setGoogleLoading(true);
+                  startGoogleTimer(120);
                   triggerGoogleLogin();
                 }}
                 disabled={googleLoading || isSigningUp || isLoggingIn}
@@ -545,8 +603,34 @@ function SignUpPage() {
                     />
                   </svg>
                 )}
-                <span>{googleLoading ? "Signing up..." : "Sign up with Google"}</span>
+                <span>{googleLoading ? "Connecting to Google..." : "Sign up with Google"}</span>
               </button>
+
+              {/* Google Auth Active Countdown Timer */}
+              {googleTimeLeft !== null && (
+                <div className="mt-3 flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs text-primary shadow-sm animate-rise">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Clock className="h-4 w-4 shrink-0 animate-pulse text-primary" />
+                    <span>Google sign-up active · Session expires in:</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs sm:text-sm font-bold tracking-wider rounded-lg bg-card/90 px-2.5 py-1 text-primary border border-primary/20 shadow-inner">
+                      {Math.floor(googleTimeLeft / 60)}:{(googleTimeLeft % 60).toString().padStart(2, "0")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopGoogleTimer();
+                        setGoogleLoading(false);
+                      }}
+                      className="text-muted-foreground hover:text-foreground text-[11px] underline cursor-pointer"
+                      title="Cancel Google sign-up session"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Terms and Privacy Notice */}
               <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -627,12 +711,30 @@ function SignUpPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsConsentOpen(false)}
+                  onClick={() => {
+                    setIsConsentOpen(false);
+                    setPendingGoogleAuth(null);
+                    stopGoogleTimer();
+                  }}
                   className="rounded-full p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground cursor-pointer"
+                  aria-label="Close dialog"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
+
+              {/* Google Auth Timer Banner inside Consent Modal */}
+              {googleTimeLeft !== null && (
+                <div className="mt-4 flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs text-primary shadow-sm animate-pulse">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Clock className="h-4 w-4 shrink-0 text-primary" />
+                    <span>Complete Google account setup within:</span>
+                  </span>
+                  <span className="font-mono text-xs sm:text-sm font-bold tracking-wider rounded-lg bg-card/90 px-2.5 py-1 text-primary border border-primary/20 shadow-inner">
+                    {Math.floor(googleTimeLeft / 60)}:{(googleTimeLeft % 60).toString().padStart(2, "0")}
+                  </span>
+                </div>
+              )}
 
               {pendingGoogleAuth && (
                 <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-3.5 text-foreground">
