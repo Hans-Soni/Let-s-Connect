@@ -35,13 +35,23 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["social", "communication", "productivity"],
+  "categories": [
+    "social",
+    "communication",
+    "productivity"
+  ],
   "shortcuts": [
     {
       "name": "Open Chat",
       "short_name": "Chat",
       "url": "./#/",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "purpose": "any" }]
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192",
+          "purpose": "any"
+        }
+      ]
     }
   ]
 }

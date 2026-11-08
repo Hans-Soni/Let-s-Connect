@@ -8,7 +8,9 @@ const ASSETS_TO_CACHE = [
   "./icon-maskable-192.png",
   "./icon-maskable-512.png",
   "./apple-touch-icon.png",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest",
+  "./sitemap.xml",
+  "./robots.txt"
 ];
 
 self.addEventListener("install", (event) => {
