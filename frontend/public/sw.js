@@ -1,10 +1,13 @@
-const CACHE_NAME = "samvaad-cache-v1";
+const CACHE_NAME = "samvaad-cache-v2";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./favicon.png",
   "./icon-192.png",
   "./icon-512.png",
+  "./icon-maskable-192.png",
+  "./icon-maskable-512.png",
+  "./apple-touch-icon.png",
   "./manifest.webmanifest"
 ];
 
@@ -34,7 +37,6 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Pass through non-GET, API requests, and socket traffic directly
   if (
     event.request.method !== "GET" ||
     event.request.url.includes("/api/") ||
@@ -46,7 +48,6 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        // Cache valid HTTP responses for static assets
         if (
           networkResponse &&
           networkResponse.status === 200 &&
@@ -62,4 +63,3 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(event.request))
   );
 });
-

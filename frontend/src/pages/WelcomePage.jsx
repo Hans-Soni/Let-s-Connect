@@ -919,7 +919,7 @@ function AppExperienceSection() {
       badge: ".APK Direct",
       desc: "Prefer an actual APK installation package? Download our latest pre-compiled build with native WebRTC hardware permissions.",
       actionText: "Download APK",
-      link: "https://github.com/Hans-Soni/Let-s-Connect/releases/latest",
+      link: "https://github.com/Hans-Soni/Let-s-Connect/releases",
       isPrimary: false,
     },
   ];
@@ -1012,7 +1012,7 @@ function AppExperienceSection() {
                   <span>Install Samवाद Now (1-Click)</span>
                 </InstallAppButton>
                 <a
-                  href="https://github.com/Hans-Soni/Let-s-Connect/releases/latest"
+                  href="https://github.com/Hans-Soni/Let-s-Connect/releases"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full border border-border px-5 py-3 text-xs sm:text-sm font-semibold transition hover:bg-secondary inline-flex items-center gap-2"

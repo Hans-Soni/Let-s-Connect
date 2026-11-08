@@ -1,4 +1,5 @@
 {
+  "id": "com.hans.samvaad",
   "name": "Samवाद — Private Real-Time Chat & HD Calling",
   "short_name": "Samवाद",
   "description": "Private, zero-knowledge real-time messaging, voice notes, and WebRTC HD voice & video calling.",
@@ -13,13 +14,25 @@
       "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": ["social", "communication", "productivity"],
@@ -28,8 +41,7 @@
       "name": "Open Chat",
       "short_name": "Chat",
       "url": "./#/",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "purpose": "any" }]
     }
   ]
 }
-
