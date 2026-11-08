@@ -89,9 +89,8 @@ function Avatar({ user, large = false, isOnline = false }) {
 
   return (
     <span
-      className={`chat-avatar relative select-none ${
-        large ? "h-20 w-20 text-2xl font-bold" : "h-11 w-11 text-sm font-semibold"
-      }`}
+      className={`chat-avatar relative select-none ${large ? "h-20 w-20 text-2xl font-bold" : "h-11 w-11 text-sm font-semibold"
+        }`}
     >
       {pic ? (
         <img src={pic} alt={name} className="h-full w-full rounded-full object-cover" />
@@ -100,9 +99,8 @@ function Avatar({ user, large = false, isOnline = false }) {
       )}
       {isOnline && (
         <span
-          className={`absolute bottom-0 right-0 rounded-full bg-emerald-500 border-2 border-card ring-1 ring-emerald-500/30 ${
-            large ? "h-4 w-4" : "h-3.5 w-3.5"
-          }`}
+          className={`absolute bottom-0 right-0 rounded-full bg-emerald-500 border-2 border-card ring-1 ring-emerald-500/30 ${large ? "h-4 w-4" : "h-3.5 w-3.5"
+            }`}
           title="Online"
         />
       )}
@@ -134,9 +132,8 @@ function ThemeToggle({ dark, toggle }) {
       title={dark ? "Switch to light mode" : "Switch to dark mode"}
     >
       <span
-        className={`absolute transition-all duration-500 ${
-          dark ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"
-        }`}
+        className={`absolute transition-all duration-500 ${dark ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"
+          }`}
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="4" />
@@ -144,9 +141,8 @@ function ThemeToggle({ dark, toggle }) {
         </svg>
       </span>
       <span
-        className={`absolute transition-all duration-500 ${
-          dark ? "rotate-90 opacity-0" : "rotate-0 opacity-100"
-        }`}
+        className={`absolute transition-all duration-500 ${dark ? "rotate-90 opacity-0" : "rotate-0 opacity-100"
+          }`}
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -195,11 +191,10 @@ function FormattedMessageText({ text, isMe, highlightQuery = "" }) {
               href={href}
               target="_blank"
               rel="noreferrer noopener"
-              className={`underline underline-offset-2 break-all ${
-                isMe
-                  ? "text-primary-foreground font-semibold hover:opacity-85"
-                  : "text-primary font-semibold hover:underline"
-              }`}
+              className={`underline underline-offset-2 break-all ${isMe
+                ? "text-primary-foreground font-semibold hover:opacity-85"
+                : "text-primary font-semibold hover:underline"
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               {part}
@@ -234,7 +229,7 @@ function AudioMessagePlayer({ src, isMe }) {
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch(() => { });
     }
   };
 
@@ -279,11 +274,10 @@ function AudioMessagePlayer({ src, isMe }) {
 
   return (
     <div
-      className={`flex items-center gap-2.5 p-2 rounded-xl mb-1.5 min-w-[220px] max-w-[320px] sm:min-w-[260px] ${
-        isMe
-          ? "bg-black/15 text-primary-foreground"
-          : "bg-card border border-border text-foreground"
-      }`}
+      className={`flex items-center gap-2.5 p-2 rounded-xl mb-1.5 min-w-[220px] max-w-[320px] sm:min-w-[260px] ${isMe
+        ? "bg-black/15 text-primary-foreground"
+        : "bg-card border border-border text-foreground"
+        }`}
     >
       <audio
         ref={audioRef}
@@ -305,11 +299,10 @@ function AudioMessagePlayer({ src, isMe }) {
       <button
         type="button"
         onClick={togglePlay}
-        className={`grid h-8 w-8 place-items-center rounded-full shrink-0 transition cursor-pointer shadow-xs ${
-          isMe
-            ? "bg-primary-foreground text-primary hover:opacity-90"
-            : "bg-primary text-primary-foreground hover:opacity-90"
-        }`}
+        className={`grid h-8 w-8 place-items-center rounded-full shrink-0 transition cursor-pointer shadow-xs ${isMe
+          ? "bg-primary-foreground text-primary hover:opacity-90"
+          : "bg-primary text-primary-foreground hover:opacity-90"
+          }`}
         title={isPlaying ? "Pause" : "Play"}
         aria-label={isPlaying ? "Pause audio" : "Play audio"}
       >
@@ -334,15 +327,14 @@ function AudioMessagePlayer({ src, isMe }) {
             return (
               <span
                 key={idx}
-                className={`flex-1 rounded-full transition-all duration-150 ${
-                  isPassed
-                    ? isMe
-                      ? "bg-primary-foreground"
-                      : "bg-primary"
-                    : isMe
+                className={`flex-1 rounded-full transition-all duration-150 ${isPassed
+                  ? isMe
+                    ? "bg-primary-foreground"
+                    : "bg-primary"
+                  : isMe
                     ? "bg-primary-foreground/35"
                     : "bg-muted-foreground/35"
-                } ${isPlaying && isPassed ? "animate-pulse" : ""}`}
+                  } ${isPlaying && isPassed ? "animate-pulse" : ""}`}
                 style={{ height: `${height}px` }}
               />
             );
@@ -366,11 +358,10 @@ function AudioMessagePlayer({ src, isMe }) {
       <button
         type="button"
         onClick={cyclePlaybackRate}
-        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-tight transition cursor-pointer select-none shrink-0 ${
-          isMe
-            ? "bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground"
-            : "bg-secondary hover:bg-secondary/80 text-foreground"
-        }`}
+        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-tight transition cursor-pointer select-none shrink-0 ${isMe
+          ? "bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground"
+          : "bg-secondary hover:bg-secondary/80 text-foreground"
+          }`}
         title="Playback speed (1x, 1.5x, 2x)"
         aria-label="Change playback speed"
       >
@@ -539,7 +530,7 @@ export default function ChatPage() {
     if (attachmentPreviewUrl) {
       try {
         URL.revokeObjectURL(attachmentPreviewUrl);
-      } catch {}
+      } catch { }
     }
     setAttachmentPreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -814,7 +805,7 @@ export default function ChatPage() {
         c._id !== authUser?._id &&
         (q
           ? (c.fullName || "").toLowerCase().includes(q) ||
-            (c.designation || "").toLowerCase().includes(q)
+          (c.designation || "").toLowerCase().includes(q)
           : true)
       )
       .slice(0, 6);
@@ -837,43 +828,43 @@ export default function ChatPage() {
     const allActions = [
       ...(selectedUser
         ? [
-            {
-              id: "act-voice-call",
-              category: "Conversation Actions",
-              title: `Voice Call ${selectedUser.fullName}`,
-              subtitle: "Start high-definition voice call",
-              icon: Phone,
-              keywords: ["call", "phone", "voice", "audio"],
-              onSelect: () => {
-                setActiveModal(null);
-                startOutgoingCall(selectedUser, "audio");
-              },
+          {
+            id: "act-voice-call",
+            category: "Conversation Actions",
+            title: `Voice Call ${selectedUser.fullName}`,
+            subtitle: "Start high-definition voice call",
+            icon: Phone,
+            keywords: ["call", "phone", "voice", "audio"],
+            onSelect: () => {
+              setActiveModal(null);
+              startOutgoingCall(selectedUser, "audio");
             },
-            {
-              id: "act-video-call",
-              category: "Conversation Actions",
-              title: `Video Call ${selectedUser.fullName}`,
-              subtitle: "Start peer-to-peer video call",
-              icon: Video,
-              keywords: ["video", "camera", "cam"],
-              onSelect: () => {
-                setActiveModal(null);
-                startOutgoingCall(selectedUser, "video");
-              },
+          },
+          {
+            id: "act-video-call",
+            category: "Conversation Actions",
+            title: `Video Call ${selectedUser.fullName}`,
+            subtitle: "Start peer-to-peer video call",
+            icon: Video,
+            keywords: ["video", "camera", "cam"],
+            onSelect: () => {
+              setActiveModal(null);
+              startOutgoingCall(selectedUser, "video");
             },
-            {
-              id: "act-in-chat-search",
-              category: "Conversation Actions",
-              title: "Search Messages in Conversation",
-              subtitle: "Quick search words in current conversation",
-              icon: Search,
-              keywords: ["search", "find", "in chat"],
-              onSelect: () => {
-                setActiveModal(null);
-                setShowInChatSearch(true);
-              },
+          },
+          {
+            id: "act-in-chat-search",
+            category: "Conversation Actions",
+            title: "Search Messages in Conversation",
+            subtitle: "Quick search words in current conversation",
+            icon: Search,
+            keywords: ["search", "find", "in chat"],
+            onSelect: () => {
+              setActiveModal(null);
+              setShowInChatSearch(true);
             },
-          ]
+          },
+        ]
         : []),
       {
         id: "act-new-chat",
@@ -974,7 +965,7 @@ export default function ChatPage() {
     setIsLoadingConsent(true);
     getConsentRecord()
       .then((record) => setConsentRecord(record))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setIsLoadingConsent(false));
   };
 
@@ -1371,9 +1362,8 @@ export default function ChatPage() {
     <div className="chat-app bg-background text-foreground">
       {/* 1. Chat Rail (Leftmost navigation bar) */}
       <nav
-        className={`chat-rail flex flex-col items-center gap-5 border-r border-border bg-card py-6 select-none z-10 shadow-xs ${
-          selectedUser ? "hidden md:flex" : "flex"
-        }`}
+        className={`chat-rail flex flex-col items-center gap-5 border-r border-border bg-card py-6 select-none z-10 shadow-xs ${selectedUser ? "hidden md:flex" : "flex"
+          }`}
       >
         <Link to="/" aria-label="Samvād messages" title="Samvād home">
           <img
@@ -1467,9 +1457,8 @@ export default function ChatPage() {
 
       {/* 2. Chat Sidebar (Conversations list & Search) */}
       <aside
-        className={`chat-sidebar flex min-h-0 flex-col border-r border-border bg-card ${
-          selectedUser ? "hidden md:flex" : ""
-        }`}
+        className={`chat-sidebar flex min-h-0 flex-col border-r border-border bg-card ${selectedUser ? "hidden md:flex" : ""
+          }`}
       >
         <header className="px-6 pb-5 pt-7 select-none">
           <LogoLink dark={dark} />
@@ -1543,11 +1532,10 @@ export default function ChatPage() {
                 key={chat._id}
                 type="button"
                 onClick={() => setSelectedUser(chat)}
-                className={`group mb-1 w-full justify-start whitespace-normal rounded-lg px-3 py-4 flex items-center gap-3 transition cursor-pointer text-left ${
-                  isSelected
-                    ? "bg-accent text-accent-foreground border-l-2 border-primary"
-                    : "hover:bg-secondary text-foreground"
-                }`}
+                className={`group mb-1 w-full justify-start whitespace-normal rounded-lg px-3 py-4 flex items-center gap-3 transition cursor-pointer text-left ${isSelected
+                  ? "bg-accent text-accent-foreground border-l-2 border-primary"
+                  : "hover:bg-secondary text-foreground"
+                  }`}
               >
                 <Avatar user={chat} isOnline={isPartnerOnline} />
                 <span className="min-w-0 flex-1 text-left">
@@ -1562,11 +1550,11 @@ export default function ChatPage() {
                       {isPartnerTyping
                         ? "typing..."
                         : lastMsg?.createdAt
-                        ? new Date(lastMsg.createdAt).toLocaleTimeString([], {
+                          ? new Date(lastMsg.createdAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : "Active"}
+                          : "Active"}
                     </span>
                   </span>
                   <span className="mt-1 block truncate text-xs text-muted-foreground">
@@ -1602,11 +1590,10 @@ export default function ChatPage() {
                         togglePinChat(chat._id);
                       }
                     }}
-                    className={`p-1 rounded-md transition cursor-pointer ${
-                      isPinned
-                        ? "text-amber-500 opacity-100"
-                        : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground hover:bg-card"
-                    }`}
+                    className={`p-1 rounded-md transition cursor-pointer ${isPinned
+                      ? "text-amber-500 opacity-100"
+                      : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground hover:bg-card"
+                      }`}
                     title={isPinned ? "Unpin chat" : "Pin chat to top"}
                     aria-label={isPinned ? "Unpin chat" : "Pin chat to top"}
                   >
@@ -1718,11 +1705,10 @@ export default function ChatPage() {
                   onClick={() => setShowInChatSearch(!showInChatSearch)}
                   aria-label="Search messages in this conversation"
                   title="Search conversation"
-                  className={`grid h-9 w-9 place-items-center rounded-lg transition cursor-pointer ${
-                    showInChatSearch
-                      ? "bg-secondary text-primary"
-                      : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`grid h-9 w-9 place-items-center rounded-lg transition cursor-pointer ${showInChatSearch
+                    ? "bg-secondary text-primary"
+                    : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
                 >
                   <Search size={18} />
                 </button>
@@ -1754,11 +1740,10 @@ export default function ChatPage() {
                   onClick={() => setShowDetails(!showDetails)}
                   aria-label="Conversation settings"
                   title="Conversation settings"
-                  className={`grid h-9 w-9 place-items-center rounded-lg transition cursor-pointer ${
-                    showDetails
-                      ? "bg-secondary text-primary"
-                      : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`grid h-9 w-9 place-items-center rounded-lg transition cursor-pointer ${showDetails
+                    ? "bg-secondary text-primary"
+                    : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
                 >
                   <Settings size={18} />
                 </button>
@@ -1875,9 +1860,8 @@ export default function ChatPage() {
                             <div className="relative group/msg">
                               {/* Floating quick reaction and copy bar on hover or mobile tap */}
                               <div
-                                className={`absolute -top-3.5 z-10 items-center gap-0.5 p-0.5 rounded-full border border-border bg-card shadow-sm animate-rise select-none ${
-                                  isMe ? "right-2" : "left-2"
-                                } ${activeReactionMsgId === msg._id ? "flex" : "hidden group-hover/msg:flex"}`}
+                                className={`absolute -top-3.5 z-10 items-center gap-0.5 p-0.5 rounded-full border border-border bg-card shadow-sm animate-rise select-none ${isMe ? "right-2" : "left-2"
+                                  } ${activeReactionMsgId === msg._id ? "flex" : "hidden group-hover/msg:flex"}`}
                               >
                                 {["❤️", "👍", "😂", "🔥", "🙏"].map((emoji) => (
                                   <button
@@ -1916,9 +1900,8 @@ export default function ChatPage() {
                                     setActiveReactionMsgId((curr) => (curr === msg._id ? null : msg._id));
                                   }
                                 }}
-                                className={`chat-bubble text-left ${
-                                  isMe ? "chat-bubble-own" : "chat-bubble-peer"
-                                } ${msg.image && !msg.text ? "!p-1.5 overflow-hidden" : ""}`}
+                                className={`chat-bubble text-left ${isMe ? "chat-bubble-own" : "chat-bubble-peer"
+                                  } ${msg.image && !msg.text ? "!p-1.5 overflow-hidden" : ""}`}
                               >
                                 <AttachmentPreview
                                   msg={msg}
@@ -1941,11 +1924,10 @@ export default function ChatPage() {
                                       key={emoji}
                                       type="button"
                                       onClick={() => addMessageReaction(msg._id, selectedUser._id, emoji)}
-                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border transition cursor-pointer shadow-2xs select-none ${
-                                        hasMine
-                                          ? "bg-primary/20 border-primary/50 text-primary font-bold"
-                                          : "bg-card border-border hover:bg-secondary text-foreground"
-                                      }`}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border transition cursor-pointer shadow-2xs select-none ${hasMine
+                                        ? "bg-primary/20 border-primary/50 text-primary font-bold"
+                                        : "bg-card border-border hover:bg-secondary text-foreground"
+                                        }`}
                                       title="Toggle reaction"
                                     >
                                       <span>{emoji}</span>
@@ -1957,9 +1939,8 @@ export default function ChatPage() {
                             </div>
 
                             <div
-                              className={`mt-1.5 flex items-center gap-1.5 text-[10px] select-none ${
-                                isMe ? "justify-end text-muted-foreground" : "text-muted-foreground"
-                              }`}
+                              className={`mt-1.5 flex items-center gap-1.5 text-[10px] select-none ${isMe ? "justify-end text-muted-foreground" : "text-muted-foreground"
+                                }`}
                             >
                               {/* Mobile tap-to-react button */}
                               <button
@@ -1971,44 +1952,44 @@ export default function ChatPage() {
                               >
                                 <Smile size={11} />
                               </button>
-                          <span>
-                            {new Date(msg.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                          {isMe && (
-                            <span
-                              className="inline-flex items-center ml-0.5"
-                              title={
-                                msg.isOptimistic
-                                  ? "Sending..."
-                                  : msg.isSeen
-                                  ? "Seen"
-                                  : msg.isDelivered
-                                  ? "Delivered"
-                                  : "Sent"
-                              }
-                            >
-                              {msg.isOptimistic ? (
-                                <Clock size={12} className="text-muted-foreground animate-pulse" />
-                              ) : msg.isSeen ? (
-                                <CheckCheck size={13} className="text-sky-500 dark:text-sky-400 font-bold" />
-                              ) : msg.isDelivered ? (
-                                <CheckCheck size={13} className="text-muted-foreground" />
-                              ) : (
-                                <Check size={13} className="text-muted-foreground" />
+                              <span>
+                                {new Date(msg.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                              {isMe && (
+                                <span
+                                  className="inline-flex items-center ml-0.5"
+                                  title={
+                                    msg.isOptimistic
+                                      ? "Sending..."
+                                      : msg.isSeen
+                                        ? "Seen"
+                                        : msg.isDelivered
+                                          ? "Delivered"
+                                          : "Sent"
+                                  }
+                                >
+                                  {msg.isOptimistic ? (
+                                    <Clock size={12} className="text-muted-foreground animate-pulse" />
+                                  ) : msg.isSeen ? (
+                                    <CheckCheck size={13} className="text-sky-500 dark:text-sky-400 font-bold" />
+                                  ) : msg.isDelivered ? (
+                                    <CheckCheck size={13} className="text-muted-foreground" />
+                                  ) : (
+                                    <Check size={13} className="text-muted-foreground" />
+                                  )}
+                                </span>
                               )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            );
-          })}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* Typing indicator bubble */}
               {typingUsers[selectedUser._id] && (
@@ -2191,9 +2172,8 @@ export default function ChatPage() {
                       title="Attach photo, video or audio file"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isSending || isRecording}
-                      className={`grid h-9 w-9 place-items-center rounded-lg hover:bg-card transition cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
-                        attachment ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={`grid h-9 w-9 place-items-center rounded-lg hover:bg-card transition cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${attachment ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                        }`}
                     >
                       <ImagePlus size={18} />
                     </button>
@@ -2205,8 +2185,8 @@ export default function ChatPage() {
                         isSending
                           ? "Uploading media and sending…"
                           : attachment
-                          ? "Add a caption… (or press Send)"
-                          : "Write a message… (or paste screenshot Ctrl+V)"
+                            ? "Add a caption… (or press Send)"
+                            : "Write a message… (or paste screenshot Ctrl+V)"
                       }
                       rows={1}
                       maxLength={2000}
@@ -2234,9 +2214,8 @@ export default function ChatPage() {
                       title="Emoji"
                       disabled={isSending}
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className={`grid h-9 w-9 place-items-center rounded-lg hover:bg-card transition cursor-pointer shrink-0 disabled:opacity-40 ${
-                        showEmojiPicker ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={`grid h-9 w-9 place-items-center rounded-lg hover:bg-card transition cursor-pointer shrink-0 disabled:opacity-40 ${showEmojiPicker ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                        }`}
                     >
                       <Smile size={18} />
                     </button>
@@ -2247,9 +2226,8 @@ export default function ChatPage() {
                       title={isRecording ? "Stop recording" : "Record voice note"}
                       onClick={handleStartVoiceNote}
                       disabled={isSending || Boolean(attachment)}
-                      className={`grid h-9 w-9 place-items-center rounded-lg hover:bg-card transition cursor-pointer shrink-0 disabled:opacity-40 ${
-                        isRecording ? "text-destructive animate-pulse" : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={`grid h-9 w-9 place-items-center rounded-lg hover:bg-card transition cursor-pointer shrink-0 disabled:opacity-40 ${isRecording ? "text-destructive animate-pulse" : "text-muted-foreground hover:text-foreground"
+                        }`}
                     >
                       {isRecording ? <Square size={18} /> : <Mic size={18} />}
                     </button>
@@ -2291,10 +2269,10 @@ export default function ChatPage() {
           <div className="chat-empty flex flex-1 flex-col items-center justify-center p-8 text-center select-none">
             <img
               src={dark ? emblemSilver : emblemGold}
-              alt="Samvād"
+              alt="Samवाद"
               className="mb-8 w-28 animate-float object-contain drop-shadow-sm dark:drop-shadow-none"
             />
-            <p className="mb-3 font-deva text-xl text-muted-foreground">संवाद</p>
+            <p className="mb-3 font-deva text-xl text-muted-foreground">Samवाद</p>
             <h2 className="font-display text-4xl sm:text-5xl font-bold leading-tight text-foreground">
               A little hello.
               <br />
@@ -2344,9 +2322,8 @@ export default function ChatPage() {
               <div className="relative">
                 <Avatar user={selectedUser} large={true} />
                 <span
-                  className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-card ${
-                    isOnline ? "bg-online" : "bg-muted-foreground/40"
-                  }`}
+                  className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-card ${isOnline ? "bg-online" : "bg-muted-foreground/40"
+                    }`}
                   title={isOnline ? "Online" : "Offline"}
                 />
               </div>
@@ -2448,11 +2425,10 @@ export default function ChatPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => setMediaFilter(tab.id)}
-                    className={`flex-1 py-1 rounded-md text-center transition cursor-pointer font-medium ${
-                      mediaFilter === tab.id
-                        ? "bg-card text-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`flex-1 py-1 rounded-md text-center transition cursor-pointer font-medium ${mediaFilter === tab.id
+                      ? "bg-card text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -2538,7 +2514,7 @@ export default function ChatPage() {
                   New Conversation
                 </h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Connect privately with any verified Samvād member.
+                  Connect privately with any verified Samवाद member.
                 </p>
               </div>
               <button
@@ -2661,11 +2637,10 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={() => setProfileTab("profile")}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${
-                  profileTab === "profile"
-                    ? "bg-card text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${profileTab === "profile"
+                  ? "bg-card text-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 <User size={13} />
                 Profile &amp; Photo
@@ -2674,11 +2649,10 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={() => setProfileTab("security")}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${
-                  profileTab === "security"
-                    ? "bg-card text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${profileTab === "security"
+                  ? "bg-card text-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 <KeyRound size={13} />
                 Security &amp; Password
@@ -2687,11 +2661,10 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={() => setProfileTab("terms")}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${
-                  profileTab === "terms"
-                    ? "bg-card text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 ${profileTab === "terms"
+                  ? "bg-card text-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 <FileText size={13} />
                 Terms &amp; Consent
@@ -2700,11 +2673,10 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={() => setProfileTab("danger")}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 text-destructive ${
-                  profileTab === "danger"
-                    ? "bg-destructive/15 font-bold shadow-xs"
-                    : "hover:bg-destructive/10"
-                }`}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer shrink-0 text-destructive ${profileTab === "danger"
+                  ? "bg-destructive/15 font-bold shadow-xs"
+                  : "hover:bg-destructive/10"
+                  }`}
               >
                 <AlertTriangle size={13} />
                 Danger Zone
@@ -3153,7 +3125,7 @@ export default function ChatPage() {
                       className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-secondary py-2.5 text-xs font-semibold text-foreground hover:bg-card transition cursor-pointer shadow-xs"
                     >
                       <LogOut size={14} />
-                      Sign out of Samvād
+                      Sign out of Samवाद
                     </button>
                   </div>
                 </div>
@@ -3318,11 +3290,10 @@ export default function ChatPage() {
             <img
               src={viewingImage}
               alt="Shared preview"
-              className={`rounded-xl object-contain shadow-2xl transition-all duration-200 select-none ${
-                isZoomed
-                  ? "scale-150 cursor-zoom-out max-h-[130dvh] max-w-none"
-                  : "max-h-[85dvh] max-w-full cursor-zoom-in"
-              }`}
+              className={`rounded-xl object-contain shadow-2xl transition-all duration-200 select-none ${isZoomed
+                ? "scale-150 cursor-zoom-out max-h-[130dvh] max-w-none"
+                : "max-h-[85dvh] max-w-full cursor-zoom-in"
+                }`}
               onClick={() => setIsZoomed(!isZoomed)}
             />
           </div>
@@ -3386,11 +3357,10 @@ export default function ChatPage() {
                       type="button"
                       onClick={() => item.onSelect()}
                       onMouseEnter={() => setCommandSelectedIndex(idx)}
-                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition cursor-pointer group ${
-                        isSelected
-                          ? "bg-primary/10 text-primary border-l-2 border-primary"
-                          : "hover:bg-secondary text-foreground"
-                      }`}
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition cursor-pointer group ${isSelected
+                        ? "bg-primary/10 text-primary border-l-2 border-primary"
+                        : "hover:bg-secondary text-foreground"
+                        }`}
                     >
                       <Avatar user={item.contact} isOnline={onlineUsers.includes(item.contact._id)} />
                       <div className="flex-1 min-w-0">
@@ -3413,11 +3383,10 @@ export default function ChatPage() {
                     type="button"
                     onClick={() => item.onSelect()}
                     onMouseEnter={() => setCommandSelectedIndex(idx)}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition cursor-pointer group text-xs font-medium ${
-                      isSelected
-                        ? "bg-primary/10 text-primary border-l-2 border-primary"
-                        : "hover:bg-secondary text-foreground"
-                    }`}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition cursor-pointer group text-xs font-medium ${isSelected
+                      ? "bg-primary/10 text-primary border-l-2 border-primary"
+                      : "hover:bg-secondary text-foreground"
+                      }`}
                   >
                     <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
                       <IconComponent size={15} />
