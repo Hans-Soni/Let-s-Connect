@@ -30,6 +30,8 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Smartphone,
+  Laptop,
   Sparkles,
   Star,
   Sun,
@@ -172,6 +174,7 @@ function Header({ dark, toggle }) {
     { label: "Calling", targetId: "calling" },
     { label: "Security", targetId: "security" },
     { label: "Compare", targetId: "compare" },
+    { label: "App", targetId: "app" },
     { label: "FAQ", targetId: "faq" },
     { label: "Feedback", targetId: "feedback" },
   ];
@@ -894,6 +897,189 @@ function CompareSection() {
   );
 }
 
+// Mobile & Desktop App Experience Section
+function AppExperienceSection() {
+  const platforms = [
+    {
+      title: "Android & Chrome",
+      badge: "1-Click WebAPK",
+      desc: "Install directly from Chrome or Edge. Launches in full-screen standalone mode with no address bar, real app icon, and push responsiveness.",
+      actionText: "Install on Phone",
+      isPrimary: true,
+    },
+    {
+      title: "iPhone & iPad",
+      badge: "iOS Standalone PWA",
+      desc: "Tap Share 📤 then 'Add to Home Screen' in Safari. Enjoy full-screen messaging and HD video calls tailored for iOS safe-area insets.",
+      actionText: "Install on iPhone",
+      isPrimary: false,
+    },
+    {
+      title: "Standalone Android APK",
+      badge: ".APK Direct",
+      desc: "Prefer an actual APK installation package? Download our latest pre-compiled build with native WebRTC hardware permissions.",
+      actionText: "Download APK",
+      link: "https://github.com/Hans-Soni/Let-s-Connect/releases/latest",
+      isPrimary: false,
+    },
+  ];
+
+  return (
+    <section id="app" className="scroll-mt-24 py-20 sm:py-28 relative overflow-hidden">
+      <div className="absolute inset-0 bg-radial from-primary/5 via-transparent to-transparent pointer-events-none" />
+      <div className="mx-auto max-w-7xl px-4 sm:px-5">
+        <SectionHeading
+          kicker="Mobile &amp; Desktop App Experience"
+          title="Use It Like WhatsApp or Instagram — On Any Device"
+          sub="No App Store accounts or multi-gigabyte bloatware required. Install to your home screen in 1 click or download the standalone APK."
+        />
+
+        {/* 3 Platform Feature Cards */}
+        <div className="mt-12 sm:mt-16 grid gap-6 sm:grid-cols-3">
+          {platforms.map((p, idx) => (
+            <div
+              key={idx}
+              className="reveal relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-7 shadow-card transition hover:-translate-y-1 hover:border-primary/40 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary">
+                    {p.badge}
+                  </span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5 text-success" /> Verified
+                  </span>
+                </div>
+                <h3 className="mt-4 text-xl font-bold font-display">{p.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  {p.desc}
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-border/50">
+                {p.link ? (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-secondary/70 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary transition"
+                  >
+                    <Download className="h-3.5 w-3.5 text-primary" />
+                    <span>{p.actionText}</span>
+                  </a>
+                ) : (
+                  <InstallAppButton className={`w-full justify-center rounded-xl py-2.5 text-xs font-semibold shadow-sm ${
+                    p.isPrimary ? "bg-primary text-primary-foreground hover:opacity-95" : "border border-border bg-secondary/70 text-foreground hover:bg-secondary"
+                  }`}>
+                    <Smartphone className="h-3.5 w-3.5" />
+                    <span>{p.actionText}</span>
+                  </InstallAppButton>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* High-Impact Device Interactive Phone Mockup */}
+        <div className="reveal mt-14 sm:mt-20 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card/90 to-background p-6 sm:p-12 shadow-elegant">
+          <div className="grid items-center gap-8 lg:grid-cols-2">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                <Sparkles className="h-3.5 w-3.5" /> Seamless Standalone Mode
+              </span>
+              <h3 className="mt-4 text-2xl sm:text-4xl font-bold font-display">
+                Zero Browser Address Bars.<br />
+                <span className="text-gradient">Pure, Uncluttered Dialogue.</span>
+              </h3>
+              <p className="mt-4 text-sm sm:text-base text-muted-foreground leading-relaxed">
+                When launched from your home screen, Samवाद activates standard Progressive Web App standalone display. You get instant access to end-to-end encrypted chats, HD voice and video calls, camera previews, and voice messaging just like native apps.
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-3 text-xs sm:text-sm">
+                <div className="rounded-2xl border border-border bg-secondary/40 p-3.5">
+                  <p className="font-bold text-foreground">Under 2 MB Size</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">Loads 50x faster than traditional store apps</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-secondary/40 p-3.5">
+                  <p className="font-bold text-foreground">Hardware Permissions</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">Camera, mic, and audio settings pre-configured</p>
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <InstallAppButton className="rounded-full bg-primary px-6 py-3 text-xs sm:text-sm font-semibold text-primary-foreground shadow-elegant hover:-translate-y-0.5 transition">
+                  <Download className="h-4 w-4" />
+                  <span>Install Samवाद Now (1-Click)</span>
+                </InstallAppButton>
+                <a
+                  href="https://github.com/Hans-Soni/Let-s-Connect/releases/latest"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-border px-5 py-3 text-xs sm:text-sm font-semibold transition hover:bg-secondary inline-flex items-center gap-2"
+                >
+                  <Smartphone className="h-4 w-4 text-primary" />
+                  <span>Get Android APK</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Mobile App Frame Mockup */}
+            <div className="mx-auto w-full max-w-sm rounded-[2.5rem] border-[6px] border-border/80 bg-background p-4 shadow-2xl relative">
+              {/* Notch / Speaker Earbar */}
+              <div className="mx-auto h-4 w-28 rounded-full bg-border/60 mb-3" />
+
+              <div className="rounded-2xl overflow-hidden border border-border bg-card">
+                {/* Mobile Header Bar */}
+                <div className="flex items-center justify-between border-b border-border bg-muted/60 px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-xs">
+                      AJ
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-success border border-card" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold leading-tight">Aarav Joshi</p>
+                      <p className="text-[10px] text-primary">online · Samवाद</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5" />
+                    <Video className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+
+                {/* Mobile Chat Messages */}
+                <div className="space-y-2.5 p-3.5 text-xs">
+                  <div className="rounded-2xl rounded-bl-sm bg-secondary p-2.5 max-w-[85%]">
+                    <p>Installed the 1-click app on my phone! No browser bar at all 🔥</p>
+                    <span className="block text-[9px] text-muted-foreground text-right mt-1">10:42 AM</span>
+                  </div>
+                  <div className="rounded-2xl rounded-br-sm bg-primary text-primary-foreground p-2.5 max-w-[85%] ml-auto">
+                    <p>Awesome! WebRTC calls and voice notes work natively just like WhatsApp ✨</p>
+                    <span className="block text-[9px] text-primary-foreground/75 text-right mt-1">10:43 AM · ✓✓</span>
+                  </div>
+                </div>
+
+                {/* Mobile Chat Input Mockup */}
+                <div className="border-t border-border bg-card p-2 flex items-center gap-2">
+                  <div className="flex-1 rounded-full bg-secondary/70 px-3 py-1.5 text-[11px] text-muted-foreground">
+                    Type a message…
+                  </div>
+                  <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                    <Send className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Gesture Bar */}
+              <div className="mx-auto h-1 w-24 rounded-full bg-muted-foreground/30 mt-3" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // Benefits section
 function BenefitsSection() {
   const benefits = [
@@ -1003,7 +1189,7 @@ function FaqSection() {
   const faqs = [
     [
       "Do I need to install an app or plugin?",
-      "No downloads or installations needed! Samवाद runs natively inside any modern desktop or mobile browser (Chrome, Safari, Firefox, Edge, Brave). HD voice calls, video calls, and screen sharing all function directly in-browser via standard WebRTC without third-party plugins.",
+      "You have total freedom! You can use Samवाद instantly in any browser with zero installation, OR install it in 1-click onto your phone (Android & iPhone) and computer (Windows & Mac) to use it full-screen just like WhatsApp or Instagram without any browser address bar. Android users can also download the standalone .apk directly from our releases page.",
     ],
     [
       "Can other people see my email address or phone number?",
@@ -1474,6 +1660,7 @@ export default function WelcomePage({ scrollTarget }) {
         <PrivacySection />
         <SecuritySection />
         <CompareSection />
+        <AppExperienceSection />
         <BenefitsSection />
         <StackSection />
         <FaqSection />

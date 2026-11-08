@@ -25,13 +25,11 @@
 }
 
 .auth-btn {
-  @apply w-full bg-primary text-white rounded-lg py-2.5 font-medium
-  hover:opacity-90 focus:ring-2 focus:ring-primary;
+  @apply w-full bg-primary text-white rounded-lg py-2.5 font-medium hover:opacity-90 focus:ring-2 focus:ring-primary;
 }
 
 .auth-link {
-  @apply px-4 py-2 inline-block bg-primary/10 rounded-lg text-primary
-  hover:text-primary transition-colors;
+  @apply px-4 py-2 inline-block bg-primary/10 rounded-lg text-primary hover:text-primary transition-colors;
 }
 
 /* Safe area support for notch and gesture navigation (WhatsApp / Instagram mobile UX) */

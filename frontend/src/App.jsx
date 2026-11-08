@@ -112,6 +112,7 @@ function App() {
           <Route path="/calling" element={<WelcomePage scrollTarget="calling" />} />
           <Route path="/security" element={<WelcomePage scrollTarget="security" />} />
           <Route path="/compare" element={<WelcomePage scrollTarget="compare" />} />
+          <Route path="/app" element={<WelcomePage scrollTarget="app" />} />
           <Route path="/faq" element={<WelcomePage scrollTarget="faq" />} />
           <Route path="/feedback" element={<WelcomePage scrollTarget="feedback" />} />
           <Route path="/profile/:id" element={authUser ? <UserProfilePage /> : <Navigate to="/login" />} />
