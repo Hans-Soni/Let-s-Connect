@@ -1,0 +1,6 @@
+# Robots.txt for Samवाद (Let's Connect)
+User-agent: *
+Allow: /
+
+# XML Sitemap for Google Search Console and web crawlers
+Sitemap: https://hans-soni.github.io/Let-s-Connect/sitemap.xml

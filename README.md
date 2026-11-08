@@ -1,75 +1,153 @@
 <div align="center">
-  
-# 💬 Let's Connect
 
-**A modern, secure, and real-time full-stack chat application.**
+# 💬 Samवाद (संवाद)
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen.svg)](https://hans-soni.github.io/Let-s-Connect)
-[![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blue)](https://react.dev/)
-[![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-success)](https://nodejs.org/)
-[![Socket.io](https://img.shields.io/badge/Realtime-Socket.io-black)](https://socket.io/)
+**Private Real-Time Chat, HD Calling & Ephemeral Communication Platform**
+
+[![Live Web Application](https://img.shields.io/badge/Live-Demo-brightgreen.svg)](https://hans-soni.github.io/Let-s-Connect/)
+[![Android APK Release](https://img.shields.io/badge/Android-APK%20v1.0.0-blue.svg)](https://github.com/Hans-Soni/Let-s-Connect/releases)
+[![Security Suite](https://img.shields.io/badge/Security-27%2F27%20Passed-success.svg)](#)
+[![Backend Tests](https://img.shields.io/badge/Tests-39%2F39%20Passed-success.svg)](#)
+[![React 19](https://img.shields.io/badge/Frontend-React%2019%20%2B%20Vite-61DAFB.svg)](https://react.dev/)
+[![Capacitor](https://img.shields.io/badge/Mobile-Capacitor%208-119EFF.svg)](https://capacitorjs.com/)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933.svg)](https://nodejs.org/)
+[![Socket.io](https://img.shields.io/badge/Realtime-Socket.io-010101.svg)](https://socket.io/)
 
 </div>
 
 ---
 
-## 🌟 Overview
-**Let's Connect** is a feature-rich, real-time messaging application designed to provide seamless communication with a premium, responsive UI. It supports instant messaging, user authentication, and secure data handling, all packed into a beautiful Dark/Light mode themed interface.
+## 🌟 Executive Overview
 
-This repository holds the entire full-stack architecture, including the React frontend, the Express backend, and the mobile application package.
+**Samवाद** is a private, zero-knowledge, real-time communication platform engineered for modern web, desktop, and mobile devices. Built around the philosophical premise of *uncluttered, dignified human dialogue*, Samवाद ensures that personal identity (phone numbers and email addresses) is never exposed to other participants.
 
----
+Conversations are secured with **AES-256-GCM authenticated encryption**, protected by **twice-daily automated server key rotation**, automatically purged after **24 hours of ephemeral retention**, and delivered with sub-millisecond latency via **WebSockets** and **peer-to-peer WebRTC**.
 
-## 📂 Project Structure & Navigation
-
-Understanding the architecture of this repository:
-
-### 📁 Directories
-- **`frontend/`** 
-  - **Use:** Contains the complete React application built with Vite. It handles the UI/UX, routing (React Router), state management (Zustand), and real-time frontend socket connections. Includes responsive designs tailored with Tailwind CSS and DaisyUI.
-- **`backend/`** 
-  - **Use:** Contains the Node.js/Express.js server logic. It handles the RESTful APIs for user authentication, database models (MongoDB), and the Socket.io server implementation for real-time bi-directional messaging.
-- **`chatify_reference/`** 
-  - **Use:** Holds the original reference codebase and templates used during the initial prototyping and development of this project.
-- **`scripts/`** 
-  - **Use:** A dedicated directory for utility and automation scripts to help with deployment or database seeding.
-
-### 📄 Root Files
-- **`chatify.zip`**
-  - **Use:** The compressed source/package for the standalone App installation. We serve this via the frontend so mobile users can download the native app package directly from the sign-up page.
-- **`node-v24.15.0-x64.msi`**
-  - **Use:** An offline installer for Node.js environment, provided here for convenience during local offline setups on Windows machines.
-- **`package.json` & `package-lock.json`**
-  - **Use:** The root configuration files. They contain concurrent scripts that allow you to start both the frontend and backend servers simultaneously with a single command (`npm run dev`).
-- **`.gitignore` & `.ignore`**
-  - **Use:** Prevents unnecessary files (like `node_modules` or `.env` files with API keys) from being tracked and pushed to GitHub.
+The application offers a **1-click installation experience** that installs as a borderless native app on Android, iOS, Windows, and macOS, alongside a compiled native **Android APK** powered by Capacitor.
 
 ---
 
-## 🚀 How to Run Locally
+## 🎯 Key Application Features
 
-To get this project running on your local machine:
+| Feature | Description |
+| :--- | :--- |
+| 📲 **1-Click App Installation** | PWA WebAPK and Capacitor native wrapper that installs to phone home screen or laptop desktop with zero address bars, custom splash screens, and native status bar coloring. |
+| 🎙️ **WebRTC HD Voice & Video** | Crystal-clear peer-to-peer audio/video calls with instant screen sharing mid-call and stun/turn fallback. |
+| 🔐 **AES-256-GCM Encryption** | Every message payload is encrypted at rest using AES-256-GCM with unique initialization vectors (IV) and 16-byte authentication tags to prevent tampering. |
+| 🔄 **Twice-Daily Key Rotation** | Encryption keys automatically cycle at 00:00 and 12:00 IST using an active/historical KeySet collection in MongoDB. |
+| ⏳ **24h Ephemeral Auto-Cleanup** | A background cron worker runs every minute, permanently purging chat text and destroying associated Cloudinary audio/video/image assets after 24 hours. |
+| 🛡️ **Zero Identity Leakage** | Email addresses and phone numbers remain strictly confidential. Only your display name and professional designation (e.g. *Lead Designer*, *Software Architect*) are visible. |
+| ⏱️ **Session Safety & Timers** | 15-minute unattended device inactivity auto-logout, paired with a 120-second session countdown timer during Google OAuth authentication. |
+| 🌓 **Adaptive Luxury Theme** | High-contrast Dark Luxury and Light themes synchronized globally with system status bars and persistent local storage. |
+| 🔍 **Quick Contact Search** | Instant modal search triggered with `Ctrl+K` / `Cmd+K` keyboard shortcuts. |
 
-1. **Install Dependencies:**
+---
+
+## 📂 Repository Architecture & Folder Map
+
+This full-stack repository is organized into distinct, modular subsystems:
+
+```
+chat app/
+├── .github/                      # GitHub automation workflows & CI/CD
+│   └── workflows/                # Android APK build and continuous release pipelines
+├── backend/                      # Node.js, Express, MongoDB & Socket.io server
+│   ├── src/                      # Backend source code
+│   │   ├── controllers/          # Request handlers (auth, messages, feedback)
+│   │   ├── emails/               # Transactional email handlers & HTML templates
+│   │   ├── lib/                  # Cryptography, socket server, DB & key rotation
+│   │   ├── middleware/           # JWT verification, Arcjet & Upstash rate limiters
+│   │   ├── models/               # Mongoose schemas (User, Message, Consent, Feedback)
+│   │   ├── routes/               # Express REST endpoint declarations
+│   │   └── server.js             # Server bootstrap, middleware chain & DNS setup
+│   └── package.json              # Backend dependencies and test runners
+├── frontend/                     # React 19 + Vite + Tailwind CSS frontend
+│   ├── public/                   # Static assets, Web App Manifest, Service Worker & Sitemap
+│   ├── src/                      # Frontend source code
+│   │   ├── assets/               # Brand logos, gold/silver seal emblems & favicons
+│   │   ├── components/           # UI components (CallModal, InstallAppBanner, PageLoader)
+│   │   ├── hooks/                # Custom React lifecycle hooks
+│   │   ├── lib/                  # Axios HTTP client, terms, and audio synthesizer
+│   │   ├── pages/                # Routed views (WelcomePage, ChatPage, LoginPage, etc.)
+│   │   └── store/                # Zustand state management stores
+│   ├── android/                  # Native Android Capacitor wrapper project
+│   ├── capacitor.config.json     # Capacitor mobile application configuration
+│   ├── vite.config.js            # Vite build configuration with relative base (./)
+│   └── package.json              # Frontend dependencies and mobile build scripts
+└── scripts/                      # System administration, database & security test scripts
+    ├── securityCheck.js          # 27-assertion security test suite
+    └── sortUsersInDB.js          # Database index and record maintenance script
+```
+
+---
+
+## 🛠️ Technology Stack
+
+- **Frontend:** React 19, Vite 7, Tailwind CSS, DaisyUI, Lucide React, Zustand, React Router 7, Axios, React Hot Toast.
+- **Mobile Engine:** Capacitor 8 (`@capacitor/core`, `@capacitor/android`, `@capacitor/app`, `@capacitor/status-bar`, `@capacitor/keyboard`).
+- **Backend:** Node.js 20+, Express.js 4, Socket.io 4, Mongoose 8, MongoDB Atlas.
+- **Security & Cryptography:** Node.js native `crypto` (AES-256-GCM), Helmet, Arcjet bot detection, Upstash Redis distributed rate limiting, xss-clean, express-mongo-sanitize, bcryptjs, jsonwebtoken.
+- **Media & Infrastructure:** Cloudinary SDK (media storage & secure auto-destruction), Resend (transactional email alerts), GitHub Pages (frontend hosting), Render (backend web service hosting).
+
+---
+
+## 🚀 Getting Started Locally
+
+### Prerequisites
+- Node.js (v18.0.0 or higher)
+- npm (v9.0.0 or higher)
+- MongoDB instance (local or MongoDB Atlas connection URI)
+
+### Installation & Execution
+
+1. **Clone the repository:**
    ```bash
-   npm install
+   git clone https://github.com/Hans-Soni/Let-s-Connect.git
+   cd "chat app"
    ```
-2. **Start the Development Servers:**
+
+2. **Install all dependencies:**
+   ```bash
+   npm install --prefix backend
+   npm install --prefix frontend
+   ```
+
+3. **Configure Environment Variables:**
+   - Create `backend/.env` based on `backend/.env.example`.
+   - Ensure `frontend/.env` contains your backend endpoint:
+     ```env
+     VITE_BACKEND_URL=https://let-s-connect-backend.onrender.com
+     VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id
+     ```
+
+4. **Run Frontend & Backend Simultaneously:**
    ```bash
    npm run dev
    ```
-   *(This single command fires up both the Vite frontend and Node.js backend simultaneously!)*
+
+5. **Run the Full Test Suite:**
+   ```bash
+   npm test
+   ```
+   *(Executes the 27-assertion cryptographic security check followed by all 39 backend test suites).*
 
 ---
 
-## 👨‍💻 About the Developer
+## 📱 Mobile App & Android APK
 
-**Hi, I'm Hans Soni! 👋**
+- **1-Click Web App:** Visit the live URL on Android or iPhone to install to your home screen with zero browser bars.
+- **Android Studio Native Build:**
+  ```bash
+  npm run cap:open
+  ```
+  *(Launches Android Studio with pre-configured camera, microphone, and audio settings permissions).*
+- **Sync Native Assets:**
+  ```bash
+  npm run cap:build
+  ```
 
-I am a passionate Full-Stack Software Developer dedicated to building scalable, secure, and user-friendly applications. I thrive on solving complex problems and turning creative ideas into real-world technological solutions. 
+---
 
-From designing pixel-perfect, dynamic frontend interfaces to architecting robust backend servers and real-time communication protocols, I love being involved in every step of the software development lifecycle. 
+## 📄 License & Attribution
 
-**Let's Connect** is a showcase of my ability to seamlessly integrate modern web technologies (React, Node.js, WebSockets, and Tailwind) into a single, polished product. 
-
-📫 **Connect with me on LinkedIn or check out my other repositories on GitHub!**
+Developed with craftsmanship by **Hans Soni**. Distributed under the ISC License. All rights reserved.

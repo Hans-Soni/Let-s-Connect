@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <!-- Primary Application Home -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Welcome / Landing Overview -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/welcome</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- 1-Click App & Android APK Showcase -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/app</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Product Features -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/features</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- WebRTC HD Voice, Video & Screen Calling -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/calling</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Cryptography & Privacy Security Architecture -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/security</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- How It Works & 24h Ephemeral Auto-Cleanup -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/how</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Comparison with Traditional Messengers -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/compare</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Frequently Asked Questions -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/faq</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- User Feedback & Bug Reporting -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/feedback</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- User Sign In -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/login</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- User Sign Up & Digital Privacy Consent -->
+  <url>
+    <loc>https://hans-soni.github.io/Let-s-Connect/#/signup</loc>
+    <lastmod>2026-11-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+</urlset>

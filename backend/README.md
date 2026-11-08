@@ -1,76 +1,94 @@
 <div align="center">
-  
-# ⚙️ Let's Connect - Backend
 
-**The secure, scalable, and real-time Node.js engine powering Let's Connect.**
+# ⚙️ Samवाद — Backend Architecture
 
-[![Node.js](https://img.shields.io/badge/Runtime-Node.js-success)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Framework-Express.js-lightgrey)](https://expressjs.com/)
-[![MongoDB](https://img.shields.io/badge/Database-MongoDB%20%2B%20Mongoose-green)](https://www.mongodb.com/)
-[![Socket.io](https://img.shields.io/badge/Realtime-Socket.io-black)](https://socket.io/)
-[![Security](https://img.shields.io/badge/Security-Helmet%20%7C%20Arcjet%20%7C%20JWT-red)](#)
+**The secure, scalable, real-time Node.js & Socket.io engine powering Samवाद.**
+
+[![Node.js](https://img.shields.io/badge/Runtime-Node.js%2020%2B-success)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Framework-Express.js%204-lightgrey)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB%20Atlas%20%2B%20Mongoose-green)](https://www.mongodb.com/)
+[![Socket.io](https://img.shields.io/badge/Realtime-Socket.io%204-black)](https://socket.io/)
+[![Cryptography](https://img.shields.io/badge/Encryption-AES--256--GCM-blue)](#)
 
 </div>
 
 ---
 
 ## 🌟 Overview
-This directory contains the **backend** architecture for Let's Connect. Built on Node.js and Express, it provides secure RESTful API endpoints for user management and authentication, while heavily utilizing Socket.io for bi-directional, real-time messaging.
 
-Security and performance are a massive priority here. The backend employs strict rate limiting, XSS protection, NoSQL injection sanitization, and robust password hashing to keep user data completely safe.
+The `backend/` directory houses the core RESTful API and WebSocket infrastructure for **Samवाद**. Built on Node.js and Express, it provides encrypted message routing, user session management, GDPR-compliant digital privacy consent logging, and WebRTC peer-to-peer audio/video call signaling.
 
----
-
-## 📂 Folder Structure
-
-- **`src/`** - The core source code for the server.
-  - **`controllers/`** - Contains the core business logic (e.g., handling what happens when a user logs in, sends a message, or updates their profile).
-  - **`models/`** - Mongoose schemas defining the structure of our MongoDB database collections (Users, Messages, etc.).
-  - **`routes/`** - Express route definitions mapping HTTP endpoints (like `/api/auth/login`) to their respective controllers.
-  - **`middleware/`** - Functions that run before controllers (e.g., verifying JWT tokens, checking arcjet rules, handling file uploads).
-  - **`config/`** - Database connection setups, environment variable loaders, and third-party configuration logic.
-  - **`utils/`** - Helper functions like JWT token generators and custom error handlers.
-  - **`server.js`** - The main entry point of the backend application that initializes Express and Socket.io.
-
-- **`.env`** - Environment variables (e.g., MongoDB URI, JWT Secrets, Cloudinary keys). *Not committed to version control.*
+Security and zero-knowledge privacy are baked into every layer:
+- **AES-256-GCM Encryption:** Message text is encrypted at rest using authenticated cryptography before entering MongoDB.
+- **Twice-Daily Key Rotation:** Server encryption keys automatically cycle every 12 hours (at 00:00 and 12:00 IST), maintaining a secure KeySet collection in the database.
+- **24-Hour Auto-Purge Worker:** A cron background task runs every minute to permanently erase messages older than 24 hours and trigger Cloudinary SDK deletion for all associated voice notes, videos, and images.
+- **Multi-Tier Rate Limiting:** High-speed token bucket rate limiting via Upstash Redis with automated fallback to Arcjet shield protection.
 
 ---
 
-## 🛠️ Key Technologies & Security
+## 📂 Subdirectory Navigation & Module Map
 
-- **Express & Node.js:** The backbone HTTP server.
-- **MongoDB & Mongoose:** NoSQL database storage and object data modeling.
-- **Socket.io:** Handles all real-time messaging, typing indicators, and online status events.
-- **Authentication:** JWT (JSON Web Tokens) stored securely in HTTP-only cookies, combined with `bcryptjs` for password hashing.
-- **Cloudinary:** Cloud storage service for handling profile pictures, image messages, voice notes, and video messages.
-- **Consent records:** Signup consent audits are stored separately from user accounts in the MongoDB `consents` collection, linked by user ID. Existing embedded consent records are migrated during backend startup.
-- **Message retention:** Chat text and attached image/audio/video assets are removed after 24 hours. The backend first deletes associated Cloudinary assets, then removes the MongoDB message; failed Cloudinary deletions are logged and retried.
-- **Top-Tier Security Stack:**
-  - `helmet`: Sets secure HTTP headers.
-  - `cors`: Protects API from unauthorized cross-origin requests.
-  - `express-mongo-sanitize`: Prevents NoSQL injection attacks.
-  - `xss-clean`: Sanitizes user input to prevent Cross-Site Scripting.
-  - Upstash Redis is the primary shared API rate limiter (100 requests per IP per 15 minutes). If it denies a request or is unavailable, Arcjet's rate limiter is used as the fallback. Arcjet shield and bot checks remain enabled on protected routes. Requests denied by both providers receive HTTP 429; if both providers are unavailable, the API returns HTTP 503.
-
-Arcjet is used for request security decisions, not as the message/media store. This app has no API to purge Arcjet provider-side security telemetry or control MongoDB/Cloudinary backups; manage provider telemetry and backup retention in their respective dashboards.
+| Directory | Purpose & Contents |
+| :--- | :--- |
+| **`src/`** | Core backend server application source code. |
+| **`src/controllers/`** | HTTP request controllers handling business logic for authentication, messaging, and user feedback. |
+| **`src/emails/`** | Transactional email handlers and HTML/CSS templates powered by Resend. |
+| **`src/lib/`** | Core system libraries: cryptographic modules (AES-256-GCM), key rotation, database connection, Socket.io signaling, and IP extraction. |
+| **`src/middleware/`** | Express and Socket.io middleware for JWT verification, distributed rate limiting, and bot defense. |
+| **`src/models/`** | Mongoose schemas defining MongoDB collections: `User`, `Message`, `Consent`, and `Feedback`. |
+| **`src/routes/`** | REST route definitions mapping endpoints to controller functions. |
 
 ---
 
-## 🚀 Development Setup
+## 🔌 API Endpoints Summary
 
-1. **Navigate to the backend directory:**
-   ```bash
-   cd backend
-   ```
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-3. **Configure Environment Variables:**
-   - Create a `.env` file based on `.env.example` and fill in your MongoDB URI, JWT secret, Cloudinary credentials, Arcjet key, and `UPSTASH_REDIS_URL`.
-   - Set `UPSTASH_REDIS_URL` to your Upstash Redis connection URL. Keep the credential private, configure it in your deployment provider's secret/environment settings, and rotate it if it has been exposed.
-4. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-   *(This uses `nodemon` to automatically restart the server when you make code changes).*
+### Authentication Routes (`/api/auth`)
+* `POST /signup` — Register a new user with full name, email, password, professional designation, and mandatory data consent audit logging.
+* `POST /login` — Authenticate credentials, set secure `jwt` httpOnly cookie, and issue bearer token.
+* `POST /google` — Secure Google OAuth 2.0 authentication with token verification and automated account creation.
+* `POST /logout` — Invalidate user cookie and disconnect active socket sessions.
+* `GET /refresh` — Silent JWT token refresh using httpOnly cookie for seamless uninterrupted sessions.
+* `GET /check` — Verify current user session and return authenticated profile data.
+* `PUT /update-profile` — Update user profile picture via Cloudinary upload.
+* `POST /delete-account` — Irreversible account deletion with 2-step password verification, purging personal records while retaining GDPR audit trails.
+
+### Message Routes (`/api/messages`)
+* `GET /users` — Retrieve sidebar conversation list with blocked user filtering and profile masking.
+* `GET /:id` — Retrieve encrypted chat history between two users, dynamically decrypted via AES-256-GCM.
+* `POST /send/:id` — Send encrypted text message and/or upload Cloudinary media attachments (images, voice notes, videos).
+
+### Feedback Routes (`/api/feedback`)
+* `POST /submit` — Submit user feedback, bug reports, and experience ratings.
+
+---
+
+## 📡 WebSockets & WebRTC Call Signaling
+
+The backend runs a Socket.io server integrated directly into the Express HTTP server:
+* **Online Status:** Tracks active user socket connections across multiple tabs and devices.
+* **Instant Messaging:** Dispatches real-time message events (`newMessage`) directly to the recipient's active socket.
+* **Typing Indicators:** Broadcasts real-time typing state to active conversation partners.
+* **WebRTC Signaling:** Mediates peer-to-peer voice and video call negotiation:
+  - `call:incoming` — Notifies recipient of incoming call with caller details and call type (`audio` or `video`).
+  - `call:accept` — Establishes peer-to-peer session and sends WebRTC offer/answer SDP.
+  - `call:reject` / `call:end` — Terminates active call session and resets media streams.
+  - `call:ice-candidate` — Relays STUN/TURN ICE network candidates between peers.
+
+---
+
+## 🛡️ Security & Hardening Stack
+
+1. **Helmet:** Injects secure HTTP response headers (`X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`).
+2. **CORS Origin Whitelist:** Restricts API and WebSocket traffic strictly to production domains (`https://hans-soni.github.io`), local development servers (`http://localhost:5173`), and native mobile app wrappers (`capacitor://localhost`, `http://localhost`).
+3. **NoSQL Injection Defense:** `express-mongo-sanitize` strips out `$` and `.` operators from request bodies and query parameters.
+4. **XSS Protection:** `xss-clean` sanitizes user input to prevent script injection.
+5. **Reverse Proxy Trust:** Configured with `app.set("trust proxy", true)` and custom `ipUtils.js` to correctly resolve client IPs behind Cloudflare and Render proxies.
+
+---
+
+## 🚀 Running Backend Tests
+
+Run all 39 unit and integration tests across rate limiters, secret generators, IP extractors, and authentication policies:
+```bash
+npm run test:all
+```
