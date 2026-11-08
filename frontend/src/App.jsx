@@ -1,5 +1,8 @@
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import { useEffect, lazy, Suspense } from "react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
+import { StatusBar, Style } from "@capacitor/status-bar";
 import { useAuthStore } from "./store/useAuthStore";
 import PageLoader from "./components/PageLoader";
 import GlobalThemeToggle from "./components/GlobalThemeToggle";
@@ -57,7 +60,42 @@ function App() {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("chat-theme", theme);
     localStorage.setItem("samvaad-theme", theme);
+
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: isDark ? "#0f172a" : "#f8fafc" }).catch(() => {});
+    }
   }, [theme]);
+
+  // Handle Android native hardware back button
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listenerHandle = null;
+    CapApp.addListener("backButton", ({ canGoBack }) => {
+      // If a modal or dropdown is active, try to dismiss it with Escape
+      const activeModal = document.querySelector(".modal-open, dialog[open], [role='dialog']");
+      if (activeModal) {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+        return;
+      }
+
+      const hash = window.location.hash.replace(/^#\/?/, "");
+      if (!hash || hash === "" || hash === "welcome") {
+        CapApp.exitApp();
+      } else if (canGoBack) {
+        window.history.back();
+      } else {
+        CapApp.exitApp();
+      }
+    }).then((handle) => {
+      listenerHandle = handle;
+    }).catch(() => {});
+
+    return () => {
+      if (listenerHandle) listenerHandle.remove();
+    };
+  }, []);
 
   if (isCheckingAuth) return <PageLoader />;
 

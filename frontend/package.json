@@ -9,10 +9,18 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "cap:sync": "cap sync",
+    "cap:build": "npm run build && cap sync",
+    "cap:open": "cap open android",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/status-bar": "^8.0.4",
     "@react-oauth/google": "^0.13.5",
     "axios": "^1.11.0",
     "lucide-react": "^0.542.0",
@@ -24,6 +32,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@eslint/js": "^9.33.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",

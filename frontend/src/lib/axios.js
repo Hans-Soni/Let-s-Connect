@@ -1,9 +1,11 @@
 import axios from "axios";
 
+const PRODUCTION_BACKEND_URL = "https://let-s-connect-backend.onrender.com";
+
 export const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL
     ? `${import.meta.env.VITE_BACKEND_URL}/api`
-    : (import.meta.env.MODE === "development" ? "http://localhost:5002/api" : "/api"),
+    : (import.meta.env.MODE === "development" ? "http://localhost:5002/api" : `${PRODUCTION_BACKEND_URL}/api`),
   withCredentials: true,
 });
 

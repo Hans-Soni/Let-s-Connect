@@ -4,9 +4,11 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useCallStore } from "./useCallStore";
 
+const PRODUCTION_BACKEND_URL = "https://let-s-connect-backend.onrender.com";
+
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.MODE === "development" 
   ? "http://localhost:5002" 
-  : "/");
+  : PRODUCTION_BACKEND_URL);
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,

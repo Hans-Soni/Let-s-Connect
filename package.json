@@ -8,7 +8,10 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "sort-db": "node scripts/sortUsersInDB.js",
     "security-check": "node scripts/securityCheck.js",
-    "test": "node scripts/securityCheck.js && npm run test:all --prefix backend"
+    "test": "node scripts/securityCheck.js && npm run test:all --prefix backend",
+    "cap:sync": "npm run cap:sync --prefix frontend",
+    "cap:build": "npm run cap:build --prefix frontend",
+    "cap:open": "npm run cap:open --prefix frontend"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"
