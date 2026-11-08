@@ -8,6 +8,7 @@ import {
   Bot,
   Check,
   Clock,
+  Download,
   Eye,
   EyeOff,
   Fingerprint,
@@ -43,6 +44,7 @@ import logoDark from "../assets/samvaad_logo_dark.png";
 import emblemGold from "../assets/emblem_gold-sNN9olCf.png";
 import emblemSilver from "../assets/emblem_silver-CXs3LN2i.png";
 import "../welcome.css";
+import { InstallAppButton } from "../components/InstallAppBanner";
 
 const LOGIN_URL = "https://hans-soni.github.io/Let-s-Connect/#/login";
 const SIGNUP_URL = "https://hans-soni.github.io/Let-s-Connect/#/signup";
@@ -220,6 +222,7 @@ function Header({ dark, toggle }) {
           >
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
+          <InstallAppButton className="hidden sm:inline-flex rounded-full border border-primary/40 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground shadow-sm" />
           <a
             href={LOGIN_URL}
             className="hidden rounded-full px-4 py-2 text-sm font-semibold md:inline-block hover:text-primary"
@@ -268,6 +271,9 @@ function Header({ dark, toggle }) {
             >
               Start free
             </a>
+          </div>
+          <div className="mt-2">
+            <InstallAppButton className="w-full justify-center rounded-xl bg-primary/10 border border-primary/30 py-3 text-sm font-semibold text-primary hover:bg-primary hover:text-primary-foreground" />
           </div>
         </div>
       )}
@@ -371,6 +377,10 @@ function Hero() {
             >
               Sign in
             </a>
+            <InstallAppButton className="rounded-full border border-primary/30 bg-primary/10 px-6 py-3.5 sm:py-4 font-semibold text-primary hover:bg-primary hover:text-primary-foreground text-center justify-center shadow-sm">
+              <Download className="h-4 w-4" />
+              <span>Install App</span>
+            </InstallAppButton>
           </div>
           <div className="mt-8 sm:mt-10 grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-3 text-xs sm:text-sm text-muted-foreground">
             <span className="flex items-center gap-2">

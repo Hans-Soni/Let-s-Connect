@@ -8,6 +8,7 @@ import PageLoader from "./components/PageLoader";
 import GlobalThemeToggle from "./components/GlobalThemeToggle";
 import { useThemeStore } from "./store/useThemeStore";
 import CallModal from "./components/CallModal";
+import InstallAppBanner from "./components/InstallAppBanner";
 import toast, { Toaster } from "react-hot-toast";
 
 // Code-split pages for smaller initial bundle and faster load performance
@@ -123,6 +124,7 @@ function App() {
       </Suspense>
 
       <CallModal />
+      <InstallAppBanner />
       <Toaster position="top-right" containerClassName="z-[99999]" toastOptions={{ duration: 4000 }} />
     </div>
   );

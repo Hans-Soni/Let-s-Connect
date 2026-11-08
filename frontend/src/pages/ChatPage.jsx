@@ -34,6 +34,7 @@ import {
   Clock,
   Shield,
   Loader2,
+  Smartphone,
   User,
   ShieldAlert,
   UserX,
@@ -66,6 +67,7 @@ import { useThemeStore } from "../store/useThemeStore";
 import { useCallStore } from "../store/useCallStore";
 import TermsContent from "../components/TermsContent";
 import { CURRENT_TERMS_VERSION, TERMS_LAST_UPDATED } from "../lib/terms";
+import { InstallAppButton } from "../components/InstallAppBanner";
 
 import logoLight from "../assets/samvaad_logo_light.png";
 import logoDark from "../assets/samvaad_logo_dark.png";
@@ -1432,6 +1434,10 @@ export default function ChatPage() {
           </button>
 
           <ThemeToggle dark={dark} toggle={toggleTheme} />
+
+          <InstallAppButton className="grid h-10 w-10 place-items-center rounded-lg text-primary hover:bg-primary/10 transition cursor-pointer" title="Install Samवाद App (1-Click)">
+            <Smartphone size={20} />
+          </InstallAppButton>
 
           <button
             type="button"
