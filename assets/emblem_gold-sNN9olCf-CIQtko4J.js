@@ -1,0 +1,1 @@
+const o=""+new URL("samvaad_logo_light-Dewsuw0W.png",import.meta.url).href,e=""+new URL("samvaad_logo_dark-BuUKXHLj.png",import.meta.url).href,a=""+new URL("emblem_gold-sNN9olCf-sNN9olCf.png",import.meta.url).href;export{o as a,a as e,e as l};
