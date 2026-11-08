@@ -114,7 +114,7 @@ function LogoLink({ dark, className = "" }) {
     <Link to="/" title="Back to welcome page" className={`block transition hover:scale-[1.03] ${className}`}>
       <img
         src={dark ? logoDark : logoLight}
-        alt="Samvād"
+        alt="Samवाद"
         className="h-9 sm:h-10 w-auto transition-opacity duration-300"
       />
     </Link>
@@ -1287,7 +1287,7 @@ export default function ChatPage() {
     try {
       await updateProfile({
         fullName: normalizedName,
-        designation: editDesignation.trim() || "Samvād member",
+        designation: editDesignation.trim() || "Samवाद member",
         ...(selectedProfileImage ? { profilePic: selectedProfileImage } : {}),
       });
       setSelectedProfileImage("");
@@ -1365,10 +1365,10 @@ export default function ChatPage() {
         className={`chat-rail flex flex-col items-center gap-5 border-r border-border bg-card py-6 select-none z-10 shadow-xs ${selectedUser ? "hidden md:flex" : "flex"
           }`}
       >
-        <Link to="/" aria-label="Samvād messages" title="Samvād home">
+        <Link to="/" aria-label="Samवाद messages" title="Samवाद home">
           <img
             src={dark ? emblemSilver : emblemGold}
-            alt="Samvād"
+            alt="Samवाद"
             className="h-9 w-auto transition-transform hover:scale-105 drop-shadow-sm dark:drop-shadow-none"
           />
         </Link>
@@ -2251,7 +2251,7 @@ export default function ChatPage() {
                   <ShieldCheck size={12} className="text-emerald-500" />
                   Only conversation members can read messages
                 </span>
-                <span>{isRecording ? "Recording…" : "Samvād · संवाद"}</span>
+                <span>{isRecording ? "Recording…" : "Samवाद"}</span>
               </div>
 
               {/* Hidden file input */}
@@ -2957,7 +2957,7 @@ export default function ChatPage() {
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        Your account operates under Samvād Version {CURRENT_TERMS_VERSION} Terms &amp; Conditions.
+                        Your account operates under Samवाद Version {CURRENT_TERMS_VERSION} Terms &amp; Conditions.
                       </p>
                     )}
 
