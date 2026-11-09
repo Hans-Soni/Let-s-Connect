@@ -74,18 +74,21 @@ export const sendSignupOtp = async (req, res) => {
     });
 
     // Dispatch email
-    await sendVerificationOtpEmail(normalizedEmail, otp, normalizedFullName);
+    const emailResult = await sendVerificationOtpEmail(normalizedEmail, otp, normalizedFullName);
 
-    const responsePayload = {
-      message: "Verification code sent to your email",
-      email: normalizedEmail,
-    };
-
-    if (ENV.NODE_ENV === "development") {
-      responsePayload.devOtp = otp;
+    if (!emailResult.success) {
+      await Otp.deleteMany({ email: normalizedEmail, type: "signup" });
+      return res.status(502).json({
+        message:
+          emailResult.error ||
+          "Failed to deliver verification code to your email. Please check your email configuration.",
+      });
     }
 
-    return res.status(200).json(responsePayload);
+    return res.status(200).json({
+      message: `Verification code sent to ${normalizedEmail}. Please check your email inbox, copy the code, and paste it here.`,
+      email: normalizedEmail,
+    });
   } catch (error) {
     console.error("Error in sendSignupOtp controller:", error);
     return res.status(500).json({ message: "Failed to send verification code. Please try again." });

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { ArrowLeft, Clock, Eye, EyeOff, Loader2, Mail, RefreshCw, User, X } from "lucide-react";
+import { ArrowLeft, Clipboard, Clock, Eye, EyeOff, Loader2, Mail, RefreshCw, User, X } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import toast from "react-hot-toast";
 
@@ -101,7 +101,6 @@ function SignUpPage() {
   const [step, setStep] = useState("form"); // "form" | "otp"
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpTimeLeft, setOtpTimeLeft] = useState(0);
-  const [devOtp, setDevOtp] = useState(null);
   const otpTimerRef = useRef(null);
   const otpInputsRef = useRef([]);
 
@@ -233,15 +232,37 @@ function SignUpPage() {
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = (e.clipboardData?.getData("text") || "").replace(/\D/g, "").slice(0, 6);
     if (pasted.length > 0) {
-      const newOtp = [...otp];
+      const newOtp = ["", "", "", "", "", ""];
       for (let i = 0; i < 6; i++) {
         newOtp[i] = pasted[i] || "";
       }
       setOtp(newOtp);
+      toast.success("Code pasted from clipboard!");
       const nextIndex = Math.min(pasted.length, 5);
       otpInputsRef.current[nextIndex]?.focus();
+    }
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const digits = text.replace(/\D/g, "").slice(0, 6);
+      if (!digits) {
+        toast.error("No numeric code found in clipboard");
+        return;
+      }
+      const newOtp = ["", "", "", "", "", ""];
+      for (let i = 0; i < 6; i++) {
+        newOtp[i] = digits[i] || "";
+      }
+      setOtp(newOtp);
+      toast.success("Code pasted from clipboard!");
+      const nextIndex = Math.min(digits.length, 5);
+      otpInputsRef.current[nextIndex]?.focus();
+    } catch {
+      toast.error("Please allow clipboard access or paste directly into the box");
     }
   };
 
@@ -253,7 +274,6 @@ function SignUpPage() {
     });
     if (res?.success) {
       startOtpTimer(res.retryAfter || 60);
-      if (res.devOtp) setDevOtp(res.devOtp);
     }
   };
 
@@ -386,7 +406,6 @@ function SignUpPage() {
       if (res?.success) {
         setIsConsentOpen(false);
         setStep("otp");
-        if (res.devOtp) setDevOtp(res.devOtp);
         startOtpTimer(res.retryAfter || 60);
         setTimeout(() => {
           otpInputsRef.current[0]?.focus();
@@ -607,10 +626,20 @@ function SignUpPage() {
 
                   {/* 6 Digit Input Boxes */}
                   <div>
-                    <label className="block text-center text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
-                      Enter 6-digit code
-                    </label>
-                    <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
+                    <div className="flex items-center justify-between mb-2 px-1">
+                      <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Enter 6-digit code
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handlePasteFromClipboard}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-xs font-semibold text-primary hover:bg-primary/10 transition cursor-pointer"
+                        title="Paste 6-digit code from clipboard"
+                      >
+                        <Clipboard className="h-3.5 w-3.5" /> Paste code
+                      </button>
+                    </div>
+                    <div className="flex justify-center gap-2 sm:gap-2.5">
                       {otp.map((digit, index) => (
                         <input
                           key={index}
@@ -621,6 +650,7 @@ function SignUpPage() {
                           maxLength={1}
                           autoComplete="one-time-code"
                           value={digit}
+                          onPaste={handleOtpPaste}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(index, e)}
                           className={`h-12 w-11 sm:h-14 sm:w-12 rounded-xl border text-center text-xl sm:text-2xl font-bold font-mono outline-none transition
@@ -629,25 +659,11 @@ function SignUpPage() {
                         />
                       ))}
                     </div>
+                    <p className="mt-3 text-center text-xs text-muted-foreground">
+                      Open the verification email sent to{" "}
+                      <strong className="text-foreground">{formData.email}</strong>, copy the 6-digit code, and paste it above.
+                    </p>
                   </div>
-
-                  {/* Development Helper Badge (if devOtp is supplied in local environment) */}
-                  {devOtp && (
-                    <div className="flex items-center justify-between rounded-xl border border-dashed border-primary/40 bg-primary/10 px-3.5 py-2 text-xs text-primary">
-                      <span>Dev Code: <strong className="font-mono tracking-widest">{devOtp}</strong></span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const digits = devOtp.split("").slice(0, 6);
-                          setOtp(digits);
-                          otpInputsRef.current[5]?.focus();
-                        }}
-                        className="underline font-semibold cursor-pointer hover:opacity-80"
-                      >
-                        Auto-fill
-                      </button>
-                    </div>
-                  )}
 
                   {/* Verify & Create Account Button */}
                   <button

@@ -1,31 +1,40 @@
 # Emails Directory (`backend/src/emails`)
 
-**Transactional email dispatchers and HTML templates powered by Resend.**
+**Transactional email dispatchers, SMTP/Resend providers, and responsive HTML templates.**
 
 ---
 
 ## 🌟 Overview
 
-This directory contains the email infrastructure for **Samवाद**. When a user creates an account or takes an important security action, the system sends beautifully styled, branded transactional notifications via the **Resend API**.
+This directory contains the email infrastructure for **Samवाद**. It supports dual delivery backends:
+1. **Nodemailer SMTP** (Gmail with App Password, Brevo, SendGrid, Amazon SES, or custom corporate SMTP).
+2. **Resend API** (Transactional email service for verified domains).
+
+When a user signs up, the system generates a secure 6-digit One-Time Password (OTP) and delivers a high-contrast branded email directly to their inbox, allowing the user to copy the code from their email and paste it into the application.
 
 ---
 
 ## 📂 File Directory & Contents
 
 ### 1. `emailHandlers.js`
-* **Purpose:** Manages the integration with the Resend client to dispatch outgoing emails.
-* **Why it's here:** Decouples email sending logic from the HTTP controllers, ensuring non-blocking asynchronous email delivery.
+* **Purpose:** Manages the integration with Nodemailer SMTP and Resend to dispatch outgoing transactional emails.
+* **Why it's here:** Decouples email sending logic from HTTP controllers and provides automatic fallback across email delivery providers.
 * **Key Exports:**
+  - `sendVerificationOtpEmail(email, otp, name)`:
+    - Constructs the OTP verification payload using `createOtpEmailTemplate`.
+    - Attempts delivery via Nodemailer SMTP if configured (`EMAIL_USER` & `EMAIL_PASS` or `SMTP_HOST`).
+    - Falls back to Resend API if `RESEND_API_KEY` is present and valid.
+    - Surfaces descriptive errors if email configuration is missing or if delivery is rejected by the provider.
   - `sendWelcomeEmail(email, name, clientUrl)`:
-    - Constructs the welcome message payload using `createWelcomeEmailTemplate`.
-    - Sends the email from `ENV.EMAIL_FROM || "onboarding@resend.dev"` via `resendClient.emails.send()`.
-    - Logs delivery status or gracefully handles network errors without breaking user registration.
+    - Sends the onboarding welcome message after registration.
 
 ---
 
 ### 2. `emailTemplates.js`
-* **Purpose:** Contains HTML and inline CSS templates for responsive, accessible emails.
-* **Why it's here:** Ensures consistent brand presentation across email clients (Gmail, Apple Mail, Outlook).
+* **Purpose:** Contains responsive HTML templates with inline styles for universal rendering across email clients (Gmail, Apple Mail, Outlook, webmail).
+* **Why it's here:** Ensures consistent brand presentation and optimal readability.
 * **Key Exports:**
+  - `createOtpEmailTemplate(otp, name)`:
+    - Returns a high-contrast HTML email highlighting the 6-digit OTP in large monospaced font (`38px`, `letter-spacing: 12px`), with a 10-minute expiration notice and security warnings.
   - `createWelcomeEmailTemplate(name, clientUrl)`:
-    - Returns a responsive, dark-mode-compatible HTML string featuring the Samवाद branding, personalized greeting, privacy assurance, and a direct CTA button leading to the application.
+    - Returns a welcome message introducing Samवाद's core features (WebRTC HD calls, ephemeral chat, zero tracking) and direct CTA button.

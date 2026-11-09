@@ -89,3 +89,4 @@ describe("Sign-up Email OTP Verification Logic", () => {
     assert.equal(emailRegex.test("user@domain"), false);
   });
 });
+

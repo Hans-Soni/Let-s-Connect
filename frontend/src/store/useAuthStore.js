@@ -50,7 +50,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post("/auth/send-signup-otp", data);
       toast.success(res.data?.message || "Verification code sent to your email!");
-      return { success: true, devOtp: res.data?.devOtp, email: res.data?.email };
+      return { success: true, email: res.data?.email };
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || "Failed to send verification code";
       toast.error(errorMsg);

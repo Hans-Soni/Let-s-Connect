@@ -40,3 +40,4 @@ otpSchema.index({ email: 1, type: 1, createdAt: -1 });
 const Otp = mongoose.model("Otp", otpSchema);
 
 export default Otp;
+
