@@ -5,24 +5,29 @@ import { ENV } from "../lib/env.js";
 
 // Helper to instantiate an SMTP transporter if credentials are provided
 const getSmtpTransporter = () => {
-  if (ENV.SMTP_SERVICE === "gmail" || (!ENV.SMTP_HOST && ENV.SMTP_USER && ENV.SMTP_USER.includes("@gmail.com"))) {
+  const user = (ENV.SMTP_USER || "").trim();
+  const pass = (ENV.SMTP_PASS || "").replace(/\s+/g, "");
+
+  if (!user || !pass) return null;
+
+  if (ENV.SMTP_SERVICE === "gmail" || (!ENV.SMTP_HOST && user.includes("@gmail.com"))) {
     return nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: ENV.SMTP_USER,
-        pass: ENV.SMTP_PASS,
+        user,
+        pass,
       },
     });
   }
 
-  if (ENV.SMTP_HOST && ENV.SMTP_USER && ENV.SMTP_PASS) {
+  if (ENV.SMTP_HOST) {
     return nodemailer.createTransport({
       host: ENV.SMTP_HOST,
       port: ENV.SMTP_PORT || 587,
       secure: ENV.SMTP_SECURE || false,
       auth: {
-        user: ENV.SMTP_USER,
-        pass: ENV.SMTP_PASS,
+        user,
+        pass,
       },
     });
   }
@@ -35,7 +40,7 @@ export const sendWelcomeEmail = async (email, name, clientURL) => {
     const smtpTransporter = getSmtpTransporter();
     if (smtpTransporter) {
       await smtpTransporter.sendMail({
-        from: `"${sender.name || "Samवाद"}" <${ENV.SMTP_USER || sender.email}>`,
+        from: `"${ENV.EMAIL_FROM_NAME || sender.name || "Samवाद"}" <${ENV.SMTP_USER || sender.email}>`,
         to: email,
         subject: "Welcome to Samवाद!",
         html: createWelcomeEmailTemplate(name, clientURL),
@@ -75,7 +80,7 @@ export const sendVerificationOtpEmail = async (email, otp, name = "") => {
   if (smtpTransporter) {
     try {
       const info = await smtpTransporter.sendMail({
-        from: `"${sender.name || "Samवाद"}" <${ENV.SMTP_USER || sender.email}>`,
+        from: `"${ENV.EMAIL_FROM_NAME || sender.name || "Samवाद"}" <${ENV.SMTP_USER || sender.email}>`,
         to: email,
         subject: `Your Samवाद Verification Code: ${otp}`,
         html: createOtpEmailTemplate(otp, name),
