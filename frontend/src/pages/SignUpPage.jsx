@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { Clock, Eye, EyeOff, Loader2, RefreshCw, User, X } from "lucide-react";
+import { ArrowLeft, Clock, Eye, EyeOff, Loader2, Mail, RefreshCw, User, X } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import toast from "react-hot-toast";
 
@@ -97,12 +97,43 @@ function SignUpPage() {
   const [googleTimeLeft, setGoogleTimeLeft] = useState(null);
   const googleTimerRef = useRef(null);
 
-  const { signup, googleLogin, isSigningUp, isLoggingIn, authUser } = useAuthStore();
+  // OTP Verification state
+  const [step, setStep] = useState("form"); // "form" | "otp"
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otpTimeLeft, setOtpTimeLeft] = useState(0);
+  const [devOtp, setDevOtp] = useState(null);
+  const otpTimerRef = useRef(null);
+  const otpInputsRef = useRef([]);
+
+  const {
+    signup,
+    sendSignupOtp,
+    isSendingOtp,
+    googleLogin,
+    isSigningUp,
+    isLoggingIn,
+    authUser,
+  } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
   const dark = theme === "dark";
 
   const toggleTheme = () => {
     setTheme(dark ? "light" : "dark");
+  };
+
+  const startOtpTimer = (seconds = 60) => {
+    if (otpTimerRef.current) clearInterval(otpTimerRef.current);
+    setOtpTimeLeft(seconds);
+    otpTimerRef.current = setInterval(() => {
+      setOtpTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(otpTimerRef.current);
+          otpTimerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const stopGoogleTimer = () => {
@@ -150,6 +181,9 @@ function SignUpPage() {
       if (googleTimerRef.current) {
         clearInterval(googleTimerRef.current);
       }
+      if (otpTimerRef.current) {
+        clearInterval(otpTimerRef.current);
+      }
     };
   }, []);
 
@@ -165,6 +199,90 @@ function SignUpPage() {
       isMounted = false;
     };
   }, []);
+
+  const handleOtpChange = (index, value) => {
+    const cleaned = value.replace(/\D/g, "");
+    if (!cleaned) {
+      const newOtp = [...otp];
+      newOtp[index] = "";
+      setOtp(newOtp);
+      return;
+    }
+
+    const digit = cleaned.slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = digit;
+    setOtp(newOtp);
+
+    if (index < 5 && otpInputsRef.current[index + 1]) {
+      otpInputsRef.current[index + 1].focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace") {
+      if (!otp[index] && index > 0 && otpInputsRef.current[index - 1]) {
+        otpInputsRef.current[index - 1].focus();
+      }
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      otpInputsRef.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length > 0) {
+      const newOtp = [...otp];
+      for (let i = 0; i < 6; i++) {
+        newOtp[i] = pasted[i] || "";
+      }
+      setOtp(newOtp);
+      const nextIndex = Math.min(pasted.length, 5);
+      otpInputsRef.current[nextIndex]?.focus();
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpTimeLeft > 0 || isSendingOtp) return;
+    const res = await sendSignupOtp({
+      email: formData.email,
+      fullName: formData.fullName,
+    });
+    if (res?.success) {
+      startOtpTimer(res.retryAfter || 60);
+      if (res.devOtp) setDevOtp(res.devOtp);
+    }
+  };
+
+  const handleVerifyOtpAndSignup = async (e) => {
+    if (e) e.preventDefault();
+    const otpCode = otp.join("").trim();
+    if (otpCode.length !== 6) {
+      toast.error("Please enter the complete 6-digit verification code");
+      return;
+    }
+
+    const resolvedIp =
+      clientIp ||
+      (await Promise.race([
+        detectClientIp(),
+        new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
+      ]));
+
+    const created = await signup({
+      ...formData,
+      dataConsent: true,
+      clientIp: resolvedIp,
+      otp: otpCode,
+    });
+
+    if (created) {
+      if (otpTimerRef.current) clearInterval(otpTimerRef.current);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -239,7 +357,7 @@ function SignUpPage() {
   });
 
   const handleAcceptConsent = async () => {
-    if (!hasAcceptedConsent || isSigningUp || isLoggingIn) return;
+    if (!hasAcceptedConsent || isSigningUp || isLoggingIn || isSendingOtp) return;
     const resolvedIp =
       clientIp ||
       (await Promise.race([
@@ -260,8 +378,20 @@ function SignUpPage() {
         setPendingGoogleAuth(null);
       }
     } else {
-      const created = await signup({ ...formData, dataConsent: true, clientIp: resolvedIp });
-      if (created) setIsConsentOpen(false);
+      // Regular registration: send email OTP verification before creating account
+      const res = await sendSignupOtp({
+        email: formData.email,
+        fullName: formData.fullName,
+      });
+      if (res?.success) {
+        setIsConsentOpen(false);
+        setStep("otp");
+        if (res.devOtp) setDevOtp(res.devOtp);
+        startOtpTimer(res.retryAfter || 60);
+        setTimeout(() => {
+          otpInputsRef.current[0]?.focus();
+        }, 120);
+      }
     }
   };
 
@@ -436,227 +566,362 @@ function SignUpPage() {
               <div className="text-center">
                 <LotusEmblem dark={dark} className="mx-auto h-12 w-auto animate-float" />
                 <h2 className="mt-3 font-display text-3xl font-semibold text-foreground">
-                  Create account
+                  {step === "otp" ? "Verify your email" : "Create account"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Join the conversation in seconds.
+                  {step === "otp"
+                    ? "Enter the 6-digit verification code sent to your email."
+                    : "Join the conversation in seconds."}
                 </p>
               </div>
 
-              {/* Sign Up Form */}
-              <form className="mt-6 sm:mt-7 space-y-4" onSubmit={handleSubmit}>
-                {/* Full Name */}
-                <label className="group block space-y-2">
-                  <span className="text-sm font-medium text-foreground">Full name</span>
-                  <span className="relative block">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="12" cy="8" r="4" />
-                        <path d="M4 21a8 8 0 0 1 16 0" />
-                      </svg>
-                    </span>
-                    <input
-                      required
-                      name="fullName"
-                      type="text"
-                      placeholder="Aarav Joshi"
-                      autoComplete="name"
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="h-12 w-full rounded-xl border border-border bg-secondary pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/30"
-                    />
-                  </span>
-                </label>
-
-                {/* Email */}
-                <label className="group block space-y-2">
-                  <span className="text-sm font-medium text-foreground">Email</span>
-                  <span className="relative block">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <rect x="3" y="5" width="18" height="14" rx="2" />
-                        <path d="m3 7 9 6 9-6" />
-                      </svg>
-                    </span>
-                    <input
-                      required
-                      name="email"
-                      type="email"
-                      placeholder="johndoe@gmail.com"
-                      autoComplete="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="h-12 w-full rounded-xl border border-border bg-secondary pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/30"
-                    />
-                  </span>
-                </label>
-
-                {/* Password with Eye Toggle */}
-                <label className="group block space-y-2">
-                  <span className="text-sm font-medium text-foreground">Password</span>
-                  <span className="relative block">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <rect x="4" y="11" width="16" height="10" rx="2" />
-                        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                      </svg>
-                    </span>
-                    <input
-                      required
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Create a password"
-                      autoComplete="new-password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="h-12 w-full rounded-xl border border-border bg-secondary pl-11 pr-11 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/30"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground cursor-pointer"
-                      tabIndex={-1}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </span>
-                </label>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSigningUp || isLoggingIn}
-                  className="group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-primary font-semibold text-primary-foreground shadow-glow transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-70 disabled:pointer-events-none cursor-pointer"
-                >
-                  <span className="absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-primary-foreground/20 transition-all duration-700 group-hover:left-[120%]" />
-                  {isSigningUp ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Creating account...
-                    </span>
-                  ) : (
-                    <>
-                      Start chatting free{" "}
-                      <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
-                        →
-                      </span>
-                    </>
-                  )}
-                </button>
-              </form>
-
-              {/* Or Divider */}
-              <div className="my-4 sm:my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                <span className="h-px flex-1 bg-border" />
-                or
-                <span className="h-px flex-1 bg-border" />
-              </div>
-
-              {/* Google Sign-Up Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setGoogleLoading(true);
-                  startGoogleTimer(120);
-                  triggerGoogleLogin();
-                }}
-                disabled={googleLoading || isSigningUp || isLoggingIn}
-                className="flex h-11 sm:h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-secondary text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:border-primary/60 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {googleLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                ) : (
-                  <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
-                    <path
-                      fill="#FFC107"
-                      d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"
-                    />
-                    <path
-                      fill="#FF3D00"
-                      d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
-                    />
-                    <path
-                      fill="#4CAF50"
-                      d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"
-                    />
-                    <path
-                      fill="#1976D2"
-                      d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
-                    />
-                  </svg>
-                )}
-                <span>{googleLoading ? "Connecting to Google..." : "Sign up with Google"}</span>
-              </button>
-
-              {/* Google Auth Active Countdown Timer */}
-              {googleTimeLeft !== null && (
-                <div className="mt-3 flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs text-primary shadow-sm animate-rise">
-                  <span className="flex items-center gap-2 font-medium">
-                    <Clock className="h-4 w-4 shrink-0 animate-pulse text-primary" />
-                    <span>Google sign-up active · Session expires in:</span>
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs sm:text-sm font-bold tracking-wider rounded-lg bg-card/90 px-2.5 py-1 text-primary border border-primary/20 shadow-inner">
-                      {Math.floor(googleTimeLeft / 60)}:{(googleTimeLeft % 60).toString().padStart(2, "0")}
-                    </span>
+              {step === "otp" ? (
+                /* Step 2: Email OTP Verification Interface */
+                <div className="mt-6 sm:mt-7 space-y-5 animate-rise">
+                  {/* Email & Edit Badge */}
+                  <div className="flex items-center justify-between rounded-2xl border border-border bg-secondary/60 p-3.5">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                        <Mail className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Code sent to
+                        </p>
+                        <p className="truncate text-sm font-semibold text-foreground" title={formData.email}>
+                          {formData.email}
+                        </p>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
-                        stopGoogleTimer();
-                        setGoogleLoading(false);
+                        setStep("form");
+                        setOtp(["", "", "", "", "", ""]);
                       }}
-                      className="text-muted-foreground hover:text-foreground text-[11px] underline cursor-pointer"
-                      title="Cancel Google sign-up session"
+                      className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/10 transition cursor-pointer"
                     >
-                      Cancel
+                      Change
+                    </button>
+                  </div>
+
+                  {/* 6 Digit Input Boxes */}
+                  <div>
+                    <label className="block text-center text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+                      Enter 6-digit code
+                    </label>
+                    <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
+                      {otp.map((digit, index) => (
+                        <input
+                          key={index}
+                          ref={(el) => (otpInputsRef.current[index] = el)}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={1}
+                          autoComplete="one-time-code"
+                          value={digit}
+                          onChange={(e) => handleOtpChange(index, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                          className={`h-12 w-11 sm:h-14 sm:w-12 rounded-xl border text-center text-xl sm:text-2xl font-bold font-mono outline-none transition
+                            ${digit ? "border-primary bg-primary/10 text-primary shadow-glow" : "border-border bg-secondary text-foreground"}
+                            focus:border-primary focus:ring-4 focus:ring-ring/30`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Development Helper Badge (if devOtp is supplied in local environment) */}
+                  {devOtp && (
+                    <div className="flex items-center justify-between rounded-xl border border-dashed border-primary/40 bg-primary/10 px-3.5 py-2 text-xs text-primary">
+                      <span>Dev Code: <strong className="font-mono tracking-widest">{devOtp}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const digits = devOtp.split("").slice(0, 6);
+                          setOtp(digits);
+                          otpInputsRef.current[5]?.focus();
+                        }}
+                        className="underline font-semibold cursor-pointer hover:opacity-80"
+                      >
+                        Auto-fill
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Verify & Create Account Button */}
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtpAndSignup}
+                    disabled={isSigningUp || otp.join("").length !== 6}
+                    className="group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-primary font-semibold text-primary-foreground shadow-glow transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none cursor-pointer"
+                  >
+                    <span className="absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-primary-foreground/20 transition-all duration-700 group-hover:left-[120%]" />
+                    {isSigningUp ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Verifying &amp; creating account...
+                      </span>
+                    ) : (
+                      <>
+                        Verify &amp; Create Account{" "}
+                        <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
+                          →
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Resend Code & Back actions */}
+                  <div className="flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground pt-1">
+                    {otpTimeLeft > 0 ? (
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 animate-spin text-primary" />
+                        Resend code in <strong className="font-mono text-foreground">{otpTimeLeft}s</strong>
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <span>Didn&apos;t receive the code?</span>
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={isSendingOtp}
+                          className="font-semibold text-primary underline underline-offset-2 hover:opacity-80 transition cursor-pointer disabled:opacity-60"
+                        >
+                          {isSendingOtp ? "Sending code..." : "Resend Code"}
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep("form");
+                        setOtp(["", "", "", "", "", ""]);
+                      }}
+                      className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition cursor-pointer"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" /> Back to edit registration details
                     </button>
                   </div>
                 </div>
+              ) : (
+                /* Step 1: Standard Registration Form */
+                <>
+                  <form className="mt-6 sm:mt-7 space-y-4" onSubmit={handleSubmit}>
+                    {/* Full Name */}
+                    <label className="group block space-y-2">
+                      <span className="text-sm font-medium text-foreground">Full name</span>
+                      <span className="relative block">
+                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 21a8 8 0 0 1 16 0" />
+                          </svg>
+                        </span>
+                        <input
+                          required
+                          name="fullName"
+                          type="text"
+                          placeholder="Aarav Joshi"
+                          autoComplete="name"
+                          value={formData.fullName}
+                          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                          className="h-12 w-full rounded-xl border border-border bg-secondary pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/30"
+                        />
+                      </span>
+                    </label>
+
+                    {/* Email */}
+                    <label className="group block space-y-2">
+                      <span className="text-sm font-medium text-foreground">Email</span>
+                      <span className="relative block">
+                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect x="3" y="5" width="18" height="14" rx="2" />
+                            <path d="m3 7 9 6 9-6" />
+                          </svg>
+                        </span>
+                        <input
+                          required
+                          name="email"
+                          type="email"
+                          placeholder="johndoe@gmail.com"
+                          autoComplete="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="h-12 w-full rounded-xl border border-border bg-secondary pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/30"
+                        />
+                      </span>
+                    </label>
+
+                    {/* Password with Eye Toggle */}
+                    <label className="group block space-y-2">
+                      <span className="text-sm font-medium text-foreground">Password</span>
+                      <span className="relative block">
+                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect x="4" y="11" width="16" height="10" rx="2" />
+                            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                          </svg>
+                        </span>
+                        <input
+                          required
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Create a password"
+                          autoComplete="new-password"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          className="h-12 w-full rounded-xl border border-border bg-secondary pl-11 pr-11 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-ring/30"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground cursor-pointer"
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </span>
+                    </label>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={isSigningUp || isLoggingIn || isSendingOtp}
+                      className="group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-primary font-semibold text-primary-foreground shadow-glow transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-70 disabled:pointer-events-none cursor-pointer"
+                    >
+                      <span className="absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-primary-foreground/20 transition-all duration-700 group-hover:left-[120%]" />
+                      {isSendingOtp ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Sending verification code...
+                        </span>
+                      ) : (
+                        <>
+                          Start chatting free{" "}
+                          <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
+                            →
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+
+                  {/* Or Divider */}
+                  <div className="my-4 sm:my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    <span className="h-px flex-1 bg-border" />
+                    or
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+
+                  {/* Google Sign-Up Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGoogleLoading(true);
+                      startGoogleTimer(120);
+                      triggerGoogleLogin();
+                    }}
+                    disabled={googleLoading || isSigningUp || isLoggingIn || isSendingOtp}
+                    className="flex h-11 sm:h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-secondary text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:border-primary/60 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {googleLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : (
+                      <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
+                        <path
+                          fill="#FFC107"
+                          d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"
+                        />
+                        <path
+                          fill="#FF3D00"
+                          d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+                        />
+                        <path
+                          fill="#4CAF50"
+                          d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"
+                        />
+                        <path
+                          fill="#1976D2"
+                          d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
+                        />
+                      </svg>
+                    )}
+                    <span>{googleLoading ? "Connecting to Google..." : "Sign up with Google"}</span>
+                  </button>
+
+                  {/* Google Auth Active Countdown Timer */}
+                  {googleTimeLeft !== null && (
+                    <div className="mt-3 flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-xs text-primary shadow-sm animate-rise">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Clock className="h-4 w-4 shrink-0 animate-pulse text-primary" />
+                        <span>Google sign-up active · Session expires in:</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs sm:text-sm font-bold tracking-wider rounded-lg bg-card/90 px-2.5 py-1 text-primary border border-primary/20 shadow-inner">
+                          {Math.floor(googleTimeLeft / 60)}:{(googleTimeLeft % 60).toString().padStart(2, "0")}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            stopGoogleTimer();
+                            setGoogleLoading(false);
+                          }}
+                          className="text-muted-foreground hover:text-foreground text-[11px] underline cursor-pointer"
+                          title="Cancel Google sign-up session"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Terms and Privacy Notice */}
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    By continuing, you review and accept our{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingGoogleAuth(null);
+                        setHasAcceptedConsent(false);
+                        setConsentDeclined(false);
+                        setIsConsentOpen(true);
+                      }}
+                      className="text-primary underline underline-offset-2 hover:opacity-80 transition cursor-pointer"
+                    >
+                      Terms &amp; Data Authorization
+                    </button>
+                    .
+                  </p>
+
+                  {/* Already have an account link */}
+                  <p className="mt-4 sm:mt-5 text-center text-sm text-muted-foreground">
+                    Already have an account?{" "}
+                    <Link to="/login" className="font-semibold text-primary hover:underline">
+                      Sign in
+                    </Link>
+                  </p>
+                </>
               )}
-
-              {/* Terms and Privacy Notice */}
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                By continuing, you review and accept our{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPendingGoogleAuth(null);
-                    setHasAcceptedConsent(false);
-                    setConsentDeclined(false);
-                    setIsConsentOpen(true);
-                  }}
-                  className="text-primary underline underline-offset-2 hover:opacity-80 transition cursor-pointer"
-                >
-                  Terms &amp; Data Authorization
-                </button>
-                .
-              </p>
-
-              {/* Already have an account link */}
-              <p className="mt-4 sm:mt-5 text-center text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <Link to="/login" className="font-semibold text-primary hover:underline">
-                  Sign in
-                </Link>
-              </p>
             </div>
           </div>
         </section>
@@ -798,7 +1063,7 @@ function SignUpPage() {
                   type="button"
                   className="h-11 px-5 rounded-full border border-border bg-secondary text-sm font-semibold text-foreground transition hover:bg-secondary/80 cursor-pointer"
                   onClick={handleDeclineConsent}
-                  disabled={isSigningUp || isLoggingIn}
+                  disabled={isSigningUp || isLoggingIn || isSendingOtp}
                 >
                   Disagree
                 </button>
@@ -806,16 +1071,17 @@ function SignUpPage() {
                   type="button"
                   className="h-11 px-6 rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-glow transition hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
                   onClick={handleAcceptConsent}
-                  disabled={!hasAcceptedConsent || isSigningUp || isLoggingIn}
+                  disabled={!hasAcceptedConsent || isSigningUp || isLoggingIn || isSendingOtp}
                 >
-                  {isSigningUp || isLoggingIn ? (
+                  {isSigningUp || isLoggingIn || isSendingOtp ? (
                     <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Processing...
+                      <Loader2 className="h-4 w-4 animate-spin" />{" "}
+                      {isSendingOtp ? "Sending code..." : "Processing..."}
                     </span>
                   ) : pendingGoogleAuth ? (
                     "Accept & Create Account with Google"
                   ) : (
-                    "Accept & Create Account"
+                    "Accept & Verify Email"
                   )}
                 </button>
               </div>

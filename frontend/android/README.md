@@ -148,3 +148,4 @@ Or open the `frontend/android` directory directly in Android Studio.
    * Always run `npm run cap:sync` after making frontend modifications so that changes in `src/` are compiled to `dist/` and copied to `app/src/main/assets/public/`.
 3. **WebRTC Hardware Acceleration**:
    * The underlying Android Chromium WebView natively offloads WebRTC VP8/VP9/H.264 video decoding and Opus audio processing to hardware codecs for minimal battery consumption.
+

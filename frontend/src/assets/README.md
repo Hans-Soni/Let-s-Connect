@@ -17,3 +17,4 @@ The `frontend/src/assets/` directory houses visual identity assets imported dire
 * **`emblem_gold-sNN9olCf.png`** — Royal golden seal emblem of Samवाद, displayed in light theme headers, hero sections, and welcome showcases.
 * **`emblem_silver-CXs3LN2i.png`** — Regal silver seal emblem of Samवाद, displayed in dark theme headers, modals, and as the master source for app icons.
 * **`favicon.png`** — Tab icon source graphic.
+

@@ -1,7 +1,9 @@
-import { sendWelcomeEmail } from "../emails/emailHandlers.js";
+import crypto from "crypto";
+import { sendWelcomeEmail, sendVerificationOtpEmail } from "../emails/emailHandlers.js";
 import { generateToken } from "../lib/utils.js";
 import Consent from "../models/Consent.js";
 import User from "../models/User.js";
+import Otp from "../models/Otp.js";
 import Message from "../models/Message.js";
 import bcrypt from "bcryptjs";
 import { ENV } from "../lib/env.js";
@@ -13,8 +15,85 @@ import { OAuth2Client } from "google-auth-library";
 
 const googleClient = new OAuth2Client(ENV.GOOGLE_CLIENT_ID);
 
+export const sendSignupOtp = async (req, res) => {
+  const { email, fullName } = req.body;
+
+  try {
+    if (!email) {
+      return res.status(400).json({ message: "Email address is required" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedFullName = (fullName || "").trim();
+
+    // Check if email is valid regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: "An account with this email already exists. Please log in." });
+    }
+
+    // Rate limiting: 60-second cooldown between OTP requests for the same email
+    const recentOtp = await Otp.findOne({
+      email: normalizedEmail,
+      type: "signup",
+      createdAt: { $gte: new Date(Date.now() - 60 * 1000) },
+    });
+
+    if (recentOtp) {
+      const elapsedMs = Date.now() - new Date(recentOtp.createdAt).getTime();
+      const remainingSeconds = Math.max(1, Math.ceil((60 * 1000 - elapsedMs) / 1000));
+      return res.status(429).json({
+        message: `Please wait ${remainingSeconds}s before requesting a new verification code.`,
+        retryAfter: remainingSeconds,
+      });
+    }
+
+    // Generate cryptographically secure 6-digit numeric OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+
+    // Hash OTP with bcrypt
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    // Delete any previous pending signup OTPs for this email
+    await Otp.deleteMany({ email: normalizedEmail, type: "signup" });
+
+    // Store new OTP record
+    await Otp.create({
+      email: normalizedEmail,
+      otp: hashedOtp,
+      type: "signup",
+      attempts: 0,
+      createdAt: new Date(),
+    });
+
+    // Dispatch email
+    await sendVerificationOtpEmail(normalizedEmail, otp, normalizedFullName);
+
+    const responsePayload = {
+      message: "Verification code sent to your email",
+      email: normalizedEmail,
+    };
+
+    if (ENV.NODE_ENV === "development") {
+      responsePayload.devOtp = otp;
+    }
+
+    return res.status(200).json(responsePayload);
+  } catch (error) {
+    console.error("Error in sendSignupOtp controller:", error);
+    return res.status(500).json({ message: "Failed to send verification code. Please try again." });
+  }
+};
+
 export const signup = async (req, res) => {
-  const { fullName, email, password, dataConsent } = req.body;
+  const { fullName, email, password, dataConsent, otp, clientIp: providedIp } = req.body;
 
   try {
     if (!fullName || !email || !password) {
@@ -25,6 +104,15 @@ export const signup = async (req, res) => {
       return res.status(400).json({
         message: "You must accept the terms and authorize data processing to create an account",
       });
+    }
+
+    if (!otp) {
+      return res.status(400).json({ message: "Email verification code (OTP) is required" });
+    }
+
+    const normalizedOtp = otp.toString().trim();
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      return res.status(400).json({ message: "Verification code must be exactly 6 digits" });
     }
 
     if (password.length < 6) {
@@ -47,6 +135,48 @@ export const signup = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
     if (user) return res.status(400).json({ message: "Email already exists" });
 
+    // Verify OTP record
+    const otpRecord = await Otp.findOne({
+      email: normalizedEmail,
+      type: "signup",
+    }).sort({ createdAt: -1 });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        message: "Verification code has expired or was not requested. Please request a new code.",
+      });
+    }
+
+    // 10-minute expiration check
+    const isExpired = Date.now() - new Date(otpRecord.createdAt).getTime() > 10 * 60 * 1000;
+    if (isExpired) {
+      await Otp.deleteMany({ email: normalizedEmail, type: "signup" });
+      return res.status(400).json({
+        message: "Verification code has expired. Please request a new code.",
+      });
+    }
+
+    // Brute force protection: max 5 attempts
+    if (otpRecord.attempts >= 5) {
+      await Otp.deleteMany({ email: normalizedEmail, type: "signup" });
+      return res.status(400).json({
+        message: "Too many failed attempts. Please request a new verification code.",
+      });
+    }
+
+    const isOtpValid = await bcrypt.compare(normalizedOtp, otpRecord.otp);
+    if (!isOtpValid) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+      const remaining = 5 - otpRecord.attempts;
+      return res.status(400).json({
+        message: `Invalid verification code. ${remaining > 0 ? remaining + " attempt(s) remaining." : "Please request a new code."}`,
+      });
+    }
+
+    // OTP successfully verified - delete the consumed OTP
+    await Otp.deleteMany({ email: normalizedEmail, type: "signup" });
+
     // 123456 => $dnjasdkasj_?dmsakmk
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -57,11 +187,12 @@ export const signup = async (req, res) => {
       email: normalizedEmail,
       designation: "",
       password: hashedPassword,
+      isVerified: true,
     });
 
     if (newUser) {
       const savedUser = await newUser.save();
-      const clientIp = extractClientIp(req);
+      const clientIp = (providedIp && typeof providedIp === "string") ? providedIp : extractClientIp(req);
       try {
         await Consent.create({
           accepted: true,

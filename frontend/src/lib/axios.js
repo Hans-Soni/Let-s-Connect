@@ -43,7 +43,13 @@ axiosInstance.interceptors.response.use(
     }
 
     // Don't try to refresh on the refresh/login/logout/signup endpoints themselves.
-    const skipPaths = ["/auth/refresh", "/auth/login", "/auth/signup", "/auth/logout"];
+    const skipPaths = [
+      "/auth/refresh",
+      "/auth/login",
+      "/auth/signup",
+      "/auth/send-signup-otp",
+      "/auth/logout",
+    ];
     if (skipPaths.some((p) => originalRequest.url?.includes(p))) {
       return Promise.reject(error);
     }

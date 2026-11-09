@@ -14,6 +14,7 @@ export const useAuthStore = create((set, get) => ({
   authUser: null,
   isCheckingAuth: true,
   isSigningUp: false,
+  isSendingOtp: false,
   isLoggingIn: false,
   isDeletingAccount: false,
   socket: null,
@@ -41,6 +42,25 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });
+    }
+  },
+
+  sendSignupOtp: async (data) => {
+    set({ isSendingOtp: true });
+    try {
+      const res = await axiosInstance.post("/auth/send-signup-otp", data);
+      toast.success(res.data?.message || "Verification code sent to your email!");
+      return { success: true, devOtp: res.data?.devOtp, email: res.data?.email };
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to send verification code";
+      toast.error(errorMsg);
+      return {
+        success: false,
+        message: errorMsg,
+        retryAfter: error.response?.data?.retryAfter,
+      };
+    } finally {
+      set({ isSendingOtp: false });
     }
   },
 

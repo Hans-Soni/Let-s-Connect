@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
     blockedUsers: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  sendSignupOtp,
   signup,
   login,
   googleAuth,
@@ -17,6 +18,7 @@ const router = express.Router();
 
 router.use(arcjetProtection);
 
+router.post("/send-signup-otp", sendSignupOtp);
 router.post("/signup", signup);
 router.post("/login", login);
 router.post("/google", googleAuth);

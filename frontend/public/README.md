@@ -63,3 +63,4 @@ Files placed in `frontend/public` are copied as-is into the root of the producti
   - Message sent and received sound effects.
   - Incoming call ringtones.
   - Call disconnect and error sounds.
+

@@ -17,3 +17,4 @@ The `frontend/public/sounds` directory stores standalone audio assets used for u
 - **Audio Specs**: Optimized low-latency MP3 sample (< 50KB) designed for swift decoding across mobile browsers and native WebViews.
 - **Service Worker Pre-caching**: Automatically pre-cached by `sw.js` upon initial service worker registration, ensuring instant playback even in offline or poor-connectivity environments.
 - **Web Audio Fallbacks**: In addition to static MP3 playback, real-time synthesized audio tones (such as WebRTC ringback, dialing, incoming ringtone, and call end beeps) are procedurally generated at runtime via the Web Audio API in [`callSounds.js`](file:///c:/Users/Asus/Desktop/chat%20app/frontend/src/lib/callSounds.js) to reduce network payload and guarantee zero-latency response.
+
