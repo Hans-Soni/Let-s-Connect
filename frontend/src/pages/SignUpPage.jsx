@@ -398,18 +398,23 @@ function SignUpPage() {
         setPendingGoogleAuth(null);
       }
     } else {
-      // Regular registration: send email OTP verification before creating account
+      // 1. Immediately close the consent modal so the user sees instant progress
+      setIsConsentOpen(false);
+      // 2. Immediately switch to the OTP putting section so the user is never stuck
+      setStep("otp");
+      startOtpTimer(60);
+      setTimeout(() => {
+        otpInputsRef.current[0]?.focus();
+      }, 150);
+
+      // 3. Dispatch the OTP verification email
       const res = await sendSignupOtp({
         email: formData.email,
         fullName: formData.fullName,
       });
-      if (res?.success) {
-        setIsConsentOpen(false);
-        setStep("otp");
-        startOtpTimer(res.retryAfter || 60);
-        setTimeout(() => {
-          otpInputsRef.current[0]?.focus();
-        }, 120);
+
+      if (res?.retryAfter) {
+        startOtpTimer(res.retryAfter);
       }
     }
   };
@@ -604,8 +609,15 @@ function SignUpPage() {
                         <Mail className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                          Code sent to
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          {isSendingOtp ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                              <span>Sending code...</span>
+                            </>
+                          ) : (
+                            <span>Code sent to</span>
+                          )}
                         </p>
                         <p className="truncate text-sm font-semibold text-foreground" title={formData.email}>
                           {formData.email}
