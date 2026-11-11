@@ -10,10 +10,11 @@ const getSmtpTransporter = () => {
 
   if (!user || !pass) return null;
 
+  const isRender = process.env.RENDER === "true";
   const timeouts = {
-    connectionTimeout: 4000,
-    greetingTimeout: 4000,
-    socketTimeout: 5000,
+    connectionTimeout: isRender ? 1500 : 4000,
+    greetingTimeout: isRender ? 1500 : 4000,
+    socketTimeout: isRender ? 2000 : 5000,
   };
 
   if (ENV.SMTP_SERVICE === "gmail" || (!ENV.SMTP_HOST && user.includes("@gmail.com"))) {

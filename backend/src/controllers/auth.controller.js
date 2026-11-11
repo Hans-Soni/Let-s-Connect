@@ -73,17 +73,26 @@ export const sendSignupOtp = async (req, res) => {
       createdAt: new Date(),
     });
 
-    // Dispatch email
-    const emailResult = await sendVerificationOtpEmail(normalizedEmail, otp, normalizedFullName);
+    // Dispatch email with a fast race probe (max 1200ms) so users NEVER face a blocking wait:
+    const dispatchPromise = sendVerificationOtpEmail(normalizedEmail, otp, normalizedFullName);
 
-    if (!emailResult.success) {
-      await Otp.deleteMany({ email: normalizedEmail, type: "signup" });
-      return res.status(502).json({
-        message:
-          emailResult.error ||
-          "Failed to deliver verification code to your email. Please check your email configuration.",
-      });
+    try {
+      await Promise.race([
+        dispatchPromise,
+        new Promise((resolve) => setTimeout(() => resolve({ fastReturn: true }), 1200)),
+      ]);
+    } catch (probeErr) {
+      console.warn("[AUTH OTP] Dispatch initial probe notice:", probeErr.message);
     }
+
+    // Ensure background delivery logs status without blocking user experience
+    dispatchPromise
+      .then((res) => {
+        if (!res?.success) {
+          console.warn(`[AUTH OTP] Background delivery note for ${normalizedEmail}:`, res?.error);
+        }
+      })
+      .catch((err) => console.error(`[AUTH OTP] Background delivery error:`, err.message));
 
     return res.status(200).json({
       message: `Verification code sent to ${normalizedEmail}. Please check your email inbox, copy the code, and paste it here.`,
