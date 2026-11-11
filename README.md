@@ -19,7 +19,7 @@
 
 ## 🌟 Executive Overview
 
-**Samवाद** is a private, zero-knowledge, real-time communication platform engineered for modern web, desktop, and mobile devices. Built around the philosophical premise of *uncluttered, dignified human dialogue*, Samवाद ensures that personal identity (phone numbers and email addresses) is never exposed to other participants.
+**Samवाद** is a private, zero-knowledge, real-time communication platform engineered for modern web, desktop, and mobile devices. Built on the principle of *uncluttered, dignified human dialogue*, Samवाद ensures personal identity (phone numbers and email addresses) is never exposed to other participants.
 
 Conversations are secured with **AES-256-GCM authenticated encryption**, protected by **twice-daily automated server key rotation**, automatically purged after **24 hours of ephemeral retention**, and delivered with sub-millisecond latency via **WebSockets** and **peer-to-peer WebRTC**.
 
@@ -138,12 +138,12 @@ chat app/
 - **1-Click Web App:** Visit the live URL on Android or iPhone to install to your home screen with zero browser bars.
 - **Android Studio Native Build:**
   ```bash
-  npm run cap:open
+  npm run cap: open
   ```
   *(Launches Android Studio with pre-configured camera, microphone, and audio settings permissions).*
 - **Sync Native Assets:**
   ```bash
-  npm run cap:build
+  npm run cap: build
   ```
 
 ---
