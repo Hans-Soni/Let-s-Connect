@@ -200,6 +200,97 @@ assert(!("blockedUsers" in aliceProfileObj), "Target user's private blockedUsers
 const isSelfBlock = aliceId === aliceId;
 assert(isSelfBlock, "Self-blocking is caught and prevented");
 
+// ----------------------------------------------------
+// 6. CI WORKFLOW ACTION PINNING & SUPPLY-CHAIN INTEGRITY
+// ----------------------------------------------------
+console.log("\n6. Testing CI Workflow Supply-Chain Security & Action Pinning...");
+
+const fs = backendRequire("fs");
+const path = backendRequire("path");
+
+const isActionPinned = (line) => {
+  const match = line.match(/^\s*uses:\s*([^#\s]+)/);
+  if (!match) return null;
+  const actionRef = match[1];
+  // Local actions (starting with ./) are safe
+  if (actionRef.startsWith("./")) return { pinned: true, ref: actionRef };
+  // External actions MUST be pinned to a full 40-char commit SHA
+  const hasSha = /@[0-9a-f]{40}$/i.test(actionRef);
+  return { pinned: hasSha, ref: actionRef };
+};
+
+// Negative security tests: mutable action refs must be rejected
+assert(isActionPinned("uses: actions/checkout@v4")?.pinned === false, "Negative test: Mutable tag '@v4' is strictly rejected");
+assert(isActionPinned("uses: actions/setup-node@main")?.pinned === false, "Negative test: Mutable branch '@main' is strictly rejected");
+assert(isActionPinned("uses: softprops/action-gh-release@v2.2.1")?.pinned === false, "Negative test: Semver tag '@v2.2.1' without SHA is strictly rejected");
+
+// Positive test: verified commit SHA must be accepted
+assert(
+  isActionPinned("uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2")?.pinned === true,
+  "Positive test: 40-character commit SHA with tag comment is accepted"
+);
+
+// Verify actual repository workflows
+const workflowDir = path.resolve(".github/workflows");
+if (fs.existsSync(workflowDir)) {
+  const workflowFiles = fs.readdirSync(workflowDir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
+  let allPinned = true;
+  let actionCount = 0;
+
+  for (const wf of workflowFiles) {
+    const content = fs.readFileSync(path.join(workflowDir, wf), "utf8");
+    const lines = content.split("\n");
+    for (const line of lines) {
+      const check = isActionPinned(line);
+      if (check) {
+        actionCount++;
+        if (!check.pinned) {
+          console.error(`    Unpinned action in ${wf}: ${check.ref}`);
+          allPinned = false;
+        }
+      }
+    }
+  }
+
+  assert(actionCount > 0, `Discovered ${actionCount} GitHub Actions in workflow files`);
+  assert(allPinned, "All GitHub Actions in .github/workflows are pinned to 40-character commit SHAs");
+}
+
+// ----------------------------------------------------
+// 7. DEPENDENCY ADVISORY & SHELL-QUOTE VULNERABILITY AUDIT
+// ----------------------------------------------------
+console.log("\n7. Testing Dependency Advisory & shell-quote Vulnerability Fix...");
+
+const isShellQuoteVulnerable = (version) => {
+  // GHSA-395f-4hp3-45gv & GHSA-pqg4-j6r4-53mv affect shell-quote <= 1.10.0
+  const semverParts = version.split(".").map((n) => parseInt(n, 10));
+  if (semverParts.length < 2) return true;
+  const major = semverParts[0];
+  const minor = semverParts[1];
+  if (major < 1) return true;
+  if (major === 1 && minor <= 10) return true;
+  return false;
+};
+
+// Negative security tests: vulnerable versions are correctly identified
+assert(isShellQuoteVulnerable("1.8.4") === true, "Negative test: shell-quote@1.8.4 identified as vulnerable");
+assert(isShellQuoteVulnerable("1.10.0") === true, "Negative test: shell-quote@1.10.0 identified as vulnerable");
+
+// Positive test: patched versions pass
+assert(isShellQuoteVulnerable("1.12.0") === false, "Positive test: shell-quote@1.12.0 identified as safe");
+
+// Verify root package-lock.json has patched shell-quote version
+const lockfilePath = path.resolve("package-lock.json");
+if (fs.existsSync(lockfilePath)) {
+  const lockfile = JSON.parse(fs.readFileSync(lockfilePath, "utf8"));
+  const shellQuotePkg = lockfile.packages?.["node_modules/shell-quote"];
+  if (shellQuotePkg) {
+    const installedVersion = shellQuotePkg.version;
+    const isVuln = isShellQuoteVulnerable(installedVersion);
+    assert(!isVuln, `Installed shell-quote version (${installedVersion}) is >= 1.10.1 (safe against GHSA-395f-4hp3-45gv & GHSA-pqg4-j6r4-53mv)`);
+  }
+}
+
 console.log("\n========================================================");
 console.log(`TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log("========================================================\n");
