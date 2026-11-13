@@ -84,7 +84,7 @@ export const sendWelcomeEmail = async (email, name, clientURL) => {
           body: JSON.stringify({
             sender: {
               name: ENV.EMAIL_FROM_NAME || "Samवाद",
-              email: ENV.EMAIL_FROM || "hanssureshsoni@gmail.com",
+              email: ENV.EMAIL_FROM || "samvada.real.time.chat@gmail.com",
             },
             to: [{ email, name: name || "Samवाद User" }],
             subject,
@@ -189,7 +189,7 @@ export const sendVerificationOtpEmail = async (email, otp, name = "") => {
         body: JSON.stringify({
           sender: {
             name: ENV.EMAIL_FROM_NAME || "Samवाद",
-            email: ENV.EMAIL_FROM || "hanssureshsoni@gmail.com",
+            email: ENV.EMAIL_FROM || "samvada.real.time.chat@gmail.com",
           },
           to: [{ email, name: name || "Samवाद User" }],
           subject: `Your Samवाद Verification Code: ${otp}`,
