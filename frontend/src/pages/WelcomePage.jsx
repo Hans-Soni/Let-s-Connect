@@ -8,6 +8,7 @@ import {
   Bot,
   Check,
   Clock,
+  Copy,
   Download,
   Eye,
   EyeOff,
@@ -27,6 +28,7 @@ import {
   Plus,
   RefreshCw,
   Send,
+  Share2,
   Shield,
   ShieldAlert,
   ShieldCheck,
@@ -156,8 +158,143 @@ function SectionHeading({ kicker, title, sub }) {
   );
 }
 
+// 1-Click Interactive Social Sharing Modal
+function ShareModal({ isOpen, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const shareUrl = "https://hans-soni.github.io/Let-s-Connect/";
+  const shortDesc = "Samवाद — Private real-time chat & WebRTC HD voice/video calling with zero tracking.";
+  const fullShareText = `${shortDesc}\n👉 ${shareUrl}`;
+
+  if (!isOpen) return null;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(fullShareText);
+    setCopied(true);
+    toast.success("Link & description copied to clipboard!");
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleNativeShare = () => {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator.share({
+        title: "Samवाद — Private Real-Time Chat & HD Calling",
+        text: shortDesc,
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      handleCopy();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-2xl animate-pop text-foreground">
+        <button
+          onClick={onClose}
+          aria-label="Close share modal"
+          className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full border border-border bg-secondary hover:bg-muted transition text-muted-foreground hover:text-foreground cursor-pointer"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+            <Share2 className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold">Share Samवाद</h3>
+            <p className="text-xs text-muted-foreground">Invite friends, teams, and colleagues with an attractive preview</p>
+          </div>
+        </div>
+
+        {/* Preview Banner Card */}
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-secondary/40">
+          <img
+            src="./og-image.png"
+            alt="Samवाद Sharing Preview"
+            className="w-full h-auto aspect-[1.91/1] object-cover"
+          />
+          <div className="p-3 bg-secondary/60">
+            <p className="text-[11px] font-semibold text-primary">hans-soni.github.io/Let-s-Connect</p>
+            <p className="text-sm font-bold text-foreground">Samवाद — Private Real-Time Chat &amp; HD Calling</p>
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+              Fast, private real-time chat, WebRTC HD voice &amp; video calls, screen sharing, and ephemeral messaging.
+            </p>
+          </div>
+        </div>
+
+        {/* 1-Click Sharing Platforms */}
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* WhatsApp */}
+          <a
+            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(fullShareText)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-xs font-semibold text-emerald-500 hover:bg-emerald-500/20 transition text-center"
+          >
+            WhatsApp
+          </a>
+          {/* Telegram */}
+          <a
+            href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shortDesc)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs font-semibold text-sky-500 hover:bg-sky-500/20 transition text-center"
+          >
+            Telegram
+          </a>
+          {/* Twitter / X */}
+          <a
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shortDesc)}&url=${encodeURIComponent(shareUrl)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-secondary px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-muted transition text-center"
+          >
+            Twitter / X
+          </a>
+          {/* LinkedIn */}
+          <a
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-blue-600/30 bg-blue-600/10 px-3 py-2.5 text-xs font-semibold text-blue-500 hover:bg-blue-600/20 transition text-center"
+          >
+            LinkedIn
+          </a>
+        </div>
+
+        {/* Copy Link & Description Row */}
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="text"
+            readOnly
+            value={shareUrl}
+            className="w-full rounded-xl border border-border bg-secondary/80 px-3 py-2 text-xs font-mono text-muted-foreground outline-none"
+          />
+          <button
+            onClick={handleCopy}
+            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition cursor-pointer"
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            <span>{copied ? "Copied" : "Copy"}</span>
+          </button>
+        </div>
+
+        {typeof navigator !== "undefined" && navigator.share && (
+          <button
+            onClick={handleNativeShare}
+            className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
+          >
+            <Share2 className="h-3.5 w-3.5" /> Open Mobile Share Sheet
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Header component with scroll glass blur, theme toggle, and mobile menu
-function Header({ dark, toggle }) {
+function Header({ dark, toggle, onShare }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -225,6 +362,15 @@ function Header({ dark, toggle }) {
           >
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
+          <button
+            onClick={onShare}
+            title="Share Samवाद"
+            aria-label="Share Samवाद"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
+          >
+            <Share2 className="h-3.5 w-3.5 text-primary" />
+            <span className="hidden sm:inline">Share</span>
+          </button>
           <InstallAppButton className="hidden sm:inline-flex rounded-full border border-primary/40 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground shadow-sm" />
           <a
             href={LOGIN_URL}
@@ -260,6 +406,14 @@ function Header({ dark, toggle }) {
               {label}
             </a>
           ))}
+          <div className="mt-2 space-y-2">
+            <button
+              onClick={() => { setMobileMenuOpen(false); onShare(); }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 py-2.5 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground cursor-pointer transition"
+            >
+              <Share2 className="h-3.5 w-3.5" /> Share Samवाद
+            </button>
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <a
               href={LOGIN_URL}
@@ -347,7 +501,7 @@ function HeroChatCard() {
 }
 
 // Hero section
-function Hero() {
+function Hero({ onShare }) {
   return (
     <section id="top" className="relative overflow-hidden pb-16 pt-24 sm:pb-24 sm:pt-36 md:pt-40">
       <Emblem className="hidden md:block absolute -left-10 bottom-10 h-40 w-56 opacity-30 dark:opacity-10 animate-float" />
@@ -384,6 +538,13 @@ function Hero() {
               <Download className="h-4 w-4" />
               <span>Install App</span>
             </InstallAppButton>
+            <button
+              onClick={onShare}
+              className="rounded-full border border-border bg-card/60 px-5 py-3.5 sm:py-4 font-semibold hover:bg-secondary text-center inline-flex items-center justify-center gap-2 cursor-pointer transition"
+            >
+              <Share2 className="h-4 w-4 text-primary" />
+              <span>Share</span>
+            </button>
           </div>
           <div className="mt-8 sm:mt-10 grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-3 text-xs sm:text-sm text-muted-foreground">
             <span className="flex items-center gap-2">
@@ -1662,6 +1823,7 @@ function Footer() {
 // Main WelcomePage Component
 export default function WelcomePage({ scrollTarget }) {
   const { dark, toggle } = useSamvaadTheme();
+  const [isShareOpen, setIsShareOpen] = useState(false);
   useReveal();
 
   useEffect(() => {
@@ -1689,9 +1851,9 @@ export default function WelcomePage({ scrollTarget }) {
 
   return (
     <div className={`welcome-page w-full max-w-full min-h-screen overflow-x-hidden ${dark ? "dark" : ""}`}>
-      <Header dark={dark} toggle={toggle} />
+      <Header dark={dark} toggle={toggle} onShare={() => setIsShareOpen(true)} />
       <main>
-        <Hero />
+        <Hero onShare={() => setIsShareOpen(true)} />
         <Marquee />
         <Features />
         <HowItWorks />
@@ -1707,6 +1869,7 @@ export default function WelcomePage({ scrollTarget }) {
         <FeedbackSection />
       </main>
       <Footer />
+      <ShareModal isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} />
     </div>
   );
 }

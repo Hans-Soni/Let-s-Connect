@@ -47,7 +47,8 @@ Files placed in `frontend/public` are copied as-is into the root of the producti
 
 ---
 
-### 5. App Icons (High-DPI Square PNGs)
+### 5. App Icons & Open Graph Social Banner
+* **`og-image.png`** — Dedicated 1200 × 630 px landscape Open Graph banner (aspect ratio 1.91:1) optimized for WhatsApp, Twitter/X, Telegram, LinkedIn, Discord, and Slack link previews.
 * **`icon-192.png`** — Exactly 192 × 192 px square icon for mobile home screens and Windows taskbar shortcuts (`purpose: any`).
 * **`icon-512.png`** — Exactly 512 × 512 px square icon for high-resolution splash screens and desktop installation dialogs (`purpose: any`).
 * **`icon-maskable-192.png`** & **`icon-maskable-512.png`** — Adaptive square icons with safe-zone margins for Android circular/squircle launcher crops (`purpose: maskable`).
