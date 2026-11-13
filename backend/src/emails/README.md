@@ -7,7 +7,7 @@
 ## 🌟 Overview
 
 This directory contains the email infrastructure for **Samवाद**. It supports multi-engine delivery backends:
-1. **Google Apps Script Web App** (`EMAIL_WEBHOOK_URL`): High-speed HTTPS (Port 443) dispatching via native Google APIs. Solves cloud hosting (Render Free Tier) SMTP port blocking without exposing personal accounts or requiring App Passwords.
+1. **Google Apps Script Web App** (`EMAIL_WEBHOOK_URL` & `EMAIL_WEBHOOK_SECRET`): Token-authenticated high-speed HTTPS (Port 443) dispatching via native Google APIs. Solves cloud hosting (Render Free Tier) SMTP port blocking without exposing personal accounts or requiring App Passwords.
 2. **Brevo REST API** (`BREVO_API_KEY`): Transactional HTTPS delivery with 300 free emails/day.
 3. **Nodemailer SMTP** (Gmail with App Password, Brevo, SendGrid, Amazon SES, or custom corporate SMTP).
 4. **Resend API** (Transactional email service for verified domains).

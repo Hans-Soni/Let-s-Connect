@@ -56,6 +56,7 @@ export const sendWelcomeEmail = async (email, name, clientURL) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            token: ENV.EMAIL_WEBHOOK_SECRET || "samvaad_secret_auth_token_2026",
             to: email,
             name: name || "Samवाद User",
             subject,
@@ -63,8 +64,13 @@ export const sendWelcomeEmail = async (email, name, clientURL) => {
           }),
         });
         if (hookRes.ok) {
-          console.log("[Email] Welcome Email delivered via HTTPS Webhook to:", email);
-          return;
+          const hookData = await hookRes.json().catch(() => null);
+          if (hookData && hookData.error) {
+            console.warn("[Email] Webhook welcome email error response:", hookData.error);
+          } else {
+            console.log("[Email] Welcome Email delivered via HTTPS Webhook to:", email);
+            return;
+          }
         }
       } catch (hookErr) {
         console.warn("[Email] Webhook welcome email warning:", hookErr.message);
@@ -154,6 +160,7 @@ export const sendVerificationOtpEmail = async (email, otp, name = "") => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          token: ENV.EMAIL_WEBHOOK_SECRET || "samvaad_secret_auth_token_2026",
           to: email,
           name: name || "Samवाद User",
           subject: `Your Samवाद Verification Code: ${otp}`,
@@ -163,12 +170,19 @@ export const sendVerificationOtpEmail = async (email, otp, name = "") => {
       });
 
       if (hookRes.ok) {
-        console.log("[Email] Real OTP delivered successfully via HTTPS Webhook to:", email);
-        return { success: true, provider: "webhook" };
+        const hookData = await hookRes.json().catch(() => null);
+        if (hookData && hookData.error) {
+          console.warn("[Email] Webhook returned error payload:", hookData.error);
+          lastError = `Webhook error: ${hookData.error}`;
+        } else {
+          console.log("[Email] Real OTP delivered successfully via HTTPS Webhook to:", email);
+          return { success: true, provider: "webhook" };
+        }
+      } else {
+        const errText = await hookRes.text().catch(() => "");
+        console.warn("[Email] Webhook responded with status:", hookRes.status, errText);
+        lastError = `Webhook delivery returned HTTP ${hookRes.status}`;
       }
-      const errText = await hookRes.text().catch(() => "");
-      console.warn("[Email] Webhook responded with status:", hookRes.status, errText);
-      lastError = `Webhook delivery returned HTTP ${hookRes.status}`;
     } catch (hookErr) {
       console.error("[Email] Exception in HTTPS Webhook delivery:", hookErr.message);
       lastError = `Webhook error: ${hookErr.message}`;
