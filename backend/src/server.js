@@ -12,6 +12,7 @@ import path from "path";
 import fs from "fs";
 import cors from "cors";
 import helmet from "helmet";
+import mongoose from "mongoose";
 import mongoSanitize from "express-mongo-sanitize";
 import xss from "xss-clean";
 
@@ -80,13 +81,36 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
-// make ready for deployment
-if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
-  app.get("*", (_, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+// Health check endpoint for uptime monitors (prevents Render free tier spin-down) and API status
+app.get(["/health", "/api/health"], (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "Samवाद Backend API",
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    database: mongoose.connection?.readyState === 1 ? "connected" : "connecting",
   });
+});
+
+// Production routing: serve built frontend assets if present, or redirect to official web client
+if (ENV.NODE_ENV === "production") {
+  const distDir = path.join(__dirname, "../frontend/dist");
+  if (fs.existsSync(distDir)) {
+    app.use(express.static(distDir));
+
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api/")) return next();
+      const indexPath = path.join(distDir, "index.html");
+      if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+      }
+      return res.redirect("https://hans-soni.github.io/Let-s-Connect/");
+    });
+  } else {
+    app.get("/", (req, res) => {
+      res.redirect("https://hans-soni.github.io/Let-s-Connect/");
+    });
+  }
 }
 
 // Connect to DB first, then initialise key rotation, then start listening.

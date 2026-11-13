@@ -9,6 +9,8 @@
     "sort-db": "node scripts/sortUsersInDB.js",
     "security-check": "node scripts/securityCheck.js",
     "test": "node scripts/securityCheck.js && npm run test:all --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "deploy": "npm run deploy --prefix frontend",
     "cap:sync": "npm run cap:sync --prefix frontend",
     "cap:build": "npm run cap:build --prefix frontend",
     "cap:open": "npm run cap:open --prefix frontend"
