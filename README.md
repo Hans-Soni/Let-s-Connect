@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💬 Samवाद (संवाद)
+# 💬 Samवाद (Let's Connect)
 
 **Private Real-Time Chat, HD Calling & Ephemeral Communication Platform**
 
