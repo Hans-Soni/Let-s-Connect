@@ -291,6 +291,39 @@ if (fs.existsSync(lockfilePath)) {
   }
 }
 
+// ----------------------------------------------------
+// 8. SECURITY HEADERS & DEFENSIVE DIRECTIVES TEST
+// ----------------------------------------------------
+console.log("\n8. Testing Security Headers & Defensive Directives (CSP, Referrer-Policy, MIME Sniffing)...");
+
+const indexHtmlPath = path.resolve("frontend/index.html");
+assert(fs.existsSync(indexHtmlPath), "frontend/index.html exists");
+if (fs.existsSync(indexHtmlPath)) {
+  const indexHtml = fs.readFileSync(indexHtmlPath, "utf8");
+  assert(
+    indexHtml.includes('http-equiv="X-Content-Type-Options"') && indexHtml.includes('content="nosniff"'),
+    "X-Content-Type-Options: nosniff meta directive present in index.html"
+  );
+  assert(
+    indexHtml.includes('http-equiv="Referrer-Policy"') && indexHtml.includes("strict-origin-when-cross-origin"),
+    "Referrer-Policy: strict-origin-when-cross-origin meta directive present in index.html"
+  );
+  assert(
+    indexHtml.includes('http-equiv="Content-Security-Policy"') && indexHtml.includes("default-src 'self'"),
+    "Content-Security-Policy (CSP) meta directive present in index.html"
+  );
+}
+
+const serverJsPath = path.resolve("backend/src/server.js");
+assert(fs.existsSync(serverJsPath), "backend/src/server.js exists");
+if (fs.existsSync(serverJsPath)) {
+  const serverJs = fs.readFileSync(serverJsPath, "utf8");
+  assert(serverJs.includes('app.disable("x-powered-by")'), "Express x-powered-by header explicitly disabled");
+  assert(serverJs.includes('res.removeHeader("Server")'), "Server header explicitly stripped on backend responses");
+  assert(serverJs.includes("contentSecurityPolicy"), "Helmet Content Security Policy configured in backend");
+  assert(serverJs.includes("referrerPolicy"), "Helmet Referrer-Policy configured in backend");
+}
+
 console.log("\n========================================================");
 console.log(`TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log("========================================================\n");

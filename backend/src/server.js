@@ -31,8 +31,48 @@ const PORT = ENV.PORT || 3000;
 // Trust reverse proxies (Cloudflare, Render, Railway, AWS ALB, Nginx) so client IP is properly extracted
 app.set("trust proxy", true);
 
-// Security Middleware
-app.use(helmet());
+// Minimize information disclosure: strip X-Powered-By and Server fingerprint headers
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.removeHeader("X-Powered-By");
+  res.removeHeader("Server");
+  next();
+});
+
+// Security Middleware: Helmet with hardened CSP, MIME protection & Referrer Policy
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://lh3.googleusercontent.com", "https://*.googleusercontent.com"],
+        mediaSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
+        connectSrc: [
+          "'self'",
+          "https://let-s-connect-backend.onrender.com",
+          "wss://let-s-connect-backend.onrender.com",
+          "https://accounts.google.com",
+          "https://apis.google.com",
+          "https://api.ipify.org",
+          "https://api64.ipify.org",
+          "https://script.google.com",
+          "https://script.googleusercontent.com",
+        ],
+        frameSrc: ["'self'", "https://accounts.google.com"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'", "https://accounts.google.com"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    xContentTypeOptions: true,
+  })
+);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(mongoSanitize());
