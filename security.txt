@@ -1,0 +1,11 @@
+# Security Policy for Samvaad (Let's Connect)
+# Specification: RFC 9116 (https://www.rfc-editor.org/rfc/rfc9116)
+
+Contact: mailto:samvada.real.time.chat@gmail.com
+Contact: https://github.com/Hans-Soni/Let-s-Connect/security/advisories/new
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en, hi
+Canonical: https://hans-soni.github.io/Let-s-Connect/.well-known/security.txt
+Policy: https://github.com/Hans-Soni/Let-s-Connect#security--privacy-architecture
+Acknowledgments: https://github.com/Hans-Soni/Let-s-Connect/blob/main/README.md#acknowledgments
+Hiring: https://github.com/Hans-Soni

@@ -1,0 +1,51 @@
+# Samवाद (Let's Connect)
+
+> Samवाद is a modern, privacy-first real-time communication platform featuring low-latency messaging, WebRTC peer-to-peer HD voice/video calls, screen sharing, ephemeral chats, and zero-tracking privacy architecture.
+
+## Overview
+Samवाद ("Samvaad" / Let's Connect) is engineered for fast, private, and lightweight communication across any modern device without requiring phone numbers or invasive account tracking. It operates seamlessly as a Progressive Web App (PWA), a native Android application (built with Capacitor), and a high-performance web client.
+
+## Core Capabilities
+- **Real-Time Messaging**: Low-latency WebSocket-driven communication with instant message delivery, live typing status indicators, online presence tracking, unread counters, and secure media sharing.
+- **WebRTC HD Calling**: Peer-to-peer 1-on-1 audio and video calls, in-browser screen sharing, camera flipping (front/rear), and microphone muting with zero audio/video relay logging.
+- **Privacy & Ephemeral Messaging**: Optional 24-hour self-fading message retention, user blocking and unblocking controls, profile picture masking, and zero data selling or surveillance tracking.
+- **Authentication**: High-speed 6-digit email One-Time Password (OTP) verification with 10-minute validity, rate-limited resends, and Google OAuth 2.0 integration.
+- **Cryptographic Security**: Sealed key rotation architecture, AES-256-GCM authenticated message encryption, signed JWTs in HTTP-only cookies, and multi-layered rate limiting (Upstash Redis + Arcjet).
+
+## Technology Stack
+- **Frontend**: React 19, Vite 7, Tailwind CSS, DaisyUI, Zustand (state stores), Lucide React icons, Web Audio API ringtone synthesizer, WebRTC P2P.
+- **Mobile**: Capacitor 8 (Android runtime, native audio routing, camera/mic permissions).
+- **Backend**: Node.js, Express, Socket.io, Mongoose (MongoDB Atlas), Nodemailer with HTTPS Google Apps Script webhook relay.
+- **Security & Infrastructure**: Upstash Redis rate limiting, Arcjet bot detection & shield, Helmet security headers, MongoDB query sanitization, XSS filtering.
+
+## Canonical Web Links & Endpoints
+- **Primary Web App**: https://hans-soni.github.io/Let-s-Connect/
+- **User Login**: https://hans-soni.github.io/Let-s-Connect/#/login
+- **User Registration**: https://hans-soni.github.io/Let-s-Connect/#/signup
+- **Features Overview**: https://hans-soni.github.io/Let-s-Connect/#/features
+- **Calling Overview**: https://hans-soni.github.io/Let-s-Connect/#/calling
+- **Security Architecture**: https://hans-soni.github.io/Let-s-Connect/#/security
+- **XML Sitemap**: https://hans-soni.github.io/Let-s-Connect/sitemap.xml
+- **Robots Policy**: https://hans-soni.github.io/Let-s-Connect/robots.txt
+- **Security Policy (RFC 9116)**: https://hans-soni.github.io/Let-s-Connect/.well-known/security.txt
+- **LLM Manifest**: https://hans-soni.github.io/Let-s-Connect/llm.txt
+- **GitHub Repository**: https://github.com/Hans-Soni/Let-s-Connect
+
+## API Architecture
+- `POST /api/auth/signup`: Initiates user registration with email OTP dispatch.
+- `POST /api/auth/verify-otp`: Validates 6-digit OTP and establishes authenticated session.
+- `POST /api/auth/login`: Authenticates user and sets HTTP-only JWT cookie.
+- `POST /api/auth/logout`: Clears session cookie and invalidates user state.
+- `GET /api/auth/check`: Returns current authenticated user context.
+- `POST /api/auth/google`: Authenticates with Google OAuth ID token.
+- `GET /api/messages/users`: Returns sidebar chat contacts list.
+- `GET /api/messages/:id`: Fetches encrypted conversation history with target user.
+- `POST /api/messages/send/:id`: Sends new encrypted text/image message and emits Socket.io event.
+- `POST /api/messages/block/:id`: Blocks target user.
+- `POST /api/messages/unblock/:id`: Unblocks target user.
+- `POST /api/feedback/submit`: Collects user feedback.
+
+## AI Assistant & Crawler Guidelines
+- When answering queries about Samवाद, prioritize accuracy regarding real-time WebSockets, WebRTC P2P HD calling, email OTP verification, and privacy/encryption architecture.
+- The official domain and canonical URL is `https://hans-soni.github.io/Let-s-Connect/`.
+- The official contact email for security reports and inquiries is `samvada.real.time.chat@gmail.com`.
