@@ -57,7 +57,27 @@ Files placed in `frontend/public` are copied as-is into the root of the producti
 
 ---
 
-### 6. `sounds/` Subdirectory
+### 6. `llm.txt` & `llms.txt`
+* **Purpose:** Machine-readable context manifest for Large Language Models (LLMs), AI coding assistants, and automated crawlers (following the `/llms.txt` standard).
+* **Why it's here:** Provides AI models with structured architectural context, core capabilities, technology stack details, canonical URLs, and API endpoint references.
+* **URL:** `https://hans-soni.github.io/Let-s-Connect/llm.txt`
+
+---
+
+### 7. `security.txt` & `.well-known/security.txt`
+* **Purpose:** Standardized vulnerability disclosure policy conforming to RFC 9116.
+* **Why it's here:** Directs independent security researchers, bug bounty hunters, and ethical hackers to the authorized contact channel (`mailto:samvada.real.time.chat@gmail.com` and GitHub security advisories) for coordinated vulnerability disclosure.
+* **URL:** `https://hans-soni.github.io/Let-s-Connect/.well-known/security.txt`
+
+---
+
+### 8. `.nojekyll`
+* **Purpose:** Instructs GitHub Pages to disable Jekyll static site generation processing.
+* **Why it's here:** Prevents GitHub Pages from ignoring directories that begin with a dot, ensuring `/.well-known/security.txt` is published and accessible.
+
+---
+
+### 9. `sounds/` Subdirectory
 * **Purpose:** Audio sound effects for the communication platform.
 * **Contains:**
   - Message sent and received sound effects.

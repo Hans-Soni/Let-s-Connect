@@ -1623,6 +1623,34 @@ function Footer() {
             hans-soni.github.io
           </a>
         </p>
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
+          <a
+            href="./.well-known/security.txt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors underline-offset-4 hover:underline"
+          >
+            security.txt
+          </a>
+          <span>·</span>
+          <a
+            href="./llm.txt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors underline-offset-4 hover:underline"
+          >
+            llm.txt
+          </a>
+          <span>·</span>
+          <a
+            href="./sitemap.xml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors underline-offset-4 hover:underline"
+          >
+            sitemap.xml
+          </a>
+        </div>
         <p className="text-xs text-muted-foreground">
           © {new Date().getFullYear()} Samवाद · All rights reserved.
         </p>
@@ -1635,6 +1663,17 @@ function Footer() {
 export default function WelcomePage({ scrollTarget }) {
   const { dark, toggle } = useSamvaadTheme();
   useReveal();
+
+  useEffect(() => {
+    document.title = "Samवाद — Private Real-Time Chat & HD Calling";
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", "https://hans-soni.github.io/Let-s-Connect/");
+  }, []);
 
   useEffect(() => {
     if (scrollTarget) {

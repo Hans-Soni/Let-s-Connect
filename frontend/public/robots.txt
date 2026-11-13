@@ -2,6 +2,6 @@
 User-agent: *
 Allow: /
 
-# XML Sitemap for Google Search Console and web crawlers
+# XML Sitemap for Search Engines
 Sitemap: https://hans-soni.github.io/Let-s-Connect/sitemap.xml
 

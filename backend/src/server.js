@@ -9,6 +9,7 @@ try {
 }
 import cookieParser from "cookie-parser";
 import path from "path";
+import fs from "fs";
 import cors from "cors";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
@@ -39,6 +40,41 @@ app.use(xss());
 app.use("/api", rateLimitMiddleware);
 app.use(cors({ origin: isOriginAllowed, credentials: true }));
 app.use(cookieParser());
+
+// Discovery & Compliance: RFC 9116 security.txt & LLM discovery manifests
+const getDiscoveryPath = (relPath) => {
+  const p1 = path.join(__dirname, "../frontend/public", relPath);
+  if (fs.existsSync(p1)) return p1;
+  const p2 = path.join(__dirname, "frontend/public", relPath);
+  if (fs.existsSync(p2)) return p2;
+  const p3 = path.join(__dirname, "../frontend/dist", relPath);
+  if (fs.existsSync(p3)) return p3;
+  return null;
+};
+
+app.get(["/.well-known/security.txt", "/security.txt"], (req, res) => {
+  const file = getDiscoveryPath(".well-known/security.txt") || getDiscoveryPath("security.txt");
+  res.type("text/plain; charset=utf-8");
+  if (file) {
+    return res.sendFile(file);
+  }
+  return res.send(
+    "Contact: mailto:samvada.real.time.chat@gmail.com\n" +
+    "Expires: 2027-12-31T23:59:59.000Z\n" +
+    "Preferred-Languages: en, hi\n" +
+    "Canonical: https://hans-soni.github.io/Let-s-Connect/.well-known/security.txt\n" +
+    "Policy: https://github.com/Hans-Soni/Let-s-Connect#security--privacy-architecture\n"
+  );
+});
+
+app.get(["/llm.txt", "/llms.txt"], (req, res) => {
+  const file = getDiscoveryPath("llm.txt") || getDiscoveryPath("llms.txt");
+  if (file) {
+    res.type("text/plain; charset=utf-8");
+    return res.sendFile(file);
+  }
+  return res.status(404).send("llm.txt not found");
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
