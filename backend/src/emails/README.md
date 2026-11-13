@@ -6,9 +6,11 @@
 
 ## 🌟 Overview
 
-This directory contains the email infrastructure for **Samवाद**. It supports dual delivery backends:
-1. **Nodemailer SMTP** (Gmail with App Password, Brevo, SendGrid, Amazon SES, or custom corporate SMTP).
-2. **Resend API** (Transactional email service for verified domains).
+This directory contains the email infrastructure for **Samवाद**. It supports multi-engine delivery backends:
+1. **Google Apps Script Web App** (`EMAIL_WEBHOOK_URL`): High-speed HTTPS (Port 443) dispatching via native Google APIs. Solves cloud hosting (Render Free Tier) SMTP port blocking without exposing personal accounts or requiring App Passwords.
+2. **Brevo REST API** (`BREVO_API_KEY`): Transactional HTTPS delivery with 300 free emails/day.
+3. **Nodemailer SMTP** (Gmail with App Password, Brevo, SendGrid, Amazon SES, or custom corporate SMTP).
+4. **Resend API** (Transactional email service for verified domains).
 
 When a user signs up, the system generates a secure 6-digit One-Time Password (OTP) and delivers a high-contrast branded email directly to their inbox, allowing the user to copy the code from their email and paste it into the application.
 
@@ -22,6 +24,8 @@ When a user signs up, the system generates a secure 6-digit One-Time Password (O
 * **Key Exports:**
   - `sendVerificationOtpEmail(email, otp, name)`:
     - Constructs the OTP verification payload using `createOtpEmailTemplate`.
+    - Attempts delivery via HTTPS Webhook (`EMAIL_WEBHOOK_URL`) if configured (Port 443, instant).
+    - Attempts delivery via Brevo REST API (`BREVO_API_KEY`) if configured.
     - Attempts delivery via Nodemailer SMTP if configured (`EMAIL_USER` & `EMAIL_PASS` or `SMTP_HOST`).
     - Falls back to Resend API if `RESEND_API_KEY` is present and valid.
     - Surfaces descriptive errors if email configuration is missing or if delivery is rejected by the provider.
