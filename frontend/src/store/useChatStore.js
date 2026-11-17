@@ -68,6 +68,10 @@ export const useChatStore = create((set, get) => ({
   viewingProfileUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  conversationRetention: {},
+  isRetentionModalOpen: false,
+  openRetentionModal: () => set({ isRetentionModalOpen: true }),
+  closeRetentionModal: () => set({ isRetentionModalOpen: false }),
   blockedUsers: (() => {
     try {
       const stored = localStorage.getItem("blockedUsers");
@@ -209,6 +213,7 @@ export const useChatStore = create((set, get) => ({
   setSelectedUser: (selectedUser) => {
     set((state) => ({
       selectedUser,
+      isRetentionModalOpen: false,
       chats: selectedUser?._id
         ? state.chats.map((chat) =>
             String(chat._id) === String(selectedUser._id) ? { ...chat, unreadCount: 0 } : chat
@@ -218,6 +223,50 @@ export const useChatStore = create((set, get) => ({
     if (selectedUser?._id) {
       get().getMessagesByUserId(selectedUser._id);
       get().markMessagesAsSeen(selectedUser._id);
+      get().getConversationRetention(selectedUser._id);
+    }
+  },
+  getConversationRetention: async (partnerId) => {
+    if (!partnerId) return null;
+    const strId = String(partnerId);
+    try {
+      const res = await axiosInstance.get(`/messages/retention/${strId}`);
+      const data = res.data;
+      set((state) => ({
+        conversationRetention: {
+          ...state.conversationRetention,
+          [strId]: data,
+        },
+        // Automatically prompt the user to choose if no retention policy was selected yet
+        isRetentionModalOpen: !data.hasSelectedRetention,
+      }));
+      return data;
+    } catch (err) {
+      console.log("Error loading retention policy:", err);
+      return null;
+    }
+  },
+  setConversationRetention: async (partnerId, policy) => {
+    if (!partnerId || !["24h", "15d"].includes(policy)) return false;
+    const strId = String(partnerId);
+    try {
+      const res = await axiosInstance.post(`/messages/retention/${strId}`, { policy });
+      set((state) => ({
+        conversationRetention: {
+          ...state.conversationRetention,
+          [strId]: res.data,
+        },
+        isRetentionModalOpen: false,
+      }));
+      toast.success(
+        policy === "15d"
+          ? "🛡️ 15-day secure retention active for this chat."
+          : "⏱️ 24-hour auto-clearing active for this chat."
+      );
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not update retention policy");
+      return false;
     }
   },
   setViewingProfileUser: (viewingProfileUser) => set({ viewingProfileUser }),
@@ -696,6 +745,35 @@ export const useChatStore = create((set, get) => ({
         };
       });
     });
+
+    socket.off("retentionPolicyUpdated");
+    socket.on("retentionPolicyUpdated", ({ chatPartnerId, retentionPolicy, updatedBy, hasSelectedRetention }) => {
+      if (!chatPartnerId) return;
+      const strId = String(chatPartnerId);
+      const authUser = useAuthStore.getState().authUser;
+      const isUpdatedByOther = authUser && String(updatedBy) !== String(authUser._id);
+
+      set((state) => ({
+        conversationRetention: {
+          ...state.conversationRetention,
+          [strId]: {
+            retentionPolicy,
+            hasSelectedRetention: Boolean(hasSelectedRetention),
+            retentionSelectedBy: updatedBy,
+          },
+        },
+        isRetentionModalOpen: false,
+      }));
+
+      if (isUpdatedByOther) {
+        toast(
+          retentionPolicy === "15d"
+            ? "🛡️ Chat partner set retention to 15 Days (Secure Storage)."
+            : "⏱️ Chat partner set retention to 24 Hours (Ephemeral).",
+          { icon: retentionPolicy === "15d" ? "🛡️" : "⏱️" }
+        );
+      }
+    });
   },
 
   blockUser: async (userId) => {
@@ -820,6 +898,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("typing");
     socket.off("stopTyping");
     socket.off("messageReaction");
+    socket.off("retentionPolicyUpdated");
   },
 
   subscribeToUsers: () => {

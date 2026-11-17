@@ -485,7 +485,17 @@ export default function ChatPage() {
     togglePinChat,
     messageReactions,
     addMessageReaction,
+    conversationRetention,
+    isRetentionModalOpen,
+    openRetentionModal,
+    closeRetentionModal,
+    setConversationRetention,
   } = useChatStore();
+
+  const currentRetention = selectedUser?._id
+    ? conversationRetention[String(selectedUser._id)] || { retentionPolicy: "24h", hasSelectedRetention: false }
+    : null;
+  const activePolicy = currentRetention?.retentionPolicy || "24h";
 
   const {
     authUser,
@@ -1682,6 +1692,22 @@ export default function ChatPage() {
                         Blocked
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRetentionModal();
+                      }}
+                      title="Chat clearing policy: Click to choose 24 Hours or 15 Days"
+                      className={`hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition cursor-pointer select-none ${
+                        activePolicy === "15d"
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
+                          : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                      }`}
+                    >
+                      {activePolicy === "15d" ? <ShieldCheck size={11} /> : <Clock size={11} />}
+                      <span>{activePolicy === "15d" ? "15-Day Storage" : "24h Auto-Clearing"}</span>
+                    </button>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
                     {isUserBlocked(selectedUser._id) ? (
@@ -1706,6 +1732,20 @@ export default function ChatPage() {
 
               {/* Header Action buttons */}
               <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={openRetentionModal}
+                  aria-label="Chat retention policy"
+                  title={`Retention: ${activePolicy === "15d" ? "15 Days" : "24 Hours"} (Click to change)`}
+                  className={`sm:hidden grid h-9 w-9 place-items-center rounded-lg border transition cursor-pointer ${
+                    activePolicy === "15d"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                      : "border-primary/30 bg-primary/10 text-primary"
+                  }`}
+                >
+                  {activePolicy === "15d" ? <ShieldCheck size={16} /> : <Clock size={16} />}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setShowInChatSearch(!showInChatSearch)}
@@ -1808,6 +1848,31 @@ export default function ChatPage() {
                 <span className="h-px w-10 bg-border" />
                 The start of something good
                 <span className="h-px w-10 bg-border" />
+              </div>
+
+              {/* Chat Retention Policy Banner */}
+              <div className="mx-auto mb-6 max-w-sm rounded-xl border border-border bg-card/70 px-4 py-3 text-center text-xs shadow-xs animate-rise">
+                <div className="flex items-center justify-center gap-1.5 font-semibold text-foreground">
+                  {activePolicy === "15d" ? (
+                    <ShieldCheck size={14} className="text-emerald-500" />
+                  ) : (
+                    <Clock size={14} className="text-primary" />
+                  )}
+                  <span>{activePolicy === "15d" ? "15-Day Secure Storage Active" : "24-Hour Auto-Clearing Active"}</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
+                  {activePolicy === "15d"
+                    ? "Messages are encrypted with AES-256 and will clear from the database after 15 days."
+                    : "Messages in this conversation automatically clear after 24 hours."}
+                </p>
+                <button
+                  type="button"
+                  onClick={openRetentionModal}
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                >
+                  <span>Change chat retention</span>
+                  <ArrowRight size={11} />
+                </button>
               </div>
 
               {isMessagesLoading ? (
@@ -2480,13 +2545,37 @@ export default function ChatPage() {
 
             {/* Conversation Data & Privacy */}
             <div className="p-4 rounded-xl border border-border bg-secondary space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <Clock size={13} className="text-primary" />
-                <span>24-Hour Ephemeral Chat</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  {activePolicy === "15d" ? (
+                    <ShieldCheck size={14} className="text-emerald-500" />
+                  ) : (
+                    <Clock size={14} className="text-primary" />
+                  )}
+                  <span>{activePolicy === "15d" ? "15-Day Secure Storage" : "24-Hour Ephemeral Chat"}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={openRetentionModal}
+                  className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                >
+                  Change
+                </button>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Messages, voice notes, and photos in this conversation automatically vanish 24 hours after being sent.
+                {activePolicy === "15d"
+                  ? "Messages and media in this conversation are encrypted with AES-256 and will clear from our database 15 days after being sent."
+                  : "Messages, voice notes, and photos in this conversation automatically vanish 24 hours after being sent."}
               </p>
+
+              <button
+                type="button"
+                onClick={openRetentionModal}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-border bg-card hover:bg-secondary text-xs font-semibold text-foreground transition cursor-pointer"
+              >
+                {activePolicy === "15d" ? <Clock size={13} className="text-primary" /> : <ShieldCheck size={13} className="text-emerald-500" />}
+                <span>Switch to {activePolicy === "15d" ? "24-Hour Clearing" : "15-Day Secure Storage"}</span>
+              </button>
 
               <button
                 type="button"
@@ -2502,6 +2591,131 @@ export default function ChatPage() {
             </div>
           </div>
         </aside>
+      )}
+
+      {/* Retention Policy Choice Modal (24 Hours vs 15 Days) */}
+      {isRetentionModalOpen && selectedUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 dark:bg-black/75 backdrop-blur-sm animate-in fade-in-0"
+          onClick={closeRetentionModal}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl overflow-hidden animate-rise text-foreground"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl font-bold text-foreground">
+                    Chat Clearing Preference
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    For conversation with <span className="font-semibold text-foreground">{selectedUser.fullName}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeRetentionModal}
+                className="rounded-full p-1.5 hover:bg-secondary text-muted-foreground hover:text-foreground transition cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="mt-4 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Choose whether to keep this conversation for <strong>24 hours</strong> or <strong>15 days</strong> before messages are cleared from our database:
+            </p>
+
+            {/* Options Grid */}
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Option A: 24 Hours */}
+              <div
+                onClick={() => setConversationRetention(selectedUser._id, "24h")}
+                className={`relative flex flex-col justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${
+                  activePolicy === "24h"
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border bg-secondary/50 hover:bg-secondary hover:border-border/80"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-card border border-border text-primary group-hover:scale-105 transition-transform">
+                      <Clock size={18} />
+                    </div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                      Option A
+                    </span>
+                  </div>
+                  <h4 className="font-semibold text-sm sm:text-base text-foreground flex items-center gap-1.5">
+                    24 Hours
+                  </h4>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    Clearing function wipes all messages, voice notes, and media after <strong>24 hours</strong>.
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-primary">
+                    {activePolicy === "24h" ? "✓ Currently Active" : "Keep for 24 Hours"}
+                  </span>
+                  <ArrowRight size={14} className="text-primary group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Option B: 15 Days */}
+              <div
+                onClick={() => setConversationRetention(selectedUser._id, "15d")}
+                className={`relative flex flex-col justify-between p-4 rounded-2xl border transition-all cursor-pointer group ${
+                  activePolicy === "15d"
+                    ? "border-emerald-500 bg-emerald-500/10 shadow-sm"
+                    : "border-border bg-secondary/50 hover:bg-secondary hover:border-border/80"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-card border border-border text-emerald-500 group-hover:scale-105 transition-transform">
+                      <ShieldCheck size={18} />
+                    </div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      Option B
+                    </span>
+                  </div>
+                  <h4 className="font-semibold text-sm sm:text-base text-foreground flex items-center gap-1.5">
+                    15 Days
+                  </h4>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    Keeps data secure with AES-256 encryption for <strong>15 days</strong>, then clears it from our database.
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {activePolicy === "15d" ? "✓ Currently Active" : "Keep for 15 Days"}
+                  </span>
+                  <ArrowRight size={14} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </div>
+
+            {/* Note & Done */}
+            <div className="mt-5 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>You can switch this anytime from the chat header or details.</span>
+              <button
+                type="button"
+                onClick={closeRetentionModal}
+                className="px-3.5 py-1.5 rounded-xl border border-border bg-card hover:bg-secondary text-foreground font-semibold transition cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 5. A New Conversation / Contacts Modal */}

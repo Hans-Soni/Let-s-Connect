@@ -1357,8 +1357,8 @@ function FaqSection() {
       "Never. Your email address and phone number are strictly confidential and never displayed to other users. Only your display name and professional designation (e.g., 'Software Architect', 'Product Designer') are shown across contacts and active chats.",
     ],
     [
-      "What exactly happens after 24 hours?",
-      "To protect your privacy and eliminate storage bloat, a background cron job runs every minute on the server. Any message older than 24 hours is automatically and permanently purged from the database, along with its attached images, videos, and voice notes from Cloudinary storage.",
+      "What are the chat clearing options (24 Hours vs 15 Days)?",
+      "You have total control over every conversation: choose between 24-hour ephemeral chat (messages and media vanish after 24 hours for maximum privacy) or 15-day secure storage (messages remain strongly encrypted with AES-256 for 15 days so you have time to collaborate, then permanently cleared from our database). You can switch between them anytime directly from the chat header.",
     ],
     [
       "How do voice, video, and screen sharing work?",

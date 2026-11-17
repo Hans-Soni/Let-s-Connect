@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 
-export const MESSAGE_RETENTION_MS = 24 * 60 * 60 * 1000;
+export const MESSAGE_RETENTION_24H_MS = 24 * 60 * 60 * 1000;
+export const MESSAGE_RETENTION_15D_MS = 15 * 24 * 60 * 60 * 1000;
+export const MESSAGE_RETENTION_MS = MESSAGE_RETENTION_24H_MS;
 
 const messageSchema = new mongoose.Schema(
   {
@@ -53,13 +55,25 @@ const messageSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    retentionPolicy: {
+      type: String,
+      enum: ["24h", "15d"],
+      default: "24h",
+    },
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true, autoIndex: false }
 );
 
-// Compound indexes for fast conversation lookups and createdAt for scheduled retention cleanup.
+// Compound indexes for fast conversation lookups and expiresAt/createdAt for scheduled retention cleanup.
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: 1 });
 messageSchema.index({ receiverId: 1, senderId: 1, createdAt: 1 });
+messageSchema.index({ senderId: 1, receiverId: 1, expiresAt: 1 });
+messageSchema.index({ receiverId: 1, senderId: 1, expiresAt: 1 });
+messageSchema.index({ expiresAt: 1 }, { name: "expiresAt_cleanup_1" });
 messageSchema.index({ createdAt: 1 }, { name: "createdAt_cleanup_1" });
 
 const Message = mongoose.model("Message", messageSchema);

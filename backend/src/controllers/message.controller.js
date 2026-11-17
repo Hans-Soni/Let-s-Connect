@@ -1,7 +1,12 @@
 import mongoose from "mongoose";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
-import Message, { MESSAGE_RETENTION_MS } from "../models/Message.js";
+import Message, {
+  MESSAGE_RETENTION_MS,
+  MESSAGE_RETENTION_24H_MS,
+  MESSAGE_RETENTION_15D_MS,
+} from "../models/Message.js";
+import Conversation, { getPairKey } from "../models/Conversation.js";
 import User from "../models/User.js";
 import { encryptText, decryptText } from "../lib/encryption.js";
 import { deleteMessageMedia } from "../lib/messageRetention.js";
@@ -100,19 +105,29 @@ export const getMessagesByUserId = async (req, res) => {
   try {
     const myId = req.user._id;
     const { id: userToChatId } = req.params;
-    const retentionCutoff = new Date(Date.now() - MESSAGE_RETENTION_MS);
+    const now = new Date();
 
     if (!isValidObjectId(userToChatId)) {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    // Automatically mark all messages from userToChatId to myId as seen
+    // Automatically mark all non-expired messages from userToChatId to myId as seen
     await Message.updateMany(
       {
         senderId: userToChatId,
         receiverId: myId,
         isSeen: { $ne: true },
-        createdAt: { $gte: retentionCutoff },
+        $or: [
+          { expiresAt: { $gt: now } },
+          {
+            expiresAt: { $exists: false },
+            createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+          },
+          {
+            expiresAt: null,
+            createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+          },
+        ],
       },
       { $set: { isSeen: true, seenAt: new Date() } }
     ).catch(() => {});
@@ -123,11 +138,27 @@ export const getMessagesByUserId = async (req, res) => {
     });
 
     const messages = await Message.find({
-      $or: [
-        { senderId: myId, receiverId: userToChatId },
-        { senderId: userToChatId, receiverId: myId },
+      $and: [
+        {
+          $or: [
+            { senderId: myId, receiverId: userToChatId },
+            { senderId: userToChatId, receiverId: myId },
+          ],
+        },
+        {
+          $or: [
+            { expiresAt: { $gt: now } },
+            {
+              expiresAt: { $exists: false },
+              createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+            },
+            {
+              expiresAt: null,
+              createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+            },
+          ],
+        },
       ],
-      createdAt: { $gte: retentionCutoff },
     })
       .sort({ createdAt: 1 })
       .lean();
@@ -155,6 +186,7 @@ export const markMessagesAsSeen = async (req, res) => {
   try {
     const myId = req.user._id;
     const { id: senderId } = req.params;
+    const now = new Date();
 
     if (!isValidObjectId(senderId)) {
       return res.status(400).json({ message: "Invalid user ID" });
@@ -165,7 +197,17 @@ export const markMessagesAsSeen = async (req, res) => {
         senderId,
         receiverId: myId,
         isSeen: { $ne: true },
-        createdAt: { $gte: new Date(Date.now() - MESSAGE_RETENTION_MS) },
+        $or: [
+          { expiresAt: { $gt: now } },
+          {
+            expiresAt: { $exists: false },
+            createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+          },
+          {
+            expiresAt: null,
+            createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+          },
+        ],
       },
       { $set: { isSeen: true, seenAt: new Date() } }
     ).catch(() => ({ modifiedCount: 0 }));
@@ -292,6 +334,12 @@ export const sendMessage = async (req, res) => {
       }
     }
 
+    const pairKey = getPairKey(senderId, receiverId);
+    const conversation = await Conversation.findOne({ pairKey }).lean();
+    const retentionPolicy = conversation?.retentionPolicy === "15d" ? "15d" : "24h";
+    const retentionMs = retentionPolicy === "15d" ? MESSAGE_RETENTION_15D_MS : MESSAGE_RETENTION_24H_MS;
+    const expiresAt = new Date(Date.now() + retentionMs);
+
     const newMessage = new Message({
       senderId,
       receiverId,
@@ -302,6 +350,8 @@ export const sendMessage = async (req, res) => {
       audioPublicId,
       video: videoUrl,
       videoPublicId,
+      retentionPolicy,
+      expiresAt,
       isDelivered: true,
       isSeen: false,
     });
@@ -347,12 +397,28 @@ export const sendMessage = async (req, res) => {
 export const getChatPartners = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const retentionCutoff = new Date(Date.now() - MESSAGE_RETENTION_MS);
+    const now = new Date();
 
-    // find all the messages where the logged-in user is either sender or receiver, sorted newest first
+    // find all the non-expired messages where the logged-in user is either sender or receiver, sorted newest first
     const messages = await Message.find({
-      $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
-      createdAt: { $gte: retentionCutoff },
+      $and: [
+        {
+          $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
+        },
+        {
+          $or: [
+            { expiresAt: { $gt: now } },
+            {
+              expiresAt: { $exists: false },
+              createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+            },
+            {
+              expiresAt: null,
+              createdAt: { $gte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+            },
+          ],
+        },
+      ],
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -576,6 +642,107 @@ export const deleteChatHistory = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in deleteChatHistory controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getConversationRetention = async (req, res) => {
+  try {
+    const myId = req.user._id;
+    const { id: partnerId } = req.params;
+
+    if (!isValidObjectId(partnerId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const pairKey = getPairKey(myId, partnerId);
+    const conversation = await Conversation.findOne({ pairKey }).lean();
+
+    res.status(200).json({
+      retentionPolicy: conversation?.retentionPolicy || "24h",
+      hasSelectedRetention: Boolean(conversation?.hasSelectedRetention),
+      retentionSelectedBy: conversation?.retentionSelectedBy || null,
+      updatedAt: conversation?.updatedAt || null,
+    });
+  } catch (error) {
+    console.error("Error in getConversationRetention controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const updateConversationRetention = async (req, res) => {
+  try {
+    const myId = req.user._id;
+    const { id: partnerId } = req.params;
+    const { policy } = req.body;
+
+    if (!isValidObjectId(partnerId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (!["24h", "15d"].includes(policy)) {
+      return res.status(400).json({ message: "Invalid retention policy. Must be '24h' or '15d'." });
+    }
+
+    const pairKey = getPairKey(myId, partnerId);
+    const conversation = await Conversation.findOneAndUpdate(
+      { pairKey },
+      {
+        $set: {
+          participants: [myId, partnerId],
+          pairKey,
+          retentionPolicy: policy,
+          hasSelectedRetention: true,
+          retentionSelectedBy: myId,
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    // Update active messages in this conversation so their expiresAt matches the chosen policy
+    const retentionMs = policy === "15d" ? MESSAGE_RETENTION_15D_MS : MESSAGE_RETENTION_24H_MS;
+    const conversationMessages = await Message.find({
+      $or: [
+        { senderId: myId, receiverId: partnerId },
+        { senderId: partnerId, receiverId: myId },
+      ],
+    });
+
+    for (const msg of conversationMessages) {
+      const newExpiresAt = new Date(new Date(msg.createdAt).getTime() + retentionMs);
+      await Message.updateOne(
+        { _id: msg._id },
+        { $set: { retentionPolicy: policy, expiresAt: newExpiresAt } }
+      );
+    }
+
+    const payload = {
+      chatPartnerId: myId.toString(),
+      retentionPolicy: policy,
+      updatedBy: myId.toString(),
+      hasSelectedRetention: true,
+    };
+
+    const partnerSocketId = getReceiverSocketId(partnerId.toString());
+    if (partnerSocketId) {
+      io.to(partnerSocketId).emit("retentionPolicyUpdated", payload);
+    }
+    const myReceiverSocketId = getReceiverSocketId(myId.toString());
+    if (myReceiverSocketId) {
+      io.to(myReceiverSocketId).emit("retentionPolicyUpdated", {
+        ...payload,
+        chatPartnerId: partnerId.toString(),
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      retentionPolicy: conversation.retentionPolicy,
+      hasSelectedRetention: conversation.hasSelectedRetention,
+      retentionSelectedBy: conversation.retentionSelectedBy,
+    });
+  } catch (error) {
+    console.error("Error in updateConversationRetention controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

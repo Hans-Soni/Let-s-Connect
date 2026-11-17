@@ -70,11 +70,27 @@ export const deleteMessageMedia = async (message) => {
 export const cleanupExpiredMessages = async () => {
   const now = new Date();
   const expiredMessages = await Message.find({
-    createdAt: { $lte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
-    $or: [
-      { mediaCleanupRetryAt: null },
-      { mediaCleanupRetryAt: { $exists: false } },
-      { mediaCleanupRetryAt: { $lte: now } },
+    $and: [
+      {
+        $or: [
+          { expiresAt: { $lte: now } },
+          {
+            expiresAt: { $exists: false },
+            createdAt: { $lte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+          },
+          {
+            expiresAt: null,
+            createdAt: { $lte: new Date(now.getTime() - MESSAGE_RETENTION_MS) },
+          },
+        ],
+      },
+      {
+        $or: [
+          { mediaCleanupRetryAt: null },
+          { mediaCleanupRetryAt: { $exists: false } },
+          { mediaCleanupRetryAt: { $lte: now } },
+        ],
+      },
     ],
   })
     .sort({ createdAt: 1 })

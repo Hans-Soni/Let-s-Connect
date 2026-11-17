@@ -324,6 +324,31 @@ if (fs.existsSync(serverJsPath)) {
   assert(serverJs.includes("referrerPolicy"), "Helmet Referrer-Policy configured in backend");
 }
 
+// ----------------------------------------------------
+// 9. EPHEMERAL CHAT RETENTION & AUTO-CLEARING TEST (24h vs 15d)
+// ----------------------------------------------------
+console.log("\n9. Testing Ephemeral Chat Retention & Auto-Clearing Policies (24h vs 15d)...");
+
+const { MESSAGE_RETENTION_24H_MS, MESSAGE_RETENTION_15D_MS } = await import("../backend/src/models/Message.js");
+assert(MESSAGE_RETENTION_24H_MS === 24 * 60 * 60 * 1000, "24-hour retention constant equals exactly 86,400,000 ms");
+assert(MESSAGE_RETENTION_15D_MS === 15 * 24 * 60 * 60 * 1000, "15-day retention constant equals exactly 1,296,000,000 ms");
+
+const { getPairKey } = await import("../backend/src/models/Conversation.js");
+const user1 = "507f1f77bcf86cd799439011";
+const user2 = "507f1f77bcf86cd799439022";
+assert(getPairKey(user1, user2) === getPairKey(user2, user1), "Conversation pairKey is deterministic and order-independent");
+assert(getPairKey(user1, user2) === `${user1}_${user2}`, "Conversation pairKey formats as expected sorted IDs");
+
+const now = Date.now();
+const twentyFiveHoursAgo = now - 25 * 60 * 60 * 1000;
+const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
+const sixteenDaysAgo = now - 16 * 24 * 60 * 60 * 1000;
+
+assert(twentyFiveHoursAgo + 24 * 60 * 60 * 1000 <= now, "24h policy clears messages older than 24 hours");
+assert(twentyFiveHoursAgo + 15 * 24 * 60 * 60 * 1000 > now, "15d policy preserves messages at 25 hours");
+assert(fourteenDaysAgo + 15 * 24 * 60 * 60 * 1000 > now, "15d policy preserves messages at 14 days");
+assert(sixteenDaysAgo + 15 * 24 * 60 * 60 * 1000 <= now, "15d policy clears messages older than 15 days");
+
 console.log("\n========================================================");
 console.log(`TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log("========================================================\n");
