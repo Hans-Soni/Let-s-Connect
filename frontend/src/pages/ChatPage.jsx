@@ -3169,11 +3169,9 @@ export default function ChatPage() {
                         {consentRecord.acceptedAt && (
                           <p>Consent timestamp: {new Date(consentRecord.acceptedAt).toLocaleString()}</p>
                         )}
-                        {consentRecord.ipAddress && (
-                          <p className="font-mono text-[11px]">
-                            Recorded IP: <span className="text-foreground">{consentRecord.ipAddress}</span>
-                          </p>
-                        )}
+                        <p className="font-mono text-[11px]">
+                          Audit Verification: <span className="text-foreground">Recorded securely for compliance</span>
+                        </p>
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">

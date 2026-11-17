@@ -465,14 +465,21 @@ export const updateProfile = async (req, res) => {
     }
 
     if (profilePic !== undefined) {
-      if (typeof profilePic !== "string" || !profilePic.startsWith("data:image/")) {
+      if (typeof profilePic !== "string" || (!profilePic.startsWith("data:image/") && profilePic !== "")) {
         return res.status(400).json({ message: "A valid profile image is required" });
       }
-      const uploadResponse = await cloudinary.uploader.upload(profilePic, {
-        resource_type: "image",
-        folder: "profile_pictures",
-      });
-      updates.profilePic = uploadResponse.secure_url;
+      if (profilePic.length > 10 * 1024 * 1024) {
+        return res.status(400).json({ message: "Profile picture must not exceed 10 MB" });
+      }
+      if (profilePic === "") {
+        updates.profilePic = "";
+      } else {
+        const uploadResponse = await cloudinary.uploader.upload(profilePic, {
+          resource_type: "image",
+          folder: "profile_pictures",
+        });
+        updates.profilePic = uploadResponse.secure_url;
+      }
     }
 
     if (Object.keys(updates).length === 0) {
@@ -504,7 +511,7 @@ export const updateProfile = async (req, res) => {
 export const getConsentRecord = async (req, res) => {
   try {
     const consent = await Consent.findOne({ userId: req.user._id })
-      .select("accepted termsVersion acceptedAt ipAddress")
+      .select("accepted termsVersion acceptedAt")
       .lean();
 
     if (!consent) {

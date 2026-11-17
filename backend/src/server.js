@@ -3,7 +3,7 @@ import dns from "dns";
 
 try {
     dns.setServers(["1.1.1.1", "8.8.8.8"]);
-    console.log("Using custom DNS servers: 1.1.1.1, 8.8.8.8");
+    console.log("Using secure custom DNS servers");
 } catch (error) {
     console.warn("dns.setServers failed:", error);
 }
@@ -165,7 +165,7 @@ if (ENV.NODE_ENV === "production") {
     console.log("[keys] Key rotation initialised successfully.");
 
     server.listen(PORT, () => {
-      console.log("Server running on port: " + PORT);
+      console.log("Server running securely in " + (ENV.NODE_ENV || "production") + " mode.");
     });
   } catch (err) {
     console.error("Startup error:", err);

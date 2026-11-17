@@ -381,6 +381,43 @@ if (fs.existsSync(mainActivityPath)) {
   assert(mainActivity.includes("setTurnScreenOn(true)"), "MainActivity implements setTurnScreenOn for incoming calls");
 }
 
+// ----------------------------------------------------
+// 11. IP & PORT PRIVACY, INPUT BOUNDS & ANTI-SPOOFING SECURITY
+// ----------------------------------------------------
+console.log("\n11. Testing IP/Port Privacy, Input Bounds & Anti-Spoofing Controls...");
+
+const signUpPageCode = fs.readFileSync(path.resolve("frontend/src/pages/SignUpPage.jsx"), "utf8");
+assert(!signUpPageCode.includes("Device IP for audit"), "Negative test: SignUpPage does not render client IP address");
+
+const userProfilePageCode = fs.readFileSync(path.resolve("frontend/src/pages/UserProfilePage.jsx"), "utf8");
+assert(!userProfilePageCode.includes("Recorded IP:"), "Negative test: UserProfilePage does not render recorded IP address");
+
+const chatPageCode = fs.readFileSync(path.resolve("frontend/src/pages/ChatPage.jsx"), "utf8");
+assert(!chatPageCode.includes("Recorded IP:"), "Negative test: ChatPage does not render recorded IP address");
+
+const authControllerCode = fs.readFileSync(path.resolve("backend/src/controllers/auth.controller.js"), "utf8");
+assert(
+  authControllerCode.includes('.select("accepted termsVersion acceptedAt")'),
+  "getConsentRecord excludes ipAddress from public API response"
+);
+
+const messageControllerCode = fs.readFileSync(path.resolve("backend/src/controllers/message.controller.js"), "utf8");
+assert(messageControllerCode.includes("ALLOWED_MEDIA_MIMES"), "message.controller enforces strict media MIME whitelist");
+assert(messageControllerCode.includes("You cannot unblock yourself"), "unblockUser prevents self-unblocking loophole");
+
+const feedbackControllerCode = fs.readFileSync(path.resolve("backend/src/controllers/feedback.controller.js"), "utf8");
+assert(feedbackControllerCode.includes("3000"), "feedback.controller enforces 3000-char message bound to prevent disk exhaustion");
+
+const feedbackRouteCode = fs.readFileSync(path.resolve("backend/src/routes/feedback.route.js"), "utf8");
+assert(feedbackRouteCode.includes("arcjetProtection"), "feedback routes protected by arcjet rate limiting against bot spam");
+
+const socketCode = fs.readFileSync(path.resolve("backend/src/lib/socket.js"), "utf8");
+assert(!socketCode.includes("caller || {"), "socket.js call:initiate binds caller to authenticated session user (anti-spoofing)");
+assert(!socketCode.includes("receiver || {"), "socket.js call:accept binds receiver to authenticated session user (anti-spoofing)");
+
+const socketAuthCode = fs.readFileSync(path.resolve("backend/src/middleware/socket.auth.middleware.js"), "utf8");
+assert(socketAuthCode.includes("30 * 60"), "socketAuthMiddleware enforces 30-min maximum reconnection grace period");
+
 console.log("\n========================================================");
 console.log(`TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log("========================================================\n");

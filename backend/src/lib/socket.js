@@ -169,9 +169,10 @@ io.on("connection", (socket) => {
   socket.on("messageReaction", ({ messageId, receiverId, emoji }) => {
     try {
       if (!receiverId || !messageId || !emoji) return;
+      if (typeof emoji !== "string" || emoji.length > 20) return;
       io.to(receiverId.toString()).emit("messageReaction", {
-        messageId,
-        emoji,
+        messageId: String(messageId).slice(0, 50),
+        emoji: emoji.slice(0, 20),
         userId: socket.userId.toString(),
       });
     } catch (err) {
@@ -234,12 +235,12 @@ io.on("connection", (socket) => {
 
       const incomingPayload = {
         callerId: callerUserId,
-        caller: caller || {
+        caller: {
           _id: socket.user._id,
           fullName: socket.user.fullName,
           profilePic: socket.user.profilePic,
         },
-        callType: callType || "audio",
+        callType: callType === "video" ? "video" : "audio",
       };
 
       // Set 45s ringing timeout
@@ -285,7 +286,7 @@ io.on("connection", (socket) => {
 
       io.to(callerUserId).emit("call:accepted", {
         receiverId: receiverUserId,
-        receiver: receiver || {
+        receiver: {
           _id: socket.user._id,
           fullName: socket.user.fullName,
           profilePic: socket.user.profilePic,

@@ -11,16 +11,21 @@ export const submitFeedback = async (req, res) => {
   try {
     const { name, email, category, rating, message } = req.body;
 
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return res.status(400).json({ message: "Name is required." });
+    if (!name || typeof name !== "string" || !name.trim() || name.trim().length > 100) {
+      return res.status(400).json({ message: "Name must be between 1 and 100 characters." });
     }
 
-    if (!email || typeof email !== "string" || !email.trim()) {
-      return res.status(400).json({ message: "Email address is required." });
+    if (!email || typeof email !== "string" || !email.trim() || email.trim().length > 254) {
+      return res.status(400).json({ message: "A valid email address is required." });
     }
 
-    if (!message || typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({ message: "Feedback message is required." });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ message: "Invalid email address format." });
+    }
+
+    if (!message || typeof message !== "string" || !message.trim() || message.trim().length > 3000) {
+      return res.status(400).json({ message: "Feedback message must be between 1 and 3000 characters." });
     }
 
     const normalizedEmail = email.toLowerCase().trim();

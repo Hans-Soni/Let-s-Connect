@@ -16,6 +16,36 @@ const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // 20 MB
 const MAX_VIDEO_BYTES = 25 * 1024 * 1024; // 25 MB
 
+const ALLOWED_MEDIA_MIMES = new Set([
+  // Images
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+  "image/bmp",
+  // Audio
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/wave",
+  "audio/x-wav",
+  "audio/webm",
+  "audio/ogg",
+  "audio/aac",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/mp4",
+  // Video
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
+  "video/ogg",
+]);
+
 /**
  * Extracts mimeType and binary buffer from a base64 data URI or accepts an existing HTTPS url.
  * Handles whitespace, codecs parameters, linebreaks, and various audio/video/image formats.
@@ -23,7 +53,7 @@ const MAX_VIDEO_BYTES = 25 * 1024 * 1024; // 25 MB
 const parseMediaPayload = (payload) => {
   if (!payload || typeof payload !== "string") return null;
   const trimmed = payload.trim();
-  if (/^https?:\/\//i.test(trimmed)) {
+  if (/^https:\/\//i.test(trimmed)) {
     return { isUrl: true, url: trimmed };
   }
 
@@ -38,6 +68,10 @@ const parseMediaPayload = (payload) => {
   if (!rawBase64) return null;
 
   const mimeType = header.split(";")[0].toLowerCase().trim();
+  if (!ALLOWED_MEDIA_MIMES.has(mimeType)) {
+    return null;
+  }
+
   try {
     const buffer = Buffer.from(rawBase64, "base64");
     if (!buffer || buffer.length === 0) return null;
@@ -550,12 +584,9 @@ export const blockUser = async (req, res) => {
       { new: true }
     ).select("blockedUsers");
 
-    const receiverSocketId = getReceiverSocketId(userToBlockId?.toString());
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("userBlocked", {
-        blockerId: myId.toString(),
-      });
-    }
+    io.to(userToBlockId.toString()).emit("userBlocked", {
+      blockerId: myId.toString(),
+    });
 
     res.status(200).json({
       message: "User blocked successfully",
@@ -576,18 +607,19 @@ export const unblockUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
+    if (myId.toString() === userToUnblockId.toString()) {
+      return res.status(400).json({ message: "You cannot unblock yourself" });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       myId,
       { $pull: { blockedUsers: userToUnblockId } },
       { new: true }
     ).select("blockedUsers");
 
-    const receiverSocketId = getReceiverSocketId(userToUnblockId?.toString());
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("userUnblocked", {
-        blockerId: myId.toString(),
-      });
-    }
+    io.to(userToUnblockId.toString()).emit("userUnblocked", {
+      blockerId: myId.toString(),
+    });
 
     res.status(200).json({
       message: "User unblocked successfully",
@@ -723,17 +755,11 @@ export const updateConversationRetention = async (req, res) => {
       hasSelectedRetention: true,
     };
 
-    const partnerSocketId = getReceiverSocketId(partnerId.toString());
-    if (partnerSocketId) {
-      io.to(partnerSocketId).emit("retentionPolicyUpdated", payload);
-    }
-    const myReceiverSocketId = getReceiverSocketId(myId.toString());
-    if (myReceiverSocketId) {
-      io.to(myReceiverSocketId).emit("retentionPolicyUpdated", {
-        ...payload,
-        chatPartnerId: partnerId.toString(),
-      });
-    }
+    io.to(partnerId.toString()).emit("retentionPolicyUpdated", payload);
+    io.to(myId.toString()).emit("retentionPolicyUpdated", {
+      ...payload,
+      chatPartnerId: partnerId.toString(),
+    });
 
     res.status(200).json({
       success: true,

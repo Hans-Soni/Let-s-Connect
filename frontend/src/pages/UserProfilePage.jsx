@@ -594,11 +594,9 @@ function UserProfilePage({ profileUser, onClose }) {
                             <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
                           )}.
                         </p>
-                        {consentRecord.ipAddress && (
-                          <p className="text-xs text-base-content/60 mt-1 font-mono">
-                            Recorded IP: <span className="text-primary font-medium">{consentRecord.ipAddress}</span>
-                          </p>
-                        )}
+                        <p className="text-xs text-base-content/60 mt-1 font-mono">
+                          Audit Verification: <span className="text-primary font-medium">Recorded securely for compliance</span>
+                        </p>
                       </div>
                     </div>
                   )}
@@ -956,11 +954,9 @@ function UserProfilePage({ profileUser, onClose }) {
                     {consentRecord.acceptedAt && (
                       <> on {new Date(consentRecord.acceptedAt).toLocaleString()}</>
                     )}.
-                    {consentRecord.ipAddress && (
-                      <span className="block mt-1 text-xs text-base-content/60 font-mono">
-                        Recorded IP: <span className="text-primary font-medium">{consentRecord.ipAddress}</span>
-                      </span>
-                    )}
+                    <span className="block mt-1 text-xs text-base-content/60 font-mono">
+                      Audit Verification: <span className="text-primary font-medium">Recorded securely for compliance</span>
+                    </span>
                   </span>
                 ) : (
                   <span>Your saved consent record could not be found.</span>

@@ -1072,12 +1072,10 @@ function SignUpPage() {
                 </span>
               </label>
 
-              {clientIp && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Device IP for audit &amp; security consent:{" "}
-                  <code className="font-mono text-primary font-medium">{clientIp}</code>
-                </p>
-              )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                Audit Status:{" "}
+                <span className="text-primary font-medium">Compliance verification enabled</span>
+              </p>
 
               {consentDeclined && (
                 <p className="mt-3 text-sm text-amber-500" role="status">

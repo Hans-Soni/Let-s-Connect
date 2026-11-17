@@ -30,7 +30,9 @@ router.post("/logout", logout);
 // to ensure forged tokens cannot hijack arbitrary user accounts.
 router.post("/refresh", async (req, res) => {
   try {
-    const token = req.cookies.jwt || (req.headers.authorization?.split(" ")[1]);
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader && typeof authHeader === "string" ? authHeader.replace(/^Bearer\s+/i, "").trim() : null;
+    const token = req.cookies.jwt || bearerToken;
     if (!token) return res.status(401).json({ message: "No token provided" });
 
     const keys = await import("../lib/keyRotation.js");
@@ -42,6 +44,11 @@ router.post("/refresh", async (req, res) => {
     }
 
     if (!decoded?.userId) return res.status(401).json({ message: "Invalid token payload" });
+
+    // Enforce that expired tokens can only be refreshed within 7 days of expiration
+    if (decoded.exp && (Math.floor(Date.now() / 1000) - decoded.exp > 7 * 24 * 3600)) {
+      return res.status(401).json({ message: "Token expired beyond maximum refresh window" });
+    }
 
     const { default: User } = await import("../models/User.js");
     const user = await User.findById(decoded.userId).select("-password");

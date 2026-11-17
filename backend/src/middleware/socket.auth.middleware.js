@@ -22,8 +22,11 @@ export const socketAuthMiddleware = async (socket, next) => {
       decoded = keys.verifyJwt(token);
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
-        // Allow recently expired JWT for active socket session if signature is valid within grace period
+        // Allow recently expired JWT for active socket session only if within 30-min grace period
         decoded = keys.verifyJwt(token, { ignoreExpiration: true });
+        if (decoded?.exp && (Math.floor(Date.now() / 1000) - decoded.exp > 30 * 60)) {
+          throw new Error('Unauthorized - Token expired beyond reconnection grace window');
+        }
       } else {
         throw err;
       }
