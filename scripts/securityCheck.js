@@ -349,6 +349,38 @@ assert(twentyFiveHoursAgo + 15 * 24 * 60 * 60 * 1000 > now, "15d policy preserve
 assert(fourteenDaysAgo + 15 * 24 * 60 * 60 * 1000 > now, "15d policy preserves messages at 14 days");
 assert(sixteenDaysAgo + 15 * 24 * 60 * 60 * 1000 <= now, "15d policy clears messages older than 15 days");
 
+// ----------------------------------------------------
+// 10. MOBILE DEVICE REGISTRATION & CALL RINGING PERMISSIONS TEST
+// ----------------------------------------------------
+console.log("\n10. Testing Mobile Device Registration & Call Ringing Permissions...");
+
+const userSchemaCode = fs.readFileSync(path.resolve("backend/src/models/User.js"), "utf8");
+assert(userSchemaCode.includes("isAppInstalled:"), "User schema includes isAppInstalled boolean field");
+assert(userSchemaCode.includes("devicePlatform:"), "User schema includes devicePlatform string field");
+
+const authRouteCode = fs.readFileSync(path.resolve("backend/src/routes/auth.route.js"), "utf8");
+assert(authRouteCode.includes("/register-device"), "Auth routes expose /register-device endpoint for mobile apps");
+
+const manifestPath = path.resolve("frontend/android/app/src/main/AndroidManifest.xml");
+assert(fs.existsSync(manifestPath), "Android manifest exists");
+if (fs.existsSync(manifestPath)) {
+  const manifest = fs.readFileSync(manifestPath, "utf8");
+  assert(manifest.includes("android.permission.VIBRATE"), "Android manifest grants VIBRATE permission for call rings");
+  assert(manifest.includes("android.permission.WAKE_LOCK"), "Android manifest grants WAKE_LOCK for incoming calls");
+  assert(manifest.includes("android.permission.POST_NOTIFICATIONS"), "Android manifest grants POST_NOTIFICATIONS (API 33+)");
+  assert(manifest.includes("android.permission.USE_FULL_SCREEN_INTENT"), "Android manifest grants USE_FULL_SCREEN_INTENT");
+  assert(manifest.includes('android:showWhenLocked="true"'), "Android MainActivity configured to showWhenLocked");
+  assert(manifest.includes('android:turnScreenOn="true"'), "Android MainActivity configured to turnScreenOn");
+}
+
+const mainActivityPath = path.resolve("frontend/android/app/src/main/java/com/hans/samvaad/MainActivity.java");
+assert(fs.existsSync(mainActivityPath), "Android MainActivity.java exists");
+if (fs.existsSync(mainActivityPath)) {
+  const mainActivity = fs.readFileSync(mainActivityPath, "utf8");
+  assert(mainActivity.includes("setShowWhenLocked(true)"), "MainActivity implements setShowWhenLocked for incoming calls");
+  assert(mainActivity.includes("setTurnScreenOn(true)"), "MainActivity implements setTurnScreenOn for incoming calls");
+}
+
 console.log("\n========================================================");
 console.log(`TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log("========================================================\n");

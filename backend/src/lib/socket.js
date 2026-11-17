@@ -52,6 +52,8 @@ io.use(socketAuthMiddleware);
 // Map of userId -> Set of socket IDs (supports multiple tabs / devices per user)
 const userSocketsMap = new Map();
 const userActiveCallMap = {}; // {userId: partnerUserId}
+// Map of targetUserId -> { callerId, caller, callType, createdAt, timeoutId }
+const pendingCallInvites = new Map();
 
 // Helper to get any active socket ID for this user (used for WebRTC signaling)
 export function getReceiverSocketId(userId) {
@@ -82,6 +84,22 @@ io.on("connection", (socket) => {
 
   // Broadcast list of currently online user IDs to all clients
   io.emit("getOnlineUsers", Array.from(userSocketsMap.keys()));
+
+  // Deliver active pending call invite if incoming call arrived while device was reconnecting
+  if (pendingCallInvites.has(userId)) {
+    const invite = pendingCallInvites.get(userId);
+    if (Date.now() - invite.createdAt < 45000) {
+      console.log(`[Call] Delivering pending call to reconnected user: ${userId}`);
+      socket.emit("call:incoming", {
+        callerId: invite.callerId,
+        caller: invite.caller,
+        callType: invite.callType,
+      });
+    } else {
+      clearTimeout(invite.timeoutId);
+      pendingCallInvites.delete(userId);
+    }
+  }
 
   // with socket.on we listen for events from clients
   socket.on("markMessagesSeen", async ({ senderId }) => {
@@ -165,12 +183,11 @@ io.on("connection", (socket) => {
   // WEBRTC CALL SIGNALING EVENTS
   // =========================================================================
 
-  socket.on("call:initiate", ({ receiverId, callType, caller }) => {
+  socket.on("call:initiate", async ({ receiverId, callType, caller }) => {
     try {
       const targetUserId = receiverId?.toString();
       if (!targetUserId) return;
-
-      const targetSocketId = getReceiverSocketId(targetUserId);
+      const callerUserId = socket.userId.toString();
 
       // Fast check: If receiver is already in a call, inform caller immediately
       if (userActiveCallMap[targetUserId]) {
@@ -178,22 +195,76 @@ io.on("connection", (socket) => {
         return;
       }
 
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("call:incoming", {
-          callerId: socket.userId.toString(),
-          caller: caller || {
-            _id: socket.user._id,
-            fullName: socket.user.fullName,
-            profilePic: socket.user.profilePic,
-          },
-          callType: callType || "audio",
-        });
-      } else {
+      // Check if user has active connected socket
+      const isOnline = isUserOnline(targetUserId);
+
+      // Check if user has installed the app (Android Capacitor / PWA)
+      let isTargetAppInstalled = false;
+      try {
+        const User = (await import("../models/User.js")).default;
+        const targetUser = await User.findById(targetUserId).select("isAppInstalled");
+        if (targetUser?.isAppInstalled) {
+          isTargetAppInstalled = true;
+        }
+      } catch (dbErr) {
+        console.error("Error checking target user install status:", dbErr);
+      }
+
+      // If user is neither online nor has the app installed, report offline
+      if (!isOnline && !isTargetAppInstalled) {
         socket.emit("call:user-offline", {
           receiverId: targetUserId,
           message: "User is currently offline",
         });
+        return;
       }
+
+      // User is either online or has app installed!
+      // Inform caller that target device is ringing
+      socket.emit("call:ringing", {
+        receiverId: targetUserId,
+        isAppInstalled: isTargetAppInstalled,
+      });
+
+      // Clear any previous invite for this target
+      if (pendingCallInvites.has(targetUserId)) {
+        clearTimeout(pendingCallInvites.get(targetUserId).timeoutId);
+        pendingCallInvites.delete(targetUserId);
+      }
+
+      const incomingPayload = {
+        callerId: callerUserId,
+        caller: caller || {
+          _id: socket.user._id,
+          fullName: socket.user.fullName,
+          profilePic: socket.user.profilePic,
+        },
+        callType: callType || "audio",
+      };
+
+      // Set 45s ringing timeout
+      const timeoutId = setTimeout(() => {
+        if (pendingCallInvites.has(targetUserId)) {
+          pendingCallInvites.delete(targetUserId);
+          io.to(callerUserId).emit("call:rejected", {
+            by: targetUserId,
+            reason: "no-answer",
+          });
+          io.to(targetUserId).emit("call:ended", {
+            by: callerUserId,
+            reason: "timeout",
+          });
+        }
+      }, 45000);
+
+      pendingCallInvites.set(targetUserId, {
+        ...incomingPayload,
+        timeoutId,
+        createdAt: Date.now(),
+      });
+
+      // Deliver incoming call to all connected sockets of the target user
+      io.to(targetUserId).emit("call:incoming", incomingPayload);
     } catch (err) {
       console.error("Error in call:initiate socket event:", err);
     }
@@ -201,19 +272,25 @@ io.on("connection", (socket) => {
 
   socket.on("call:accept", ({ callerId, receiver }) => {
     try {
-      const callerSocketId = getReceiverSocketId(callerId?.toString());
-      if (callerSocketId) {
-        userActiveCallMap[callerId.toString()] = socket.userId.toString();
-        userActiveCallMap[socket.userId.toString()] = callerId.toString();
-        io.to(callerSocketId).emit("call:accepted", {
-          receiverId: socket.userId.toString(),
-          receiver: receiver || {
-            _id: socket.user._id,
-            fullName: socket.user.fullName,
-            profilePic: socket.user.profilePic,
-          },
-        });
+      const callerUserId = callerId?.toString();
+      const receiverUserId = socket.userId.toString();
+
+      if (pendingCallInvites.has(receiverUserId)) {
+        clearTimeout(pendingCallInvites.get(receiverUserId).timeoutId);
+        pendingCallInvites.delete(receiverUserId);
       }
+
+      userActiveCallMap[callerUserId] = receiverUserId;
+      userActiveCallMap[receiverUserId] = callerUserId;
+
+      io.to(callerUserId).emit("call:accepted", {
+        receiverId: receiverUserId,
+        receiver: receiver || {
+          _id: socket.user._id,
+          fullName: socket.user.fullName,
+          profilePic: socket.user.profilePic,
+        },
+      });
     } catch (err) {
       console.error("Error in call:accept socket event:", err);
     }
@@ -221,13 +298,22 @@ io.on("connection", (socket) => {
 
   socket.on("call:reject", ({ targetUserId, reason }) => {
     try {
-      delete userActiveCallMap[socket.userId.toString()];
+      const currentUserId = socket.userId.toString();
+      if (pendingCallInvites.has(currentUserId)) {
+        clearTimeout(pendingCallInvites.get(currentUserId).timeoutId);
+        pendingCallInvites.delete(currentUserId);
+      }
+      if (targetUserId && pendingCallInvites.has(targetUserId.toString())) {
+        clearTimeout(pendingCallInvites.get(targetUserId.toString()).timeoutId);
+        pendingCallInvites.delete(targetUserId.toString());
+      }
+
+      delete userActiveCallMap[currentUserId];
       if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
 
-      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("call:rejected", {
-          by: socket.userId.toString(),
+      if (targetUserId) {
+        io.to(targetUserId.toString()).emit("call:rejected", {
+          by: currentUserId,
           reason: reason || "declined",
         });
       }
@@ -238,13 +324,22 @@ io.on("connection", (socket) => {
 
   socket.on("call:end", ({ targetUserId }) => {
     try {
-      delete userActiveCallMap[socket.userId.toString()];
+      const currentUserId = socket.userId.toString();
+      if (pendingCallInvites.has(currentUserId)) {
+        clearTimeout(pendingCallInvites.get(currentUserId).timeoutId);
+        pendingCallInvites.delete(currentUserId);
+      }
+      if (targetUserId && pendingCallInvites.has(targetUserId.toString())) {
+        clearTimeout(pendingCallInvites.get(targetUserId.toString()).timeoutId);
+        pendingCallInvites.delete(targetUserId.toString());
+      }
+
+      delete userActiveCallMap[currentUserId];
       if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
 
-      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("call:ended", {
-          by: socket.userId.toString(),
+      if (targetUserId) {
+        io.to(targetUserId.toString()).emit("call:ended", {
+          by: currentUserId,
         });
       }
     } catch (err) {
@@ -254,9 +349,8 @@ io.on("connection", (socket) => {
 
   socket.on("call:busy", ({ callerId }) => {
     try {
-      const callerSocketId = getReceiverSocketId(callerId?.toString());
-      if (callerSocketId) {
-        io.to(callerSocketId).emit("call:busy", {
+      if (callerId) {
+        io.to(callerId.toString()).emit("call:busy", {
           by: socket.userId.toString(),
         });
       }
@@ -267,13 +361,11 @@ io.on("connection", (socket) => {
 
   socket.on("webrtc:signal", ({ targetUserId, signalData }) => {
     try {
-      const targetSocketId = getReceiverSocketId(targetUserId?.toString());
-      if (targetSocketId) {
-        io.to(targetSocketId).emit("webrtc:signal", {
-          senderId: socket.userId.toString(),
-          signalData,
-        });
-      }
+      if (!targetUserId) return;
+      io.to(targetUserId.toString()).emit("webrtc:signal", {
+        senderId: socket.userId.toString(),
+        signalData,
+      });
     } catch (err) {
       console.error("Error in webrtc:signal socket event:", err);
     }
@@ -292,13 +384,10 @@ io.on("connection", (socket) => {
 
     const partnerId = userActiveCallMap[userId];
     if (partnerId && (!userSocketsMap.has(userId) || userSocketsMap.get(userId).size === 0)) {
-      const partnerSocketId = getReceiverSocketId(partnerId);
-      if (partnerSocketId) {
-        io.to(partnerSocketId).emit("call:ended", {
-          by: userId,
-          reason: "disconnected",
-        });
-      }
+      io.to(partnerId.toString()).emit("call:ended", {
+        by: userId,
+        reason: "disconnected",
+      });
       delete userActiveCallMap[userId];
       delete userActiveCallMap[partnerId];
     }

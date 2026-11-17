@@ -10,6 +10,7 @@ import { useThemeStore } from "./store/useThemeStore";
 import CallModal from "./components/CallModal";
 import InstallAppBanner from "./components/InstallAppBanner";
 import toast, { Toaster } from "react-hot-toast";
+import { axiosInstance } from "./lib/axios";
 
 // Code-split pages for smaller initial bundle and faster load performance
 const ChatPage = lazy(() => import("./pages/ChatPage"));
@@ -27,9 +28,84 @@ function App() {
     checkAuth();
   }, [checkAuth]);
 
-  // Automatically logout if user leaves device unattended (15 min inactivity)
+  // Request notification permission for incoming call banners
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  // Prime Web Audio context on initial user interaction to ensure call ringtones play freely
+  useEffect(() => {
+    const unlockAudio = () => {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        const dummy = new AudioContextClass();
+        dummy.resume().then(() => dummy.close()).catch(() => {});
+      }
+      window.removeEventListener("touchstart", unlockAudio);
+      window.removeEventListener("click", unlockAudio);
+    };
+    window.addEventListener("touchstart", unlockAudio, { passive: true });
+    window.addEventListener("click", unlockAudio, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", unlockAudio);
+      window.removeEventListener("click", unlockAudio);
+    };
+  }, []);
+
+  // Register device platform with backend so callers know this user has the app installed
   useEffect(() => {
     if (!authUser) return;
+    const isNative = Capacitor.isNativePlatform();
+    const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+
+    if (isNative || isStandalone) {
+      const platform = isNative ? Capacitor.getPlatform() : "pwa";
+      axiosInstance.post("/auth/register-device", { platform }).catch(() => {});
+    }
+  }, [authUser]);
+
+  // Auto-reconnect socket when app wakes up or returns to foreground
+  useEffect(() => {
+    if (!authUser) return;
+
+    const handleResume = () => {
+      useAuthStore.getState().connectSocket();
+    };
+
+    let capListenerHandle = null;
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) {
+          handleResume();
+        }
+      }).then((handle) => {
+        capListenerHandle = handle;
+      }).catch(() => {});
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleResume();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      if (capListenerHandle) capListenerHandle.remove();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [authUser]);
+
+  // Automatically logout if web user leaves device unattended (15 min inactivity)
+  // On native mobile (Capacitor) or installed PWA, do NOT log out on idle,
+  // so users can receive incoming calls even after their phone has been asleep or idle.
+  useEffect(() => {
+    if (!authUser) return;
+    const isNative = Capacitor.isNativePlatform();
+    const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+    if (isNative || isStandalone) return;
 
     let timeoutId;
     const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 minutes

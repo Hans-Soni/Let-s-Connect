@@ -5,7 +5,6 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -46,12 +45,24 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    isAppInstalled: {
+      type: Boolean,
+      default: false,
+    },
+    devicePlatform: {
+      type: String,
+      default: "",
+    },
+    lastActiveAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true } // createdAt & updatedAt
 );
 
 // Index email in ascending (A to Z) dictionary order with case-insensitive collation
-userSchema.index({ email: 1 }, { collation: { locale: "en", strength: 2 } });
+userSchema.index({ email: 1 }, { unique: true, collation: { locale: "en", strength: 2 } });
 
 const User = mongoose.model("User", userSchema);
 

@@ -61,6 +61,59 @@ const safelyAddCandidate = async (pc, candidateData) => {
   }
 };
 
+let vibrateInterval = null;
+
+const startCallVibration = () => {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate([1000, 500, 1000, 1000]);
+      if (vibrateInterval) clearInterval(vibrateInterval);
+      vibrateInterval = setInterval(() => {
+        try {
+          navigator.vibrate([1000, 500, 1000, 1000]);
+        } catch (e) {}
+      }, 3500);
+    } catch (e) {
+      console.warn("Vibration not permitted or failed:", e);
+    }
+  }
+};
+
+const stopCallVibration = () => {
+  if (vibrateInterval) {
+    clearInterval(vibrateInterval);
+    vibrateInterval = null;
+  }
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(0);
+    } catch (e) {}
+  }
+};
+
+const triggerIncomingCallNotification = (callerName, callType) => {
+  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try {
+      const title = `Incoming ${callType === "video" ? "Video" : "Voice"} Call`;
+      const options = {
+        body: `${callerName || "Someone"} is calling you...`,
+        icon: "/pwa-192x192.png",
+        badge: "/pwa-192x192.png",
+        tag: "incoming-call",
+        renotify: true,
+        requireInteraction: true,
+      };
+      const notif = new Notification(title, options);
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+    } catch (e) {
+      console.warn("Incoming call notification failed:", e);
+    }
+  }
+};
+
 export const useCallStore = create((set, get) => ({
   callState: "idle", // 'idle' | 'outgoing' | 'incoming' | 'connected'
   callType: "video", // 'audio' | 'video'
@@ -87,6 +140,14 @@ export const useCallStore = create((set, get) => ({
     socket.on("call:incoming", (data) => {
       console.log("[Call] Received call:incoming event:", data);
       get().handleIncomingCall(data);
+    });
+
+    // Recipient device is ringing
+    socket.on("call:ringing", (data) => {
+      console.log("[Call] Received call:ringing event:", data);
+      if (get().callState === "outgoing") {
+        toast("Ringing...", { icon: "🔔", id: "call-ringing" });
+      }
     });
 
     // Remote peer accepted our call
@@ -135,6 +196,7 @@ export const useCallStore = create((set, get) => ({
     if (s) {
       console.log("[Call] Detaching WebRTC call signaling listeners");
       s.off("call:incoming");
+      s.off("call:ringing");
       s.off("call:accepted");
       s.off("call:rejected");
       s.off("call:ended");
@@ -278,6 +340,8 @@ export const useCallStore = create((set, get) => ({
     });
 
     playIncomingRingtone();
+    startCallVibration();
+    triggerIncomingCallNotification(data?.caller?.fullName, data?.callType);
 
     // 45s auto timeout on incoming call
     if (callRingingTimeout) clearTimeout(callRingingTimeout);
@@ -291,6 +355,7 @@ export const useCallStore = create((set, get) => ({
   acceptCall: async () => {
     if (callRingingTimeout) clearTimeout(callRingingTimeout);
     stopIncomingRingtone();
+    stopCallVibration();
 
     let { callType, callPartner } = get();
     const { socket, authUser } = useAuthStore.getState();
@@ -407,6 +472,7 @@ export const useCallStore = create((set, get) => ({
 
     stopIncomingRingtone();
     stopOutgoingRingtone();
+    stopCallVibration();
     playCallEndedSound();
 
     if (socket && socket.connected && callPartner?._id) {
@@ -426,6 +492,7 @@ export const useCallStore = create((set, get) => ({
 
     stopIncomingRingtone();
     stopOutgoingRingtone();
+    stopCallVibration();
     playCallEndedSound();
 
     if (notifyRemote && socket && socket.connected && callPartner?._id) {
@@ -740,6 +807,7 @@ export const useCallStore = create((set, get) => ({
     get().stopCallTimer();
     stopIncomingRingtone();
     stopOutgoingRingtone();
+    stopCallVibration();
 
     // Close and nullify WebRTC Peer Connection
     if (peerConnection) {

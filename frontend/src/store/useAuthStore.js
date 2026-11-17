@@ -210,10 +210,18 @@ export const useAuthStore = create((set, get) => ({
   },
 
   connectSocket: () => {
-    const { authUser } = get();
-    if (!authUser || get().socket?.connected) return;
+    const { authUser, socket: existingSocket } = get();
+    if (!authUser) return;
+    if (existingSocket?.connected) return;
 
     const token = sessionStorage.getItem("jwt") || localStorage.getItem("jwt");
+
+    if (existingSocket && !existingSocket.connected) {
+      existingSocket.auth = { token };
+      existingSocket.connect();
+      return;
+    }
+
     const socket = io(BASE_URL, {
       auth: (cb) => {
         cb({ token: sessionStorage.getItem("jwt") || localStorage.getItem("jwt") });

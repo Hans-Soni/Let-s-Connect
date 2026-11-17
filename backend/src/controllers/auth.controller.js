@@ -661,3 +661,21 @@ export const deleteAccount = async (req, res) => {
     return res.status(500).json({ message: "Internal server error during account deletion" });
   }
 };
+
+export const registerDevice = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { platform = "android" } = req.body;
+
+    await User.findByIdAndUpdate(userId, {
+      isAppInstalled: true,
+      devicePlatform: typeof platform === "string" ? platform.slice(0, 30) : "android",
+      lastActiveAt: new Date(),
+    });
+
+    return res.status(200).json({ success: true, message: "Device registered successfully" });
+  } catch (error) {
+    console.error("Error in registerDevice controller:", error);
+    return res.status(500).json({ message: "Failed to register device" });
+  }
+};
