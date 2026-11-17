@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { resendClient, sender } from "../lib/resend.js";
-import { createWelcomeEmailTemplate, createOtpEmailTemplate } from "../emails/emailTemplates.js";
+import { createWelcomeEmailTemplate, createOtpEmailTemplate, createPasswordResetOtpEmailTemplate } from "../emails/emailTemplates.js";
 import { ENV } from "../lib/env.js";
 
 // Helper to instantiate an SMTP transporter if credentials are provided
@@ -278,4 +278,132 @@ export const sendVerificationOtpEmail = async (email, otp, name = "") => {
     success: false,
     error: configError,
   };
+};
+
+export const sendPasswordResetOtpEmail = async (email, otp, name = "") => {
+  console.log(`\n=========================================`);
+  console.log(`[PASSWORD RESET OTP] Dispatching Code to: ${email}`);
+  console.log(`[PASSWORD RESET OTP] CODE: ${otp}`);
+  console.log(`=========================================\n`);
+
+  let lastError = null;
+
+  // 1. Try HTTPS Webhook (e.g. Google Apps Script Web App for Gmail delivery over HTTPS / Port 443)
+  if (ENV.EMAIL_WEBHOOK_URL) {
+    try {
+      console.log("[Email] Dispatching Password Reset OTP via HTTPS Webhook...");
+      const hookRes = await fetch(ENV.EMAIL_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: ENV.EMAIL_WEBHOOK_SECRET || "samvaad_secret_auth_token_2026",
+          to: email,
+          name: name || "Samवाद User",
+          subject: `Your Samवाद Password Reset Code: ${otp}`,
+          html: createPasswordResetOtpEmailTemplate(otp, name),
+          otp,
+        }),
+      });
+
+      if (hookRes.ok) {
+        const hookData = await hookRes.json().catch(() => null);
+        if (hookData && hookData.error) {
+          console.warn("[Email] Webhook returned error payload for password reset:", hookData.error);
+          lastError = `Webhook error: ${hookData.error}`;
+        } else {
+          console.log("[Email] Password Reset OTP delivered successfully via HTTPS Webhook to:", email);
+          return { success: true, provider: "webhook" };
+        }
+      } else {
+        const errText = await hookRes.text().catch(() => "");
+        console.warn("[Email] Webhook responded with status for password reset:", hookRes.status, errText);
+        lastError = `Webhook delivery returned HTTP ${hookRes.status}`;
+      }
+    } catch (hookErr) {
+      console.error("[Email] Exception in HTTPS Webhook delivery for password reset:", hookErr.message);
+      lastError = `Webhook error: ${hookErr.message}`;
+    }
+  }
+
+  // 2. Try Brevo REST API over HTTPS
+  if (ENV.BREVO_API_KEY) {
+    try {
+      console.log("[Email] Dispatching Password Reset OTP via Brevo API...");
+      const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": ENV.BREVO_API_KEY,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: ENV.EMAIL_FROM_NAME || "Samवाद",
+            email: ENV.EMAIL_FROM || "samvada.real.time.chat@gmail.com",
+          },
+          to: [{ email, name: name || "Samवाद User" }],
+          subject: `Your Samवाद Password Reset Code: ${otp}`,
+          htmlContent: createPasswordResetOtpEmailTemplate(otp, name),
+        }),
+      });
+
+      if (brevoRes.ok) {
+        console.log("[Email] Password Reset OTP delivered successfully via Brevo to:", email);
+        return { success: true, provider: "brevo" };
+      }
+      const errData = await brevoRes.json().catch(() => ({}));
+      console.warn("[Email] Brevo responded with error for password reset:", errData);
+      lastError = `Brevo error: ${JSON.stringify(errData)}`;
+    } catch (brevoErr) {
+      console.error("[Email] Exception in Brevo delivery for password reset:", brevoErr.message);
+      lastError = `Brevo error: ${brevoErr.message}`;
+    }
+  }
+
+  // 3. Try SMTP Transporter
+  const smtpTransporter = getSmtpTransporter();
+  if (smtpTransporter) {
+    try {
+      console.log("[Email] Dispatching Password Reset OTP via SMTP Transporter...");
+      const info = await smtpTransporter.sendMail({
+        from: `"${ENV.EMAIL_FROM_NAME || 'Samवाद'}" <${ENV.EMAIL_FROM || 'samvada.real.time.chat@gmail.com'}>`,
+        to: email,
+        subject: `Your Samवाद Password Reset Code: ${otp}`,
+        html: createPasswordResetOtpEmailTemplate(otp, name),
+      });
+      console.log("[Email] Password Reset OTP delivered successfully via SMTP:", info?.messageId);
+      return { success: true, provider: "smtp", messageId: info?.messageId };
+    } catch (smtpErr) {
+      console.error("[Email] SMTP password reset delivery error:", smtpErr.message);
+      lastError = `SMTP error: ${smtpErr.message}`;
+    }
+  }
+
+  // 4. Try Resend
+  if (ENV.RESEND_API_KEY && resendClient) {
+    try {
+      console.log("[Email] Dispatching Password Reset OTP via Resend...");
+      const { data, error } = await resendClient.emails.send({
+        from: sender,
+        to: email,
+        subject: `Your Samवाद Password Reset Code: ${otp}`,
+        html: createPasswordResetOtpEmailTemplate(otp, name),
+      });
+
+      if (error) {
+        console.error("[Email] Resend reported password reset error:", error);
+        lastError = error.message;
+      } else {
+        console.log("[Email] Password Reset OTP delivered via Resend:", data);
+        return { success: true, provider: "resend", data };
+      }
+    } catch (resendErr) {
+      console.error("[Email] Exception in Resend password reset delivery:", resendErr.message);
+      lastError = resendErr.message;
+    }
+  }
+
+  const configError = lastError || "Failed to deliver verification code. Please try again later.";
+  console.error(`[Password Reset Email Delivery Failed] ${configError}`);
+  return { success: false, error: configError };
 };

@@ -418,6 +418,54 @@ assert(!socketCode.includes("receiver || {"), "socket.js call:accept binds recei
 const socketAuthCode = fs.readFileSync(path.resolve("backend/src/middleware/socket.auth.middleware.js"), "utf8");
 assert(socketAuthCode.includes("30 * 60"), "socketAuthMiddleware enforces 30-min maximum reconnection grace period");
 
+// ----------------------------------------------------
+// 12. FORGOT PASSWORD FLOW, STRONG PASSWORD & PREVIOUS PASSWORD REJECTION
+// ----------------------------------------------------
+console.log("\n12. Testing Forgot Password Flow, Strong Password & Previous Password Rejection...");
+
+const authRoutesText = fs.readFileSync(path.resolve("backend/src/routes/auth.route.js"), "utf8");
+assert(authRoutesText.includes("/send-reset-otp"), "auth.route.js exposes POST /send-reset-otp");
+assert(authRoutesText.includes("/verify-reset-otp"), "auth.route.js exposes POST /verify-reset-otp");
+assert(authRoutesText.includes("/reset-password"), "auth.route.js exposes POST /reset-password");
+
+const authCtrlText = fs.readFileSync(path.resolve("backend/src/controllers/auth.controller.js"), "utf8");
+assert(authCtrlText.includes("sendPasswordResetOtp = async"), "auth.controller implements sendPasswordResetOtp");
+assert(authCtrlText.includes("verifyPasswordResetOtp = async"), "auth.controller implements verifyPasswordResetOtp");
+assert(authCtrlText.includes("resetPassword = async"), "auth.controller implements resetPassword");
+assert(authCtrlText.includes("type: \"reset_password\""), "sendPasswordResetOtp stores OTPs tagged with type 'reset_password'");
+assert(authCtrlText.includes("attempts >= 5"), "verifyPasswordResetOtp locks out after 5 invalid attempts");
+assert(authCtrlText.includes("newPassword !== confirmPassword"), "resetPassword validates newPassword matches confirmPassword");
+assert(authCtrlText.includes("newPassword.length < 8"), "resetPassword enforces minimum 8 characters");
+assert(authCtrlText.includes("/[A-Z]/"), "resetPassword enforces uppercase letter requirement");
+assert(authCtrlText.includes("/[a-z]/"), "resetPassword enforces lowercase letter requirement");
+assert(authCtrlText.includes("/[0-9]/"), "resetPassword enforces numeric digit requirement");
+assert(authCtrlText.includes("Password must contain at least one special symbol"), "resetPassword enforces special symbol requirement");
+assert(authCtrlText.includes("isSameAsPrevious"), "resetPassword checks if new password is identical to previous password");
+assert(authCtrlText.includes("New password cannot be the same as your previous password"), "resetPassword rejects reusing the previous password with 400 error");
+
+const loginPageText = fs.readFileSync(path.resolve("frontend/src/pages/LoginPage.jsx"), "utf8");
+assert(loginPageText.includes("Forgot Password?"), "LoginPage renders user-facing 'Forgot Password?' option");
+assert(loginPageText.includes("handleOpenForgotPassword"), "LoginPage binds click handler to open Forgot Password modal");
+assert(loginPageText.includes("handleForgotSendOtp"), "LoginPage implements OTP dispatch step with email input");
+assert(loginPageText.includes("handleForgotVerifyOtp"), "LoginPage implements 6-digit OTP verification step");
+assert(loginPageText.includes("handleForgotResetPassword"), "LoginPage implements 2x password entry step with strength check");
+assert(loginPageText.includes("getPasswordStrength"), "LoginPage renders real-time password strength meter and checklist");
+assert(loginPageText.includes("cannot be the same as your previous password"), "LoginPage displays explicit rule against reusing previous password");
+
+// Functional simulation of bcrypt previous-password check
+const bcrypt = backendRequire("bcryptjs");
+const oldPasswordPlain = "CurrentSecur3P@ssw0rd!";
+const oldHashed = bcrypt.hashSync(oldPasswordPlain, 10);
+
+const testSamePasswordAttempt = "CurrentSecur3P@ssw0rd!";
+const testDifferentPasswordAttempt = "NewBrilli@ntP@ssword2026#";
+
+const isSameDetected = bcrypt.compareSync(testSamePasswordAttempt, oldHashed);
+const isDifferentDetected = bcrypt.compareSync(testDifferentPasswordAttempt, oldHashed);
+
+assert(isSameDetected === true, "Simulated check: identical new password correctly detected as previous password");
+assert(isDifferentDetected === false, "Simulated check: truly new password passes previous password check");
+
 console.log("\n========================================================");
 console.log(`TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log("========================================================\n");

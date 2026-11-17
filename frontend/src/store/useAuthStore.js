@@ -64,6 +64,46 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  sendPasswordResetOtp: async (email) => {
+    try {
+      const res = await axiosInstance.post("/auth/send-reset-otp", { email });
+      toast.success(res.data?.message || "Verification code sent to your email!");
+      return { success: true, email: res.data?.email };
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to send reset code";
+      toast.error(errorMsg);
+      return {
+        success: false,
+        message: errorMsg,
+        retryAfter: error.response?.data?.retryAfter,
+      };
+    }
+  },
+
+  verifyPasswordResetOtp: async (email, otp) => {
+    try {
+      const res = await axiosInstance.post("/auth/verify-reset-otp", { email, otp });
+      toast.success(res.data?.message || "Verification code confirmed!");
+      return { success: true, resetToken: res.data?.resetToken };
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Invalid or expired code";
+      toast.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
+  },
+
+  resetPassword: async (data) => {
+    try {
+      const res = await axiosInstance.post("/auth/reset-password", data);
+      toast.success(res.data?.message || "Password changed successfully!");
+      return { success: true, message: res.data?.message };
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message || "Failed to reset password";
+      toast.error(errorMsg);
+      return { success: false, message: errorMsg };
+    }
+  },
+
   signup: async (data) => {
     set({ isSigningUp: true });
     try {

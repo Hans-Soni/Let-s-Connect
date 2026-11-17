@@ -10,6 +10,9 @@ import {
   changePassword,
   deleteAccount,
   registerDevice,
+  sendPasswordResetOtp,
+  verifyPasswordResetOtp,
+  resetPassword,
 } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
@@ -22,6 +25,9 @@ router.use(arcjetProtection);
 router.post("/send-signup-otp", sendSignupOtp);
 router.post("/signup", signup);
 router.post("/login", login);
+router.post("/send-reset-otp", sendPasswordResetOtp);
+router.post("/verify-reset-otp", verifyPasswordResetOtp);
+router.post("/reset-password", resetPassword);
 router.post("/google", googleAuth);
 router.post("/logout", logout);
 

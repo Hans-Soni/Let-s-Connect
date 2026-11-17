@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { sendWelcomeEmail, sendVerificationOtpEmail } from "../emails/emailHandlers.js";
+import { sendWelcomeEmail, sendVerificationOtpEmail, sendPasswordResetOtpEmail } from "../emails/emailHandlers.js";
 import { generateToken } from "../lib/utils.js";
 import Consent from "../models/Consent.js";
 import User from "../models/User.js";
@@ -684,5 +684,252 @@ export const registerDevice = async (req, res) => {
   } catch (error) {
     console.error("Error in registerDevice controller:", error);
     return res.status(500).json({ message: "Failed to register device" });
+  }
+};
+
+export const sendPasswordResetOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({ message: "Email address is required" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email address. Please check your email or sign up.",
+      });
+    }
+
+    // Rate limiting: 60-second cooldown between OTP requests for this email
+    const recentOtp = await Otp.findOne({
+      email: normalizedEmail,
+      type: "reset_password",
+      createdAt: { $gte: new Date(Date.now() - 60 * 1000) },
+    });
+
+    if (recentOtp) {
+      const elapsedMs = Date.now() - new Date(recentOtp.createdAt).getTime();
+      const remainingSeconds = Math.max(1, Math.ceil((60 * 1000 - elapsedMs) / 1000));
+      return res.status(429).json({
+        message: `Please wait ${remainingSeconds}s before requesting a new verification code.`,
+        retryAfter: remainingSeconds,
+      });
+    }
+
+    // Generate cryptographically secure 6-digit numeric OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+
+    // Hash OTP with bcrypt
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    // Delete any previous pending reset OTPs for this email
+    await Otp.deleteMany({ email: normalizedEmail, type: "reset_password" });
+
+    // Store new OTP record
+    await Otp.create({
+      email: normalizedEmail,
+      otp: hashedOtp,
+      type: "reset_password",
+      attempts: 0,
+      createdAt: new Date(),
+    });
+
+    // Dispatch email with race probe (max 1200ms)
+    const dispatchPromise = sendPasswordResetOtpEmail(normalizedEmail, otp, user.fullName);
+    try {
+      await Promise.race([
+        dispatchPromise,
+        new Promise((resolve) => setTimeout(() => resolve({ fastReturn: true }), 1200)),
+      ]);
+    } catch (probeErr) {
+      console.warn("[PASSWORD RESET OTP] Dispatch notice:", probeErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Password reset verification code sent to ${normalizedEmail}. Please check your inbox.`,
+      email: normalizedEmail,
+    });
+  } catch (error) {
+    console.error("Error in sendPasswordResetOtp controller:", error);
+    return res.status(500).json({ message: "Failed to send verification code. Please try again." });
+  }
+};
+
+export const verifyPasswordResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and verification code are required" });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedOtp = otp.toString().trim();
+
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      return res.status(400).json({ message: "Verification code must be exactly 6 digits" });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: "Account not found" });
+    }
+
+    const otpRecord = await Otp.findOne({
+      email: normalizedEmail,
+      type: "reset_password",
+    }).sort({ createdAt: -1 });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        message: "Verification code has expired or was not requested. Please request a new code.",
+      });
+    }
+
+    // 10-minute expiry
+    const isExpired = Date.now() - new Date(otpRecord.createdAt).getTime() > 10 * 60 * 1000;
+    if (isExpired) {
+      await Otp.deleteMany({ email: normalizedEmail, type: "reset_password" });
+      return res.status(400).json({ message: "Verification code has expired. Please request a new code." });
+    }
+
+    if (otpRecord.attempts >= 5) {
+      await Otp.deleteMany({ email: normalizedEmail, type: "reset_password" });
+      return res.status(400).json({ message: "Too many failed attempts. Please request a new verification code." });
+    }
+
+    const isOtpValid = await bcrypt.compare(normalizedOtp, otpRecord.otp);
+    if (!isOtpValid) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+      const remaining = 5 - otpRecord.attempts;
+      return res.status(400).json({
+        message: `Invalid verification code. ${remaining > 0 ? remaining + " attempt(s) remaining." : "Please request a new code."}`,
+      });
+    }
+
+    // Generate short-lived resetToken (15 mins) using key rotation signJwt
+    const keys = await import("../lib/keyRotation.js");
+    const resetToken = keys.signJwt({ userId: user._id, email: user.email, purpose: "password_reset" });
+
+    return res.status(200).json({
+      success: true,
+      message: "Identity verified successfully. You can now choose a new password.",
+      resetToken,
+    });
+  } catch (error) {
+    console.error("Error in verifyPasswordResetOtp controller:", error);
+    return res.status(500).json({ message: "Failed to verify code. Please try again." });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, resetToken, newPassword, confirmPassword } = req.body;
+
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "New password and confirm password are required" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "The two passwords do not match" });
+    }
+
+    // Strong password validation
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters long" });
+    }
+    if (newPassword.length > 128) {
+      return res.status(400).json({ message: "Password cannot exceed 128 characters" });
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      return res.status(400).json({ message: "Password must contain at least one uppercase letter (A-Z)" });
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      return res.status(400).json({ message: "Password must contain at least one lowercase letter (a-z)" });
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ message: "Password must contain at least one number (0-9)" });
+    }
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/.test(newPassword)) {
+      return res.status(400).json({ message: "Password must contain at least one special symbol (!@#$%^&*...)" });
+    }
+
+    let user = null;
+
+    // Verify via resetToken if provided
+    if (resetToken && typeof resetToken === "string") {
+      try {
+        const keys = await import("../lib/keyRotation.js");
+        const decoded = keys.verifyJwt(resetToken);
+        if (decoded?.userId && decoded?.purpose === "password_reset") {
+          user = await User.findById(decoded.userId);
+        }
+      } catch (tokenErr) {
+        // Fall back to email + OTP verification below
+      }
+    }
+
+    // Or verify via email + OTP
+    if (!user) {
+      if (!email || !otp) {
+        return res.status(400).json({ message: "Session expired. Please verify your OTP code again." });
+      }
+      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedOtp = otp.toString().trim();
+
+      user = await User.findOne({ email: normalizedEmail });
+      if (!user) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+
+      const otpRecord = await Otp.findOne({
+        email: normalizedEmail,
+        type: "reset_password",
+      }).sort({ createdAt: -1 });
+
+      if (!otpRecord) {
+        return res.status(400).json({ message: "Verification code expired. Please request a new code." });
+      }
+
+      const isOtpValid = await bcrypt.compare(normalizedOtp, otpRecord.otp);
+      if (!isOtpValid) {
+        return res.status(400).json({ message: "Invalid verification code. Please request a new code." });
+      }
+    }
+
+    // CRITICAL REQUIREMENT: Make sure new password is NOT the same as the previous password
+    if (user.password) {
+      const isSameAsPrevious = await bcrypt.compare(newPassword, user.password);
+      if (isSameAsPrevious) {
+        return res.status(400).json({
+          message: "New password cannot be the same as your previous password. Please choose a different password.",
+        });
+      }
+    }
+
+    // Hash and update password in database
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    // Clean up all reset OTPs for this user
+    await Otp.deleteMany({ email: user.email, type: "reset_password" });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully! You can now sign in with your new password.",
+    });
+  } catch (error) {
+    console.error("Error in resetPassword controller:", error);
+    return res.status(500).json({ message: "Failed to reset password. Please try again." });
   }
 };
