@@ -413,7 +413,7 @@ function LoginPage() {
     };
   }, []);
 
-  // Detect client device IP proactively
+  // Detect client device telemetry proactively for audit logging
   useEffect(() => {
     let isMounted = true;
     detectClientIp().then((ip) => {
