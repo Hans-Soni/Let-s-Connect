@@ -66,35 +66,8 @@ function App() {
     const platform = isNative ? "android" : (isStandalone ? "pwa" : (isMobile ? "mobile" : "web"));
     axiosInstance.post("/auth/register-device", { platform }).catch(() => {});
 
-    // Enable native Android wake lock and background capability
+    // Enable native Android Foreground Service & wake lock so device receives calls even when kept aside
     enableMobileBackgroundMode();
-
-    // Heartbeat check for pending calls (backup for sleeping WebSockets when phone is kept aside)
-    let isChecking = false;
-    const checkPendingCall = async () => {
-      if (isChecking) return;
-      try {
-        const { callState, handleIncomingCall } = useCallStore.getState();
-        if (callState !== "idle") return;
-        isChecking = true;
-        const res = await axiosInstance.get("/messages/pending-call");
-        if (res.data?.hasPendingCall && res.data.call) {
-          console.log("[Call] Detected incoming call via background heartbeat:", res.data.call);
-          handleIncomingCall(res.data.call);
-        }
-      } catch (err) {
-        // Ignore silent polling errors
-      } finally {
-        isChecking = false;
-      }
-    };
-
-    checkPendingCall();
-    const pollTimer = setInterval(checkPendingCall, 3000);
-
-    return () => {
-      clearInterval(pollTimer);
-    };
   }, [authUser]);
 
   // Auto-reconnect socket when app wakes up or returns to foreground
@@ -103,6 +76,17 @@ function App() {
 
     const handleResume = () => {
       useAuthStore.getState().connectSocket();
+      const { callState, handleIncomingCall } = useCallStore.getState();
+      if (callState === "idle") {
+        axiosInstance
+          .get("/messages/pending-call")
+          .then((res) => {
+            if (res.data?.hasPendingCall && res.data.call) {
+              handleIncomingCall(res.data.call);
+            }
+          })
+          .catch(() => {});
+      }
     };
 
     let capListenerHandle = null;

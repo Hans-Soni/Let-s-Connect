@@ -369,6 +369,8 @@ if (fs.existsSync(manifestPath)) {
   assert(manifest.includes("android.permission.WAKE_LOCK"), "Android manifest grants WAKE_LOCK for incoming calls");
   assert(manifest.includes("android.permission.POST_NOTIFICATIONS"), "Android manifest grants POST_NOTIFICATIONS (API 33+)");
   assert(manifest.includes("android.permission.USE_FULL_SCREEN_INTENT"), "Android manifest grants USE_FULL_SCREEN_INTENT");
+  assert(manifest.includes("android.permission.FOREGROUND_SERVICE_PHONE_CALL"), "Android manifest grants FOREGROUND_SERVICE_PHONE_CALL");
+  assert(manifest.includes("CallNotificationService"), "Android manifest registers CallNotificationService for background calls");
   assert(manifest.includes('android:showWhenLocked="true"'), "Android MainActivity configured to showWhenLocked");
   assert(manifest.includes('android:turnScreenOn="true"'), "Android MainActivity configured to turnScreenOn");
 }
@@ -379,6 +381,15 @@ if (fs.existsSync(mainActivityPath)) {
   const mainActivity = fs.readFileSync(mainActivityPath, "utf8");
   assert(mainActivity.includes("setShowWhenLocked(true)"), "MainActivity implements setShowWhenLocked for incoming calls");
   assert(mainActivity.includes("setTurnScreenOn(true)"), "MainActivity implements setTurnScreenOn for incoming calls");
+}
+
+const servicePath = path.resolve("frontend/android/app/src/main/java/com/hans/samvaad/CallNotificationService.java");
+assert(fs.existsSync(servicePath), "Android CallNotificationService.java exists");
+if (fs.existsSync(servicePath)) {
+  const serviceCode = fs.readFileSync(servicePath, "utf8");
+  assert(serviceCode.includes("ACTION_INCOMING_CALL"), "CallNotificationService implements ACTION_INCOMING_CALL");
+  assert(serviceCode.includes("setFullScreenIntent"), "CallNotificationService configures full-screen intent over lock screen");
+  assert(serviceCode.includes("USAGE_NOTIFICATION_RINGTONE"), "CallNotificationService configures hardware ringtone audio usage");
 }
 
 // ----------------------------------------------------
