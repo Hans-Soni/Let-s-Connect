@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import cloudinary from "../lib/cloudinary.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import { getReceiverSocketId, io, getActivePendingCall } from "../lib/socket.js";
 import Message, {
   MESSAGE_RETENTION_MS,
   MESSAGE_RETENTION_24H_MS,
@@ -770,5 +770,19 @@ export const updateConversationRetention = async (req, res) => {
   } catch (error) {
     console.error("Error in updateConversationRetention controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getPendingCallForUser = (req, res) => {
+  try {
+    const userId = req.user._id;
+    const pendingCall = getActivePendingCall(userId);
+    if (pendingCall) {
+      return res.status(200).json({ hasPendingCall: true, call: pendingCall });
+    }
+    return res.status(200).json({ hasPendingCall: false });
+  } catch (error) {
+    console.error("Error in getPendingCallForUser controller:", error.message);
+    return res.status(500).json({ hasPendingCall: false });
   }
 };

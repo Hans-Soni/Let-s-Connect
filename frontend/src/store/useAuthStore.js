@@ -1,8 +1,19 @@
 import { create } from "zustand";
+import { Capacitor } from "@capacitor/core";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useCallStore } from "./useCallStore";
+
+const registerCurrentDevice = () => {
+  try {
+    const isNative = Capacitor.isNativePlatform();
+    const isPwa = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+    const isMobile = isNative || isPwa || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || "");
+    const platform = isNative ? "android" : (isPwa ? "pwa" : (isMobile ? "mobile" : "web"));
+    axiosInstance.post("/auth/register-device", { platform }).catch(() => {});
+  } catch (e) {}
+};
 
 const PRODUCTION_BACKEND_URL = "https://let-s-connect-backend.onrender.com";
 
@@ -32,6 +43,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get("/auth/check");
       set({ authUser: res.data });
+      registerCurrentDevice();
       get().connectSocket();
     } catch (error) {
       console.log("Error in authCheck:", error);
@@ -111,6 +123,7 @@ export const useAuthStore = create((set, get) => ({
       sessionStorage.setItem("jwt", res.data.token);
       localStorage.setItem("jwt", res.data.token);
       set({ authUser: res.data });
+      registerCurrentDevice();
 
       toast.success("Account created successfully!");
       get().connectSocket();
@@ -130,6 +143,7 @@ export const useAuthStore = create((set, get) => ({
       sessionStorage.setItem("jwt", res.data.token);
       localStorage.setItem("jwt", res.data.token);
       set({ authUser: res.data });
+      registerCurrentDevice();
 
       toast.success("Logged in successfully");
 
@@ -153,6 +167,7 @@ export const useAuthStore = create((set, get) => ({
       sessionStorage.setItem("jwt", res.data.token);
       localStorage.setItem("jwt", res.data.token);
       set({ authUser: res.data });
+      registerCurrentDevice();
 
       toast.success(
         res.data.isNewUser
@@ -256,8 +271,13 @@ export const useAuthStore = create((set, get) => ({
 
     const token = sessionStorage.getItem("jwt") || localStorage.getItem("jwt");
 
+    const isNative = Capacitor.isNativePlatform();
+    const isPwa = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+    const clientPlatform = isNative ? "android" : (isPwa ? "pwa" : "web");
+
     if (existingSocket && !existingSocket.connected) {
       existingSocket.auth = { token };
+      existingSocket.io.opts.query = { token, platform: clientPlatform };
       existingSocket.connect();
       return;
     }
@@ -266,7 +286,7 @@ export const useAuthStore = create((set, get) => ({
       auth: (cb) => {
         cb({ token: sessionStorage.getItem("jwt") || localStorage.getItem("jwt") });
       },
-      query: { token },
+      query: { token, platform: clientPlatform },
       withCredentials: true,
       transports: ["websocket", "polling"],
       reconnection: true,

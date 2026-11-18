@@ -8,6 +8,7 @@ import {
   playCallConnectedSound,
   playCallEndedSound,
 } from "../lib/callSounds";
+import { triggerNativeIncomingCall, stopNativeIncomingCall } from "../lib/nativeCall";
 import { useAuthStore } from "./useAuthStore";
 
 const ICE_SERVERS = {
@@ -342,6 +343,7 @@ export const useCallStore = create((set, get) => ({
     playIncomingRingtone();
     startCallVibration();
     triggerIncomingCallNotification(data?.caller?.fullName, data?.callType);
+    triggerNativeIncomingCall({ callerName: data?.caller?.fullName, callType: data?.callType });
 
     // 45s auto timeout on incoming call
     if (callRingingTimeout) clearTimeout(callRingingTimeout);
@@ -356,6 +358,7 @@ export const useCallStore = create((set, get) => ({
     if (callRingingTimeout) clearTimeout(callRingingTimeout);
     stopIncomingRingtone();
     stopCallVibration();
+    stopNativeIncomingCall();
 
     let { callType, callPartner } = get();
     const { socket, authUser } = useAuthStore.getState();
@@ -428,6 +431,7 @@ export const useCallStore = create((set, get) => ({
     if (callRingingTimeout) clearTimeout(callRingingTimeout);
     stopOutgoingRingtone();
     stopIncomingRingtone();
+    stopNativeIncomingCall();
     playCallConnectedSound();
 
     set({ callState: "connected" });
@@ -473,6 +477,7 @@ export const useCallStore = create((set, get) => ({
     stopIncomingRingtone();
     stopOutgoingRingtone();
     stopCallVibration();
+    stopNativeIncomingCall();
     playCallEndedSound();
 
     if (socket && socket.connected && callPartner?._id) {
@@ -493,6 +498,7 @@ export const useCallStore = create((set, get) => ({
     stopIncomingRingtone();
     stopOutgoingRingtone();
     stopCallVibration();
+    stopNativeIncomingCall();
     playCallEndedSound();
 
     if (notifyRemote && socket && socket.connected && callPartner?._id) {
@@ -808,6 +814,7 @@ export const useCallStore = create((set, get) => ({
     stopIncomingRingtone();
     stopOutgoingRingtone();
     stopCallVibration();
+    stopNativeIncomingCall();
 
     // Close and nullify WebRTC Peer Connection
     if (peerConnection) {

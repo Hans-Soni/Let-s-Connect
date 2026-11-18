@@ -12,6 +12,7 @@ import {
   getBlockedUsers,
   getConversationRetention,
   updateConversationRetention,
+  getPendingCallForUser,
 } from "../controllers/message.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
@@ -31,6 +32,7 @@ router.post("/retention/:id", updateConversationRetention);
 router.post("/block/:id", blockUser);
 router.post("/unblock/:id", unblockUser);
 router.delete("/history/:id", deleteChatHistory);
+router.get("/pending-call", getPendingCallForUser);
 router.get("/:id", getMessagesByUserId);
 router.post("/send/:id", sendMessage);
 router.put("/seen/:id", markMessagesAsSeen);

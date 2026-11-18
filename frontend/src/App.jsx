@@ -11,6 +11,8 @@ import CallModal from "./components/CallModal";
 import InstallAppBanner from "./components/InstallAppBanner";
 import toast, { Toaster } from "react-hot-toast";
 import { axiosInstance } from "./lib/axios";
+import { enableMobileBackgroundMode } from "./lib/nativeCall";
+import { useCallStore } from "./store/useCallStore";
 
 // Code-split pages for smaller initial bundle and faster load performance
 const ChatPage = lazy(() => import("./pages/ChatPage"));
@@ -54,16 +56,45 @@ function App() {
     };
   }, []);
 
-  // Register device platform with backend so callers know this user has the app installed
+  // Register device platform with backend and enable background call listener
   useEffect(() => {
     if (!authUser) return;
     const isNative = Capacitor.isNativePlatform();
     const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+    const isMobile = isNative || isStandalone || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || "");
 
-    if (isNative || isStandalone) {
-      const platform = isNative ? Capacitor.getPlatform() : "pwa";
-      axiosInstance.post("/auth/register-device", { platform }).catch(() => {});
-    }
+    const platform = isNative ? "android" : (isStandalone ? "pwa" : (isMobile ? "mobile" : "web"));
+    axiosInstance.post("/auth/register-device", { platform }).catch(() => {});
+
+    // Enable native Android wake lock and background capability
+    enableMobileBackgroundMode();
+
+    // Heartbeat check for pending calls (backup for sleeping WebSockets when phone is kept aside)
+    let isChecking = false;
+    const checkPendingCall = async () => {
+      if (isChecking) return;
+      try {
+        const { callState, handleIncomingCall } = useCallStore.getState();
+        if (callState !== "idle") return;
+        isChecking = true;
+        const res = await axiosInstance.get("/messages/pending-call");
+        if (res.data?.hasPendingCall && res.data.call) {
+          console.log("[Call] Detected incoming call via background heartbeat:", res.data.call);
+          handleIncomingCall(res.data.call);
+        }
+      } catch (err) {
+        // Ignore silent polling errors
+      } finally {
+        isChecking = false;
+      }
+    };
+
+    checkPendingCall();
+    const pollTimer = setInterval(checkPendingCall, 3000);
+
+    return () => {
+      clearInterval(pollTimer);
+    };
   }, [authUser]);
 
   // Auto-reconnect socket when app wakes up or returns to foreground

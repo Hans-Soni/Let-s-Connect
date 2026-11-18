@@ -70,9 +70,48 @@ export function isUserOnline(userId) {
   return Boolean(sockets && sockets.size > 0);
 }
 
+// Retrieve any active pending call for a user (used by REST polling fallback when device wakes up)
+export function getActivePendingCall(userId) {
+  if (!userId) return null;
+  const targetId = userId.toString();
+  if (!pendingCallInvites.has(targetId)) return null;
+  const invite = pendingCallInvites.get(targetId);
+  if (Date.now() - invite.createdAt < 45000) {
+    return {
+      callerId: invite.callerId,
+      caller: invite.caller,
+      callType: invite.callType,
+      createdAt: invite.createdAt,
+    };
+  } else {
+    clearTimeout(invite.timeoutId);
+    pendingCallInvites.delete(targetId);
+    return null;
+  }
+}
+
 io.on("connection", (socket) => {
   const userId = socket.userId;
   // Automatically join private room for targeted broadcasts (delivers to all tabs of this user)
+  socket.join(userId);
+
+  // If client connected from Android Capacitor or Mobile PWA, automatically ensure isAppInstalled is true in DB
+  const userAgent = socket.handshake.headers["user-agent"] || "";
+  const queryPlatform = socket.handshake.query?.platform;
+  const isMobileClient =
+    queryPlatform === "android" ||
+    queryPlatform === "pwa" ||
+    /Capacitor|Android/i.test(userAgent);
+
+  if (isMobileClient) {
+    import("../models/User.js").then(({ default: User }) => {
+      User.findByIdAndUpdate(userId, {
+        isAppInstalled: true,
+        devicePlatform: queryPlatform === "android" || /Capacitor/i.test(userAgent) ? "android" : "mobile",
+        lastActiveAt: new Date(),
+      }).catch(() => {});
+    }).catch(() => {});
+  }
   socket.join(userId);
 
   if (!userSocketsMap.has(userId)) {
