@@ -390,7 +390,15 @@ if (fs.existsSync(servicePath)) {
   assert(serviceCode.includes("ACTION_INCOMING_CALL"), "CallNotificationService implements ACTION_INCOMING_CALL");
   assert(serviceCode.includes("setFullScreenIntent"), "CallNotificationService configures full-screen intent over lock screen");
   assert(serviceCode.includes("USAGE_NOTIFICATION_RINGTONE"), "CallNotificationService configures hardware ringtone audio usage");
+  assert(serviceCode.includes("wait-for-call"), "CallNotificationService implements wait-for-call native background listener");
+  assert(serviceCode.includes("monitorCallStatusWhileRinging"), "CallNotificationService implements monitorCallStatusWhileRinging");
 }
+
+const messageControllerCode = fs.readFileSync(path.resolve("backend/src/controllers/message.controller.js"), "utf8");
+assert(messageControllerCode.includes("waitForIncomingCall"), "message.controller.js implements waitForIncomingCall");
+
+const socketLibCode = fs.readFileSync(path.resolve("backend/src/lib/socket.js"), "utf8");
+assert(socketLibCode.includes("dispatchCallToWaiters"), "socket.js implements dispatchCallToWaiters for background wakeup");
 
 // ----------------------------------------------------
 // 11. IP & PORT PRIVACY, INPUT BOUNDS & ANTI-SPOOFING SECURITY
@@ -412,7 +420,7 @@ assert(
   "getConsentRecord excludes ipAddress from public API response"
 );
 
-const messageControllerCode = fs.readFileSync(path.resolve("backend/src/controllers/message.controller.js"), "utf8");
+// message.controller.js already read above
 assert(messageControllerCode.includes("ALLOWED_MEDIA_MIMES"), "message.controller enforces strict media MIME whitelist");
 assert(messageControllerCode.includes("You cannot unblock yourself"), "unblockUser prevents self-unblocking loophole");
 

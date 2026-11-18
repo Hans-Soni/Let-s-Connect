@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -19,6 +20,12 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
+import java.net.URL;
+import org.json.JSONObject;
 
 public class CallNotificationService extends Service {
 
@@ -36,6 +43,10 @@ public class CallNotificationService extends Service {
     private MediaPlayer mediaPlayer = null;
     private Vibrator vibrator = null;
 
+    private volatile boolean isWorkerRunning = false;
+    private Thread backgroundWorkerThread = null;
+    private volatile boolean isRinging = false;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -51,11 +62,27 @@ public class CallNotificationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent == null) return START_STICKY;
+        if (intent == null) {
+            startBackgroundWorker();
+            return START_STICKY;
+        }
 
         String action = intent.getAction();
         if (ACTION_START_FOREGROUND.equals(action)) {
             startForegroundNotification();
+
+            String sUrl = intent.getStringExtra("serverUrl");
+            String uId = intent.getStringExtra("userId");
+            String tok = intent.getStringExtra("token");
+
+            SharedPreferences prefs = getSharedPreferences("samvaad_call_prefs", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            if (sUrl != null && !sUrl.isEmpty()) editor.putString("serverUrl", sUrl);
+            if (uId != null && !uId.isEmpty()) editor.putString("userId", uId);
+            if (tok != null && !tok.isEmpty()) editor.putString("token", tok);
+            editor.apply();
+
+            startBackgroundWorker();
         } else if (ACTION_INCOMING_CALL.equals(action)) {
             String callerName = intent.getStringExtra("callerName");
             if (callerName == null || callerName.isEmpty()) callerName = "Incoming Caller";
@@ -81,7 +108,127 @@ public class CallNotificationService extends Service {
         startForeground(FOREGROUND_SERVICE_ID, builder.build());
     }
 
-    private void handleIncomingCall(String callerName, String callType) {
+    private synchronized void startBackgroundWorker() {
+        if (isWorkerRunning && backgroundWorkerThread != null && backgroundWorkerThread.isAlive()) {
+            return;
+        }
+
+        isWorkerRunning = true;
+        backgroundWorkerThread = new Thread(() -> {
+            while (isWorkerRunning) {
+                try {
+                    SharedPreferences prefs = getSharedPreferences("samvaad_call_prefs", Context.MODE_PRIVATE);
+                    String baseUrl = prefs.getString("serverUrl", null);
+                    String userId = prefs.getString("userId", null);
+                    String token = prefs.getString("token", null);
+
+                    if (baseUrl == null || userId == null || token == null || baseUrl.isEmpty() || token.isEmpty()) {
+                        Thread.sleep(3000);
+                        continue;
+                    }
+
+                    // Format URL properly: ensure base URL ends with slash
+                    String cleanBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+                    String endpoint = cleanBase + "messages/wait-for-call?userId=" + userId;
+
+                    URL url = new URL(endpoint);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setRequestProperty("Authorization", "Bearer " + token);
+                    conn.setRequestProperty("Accept", "application/json");
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(35000); // 35s timeout for 25s long-poll
+                    conn.setUseCaches(false);
+                    conn.setDoInput(true);
+
+                    int code = conn.getResponseCode();
+                    if (code == 200) {
+                        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = in.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        in.close();
+
+                        JSONObject json = new JSONObject(sb.toString());
+                        if (json.optBoolean("hasCall", false)) {
+                            String callerName = json.optString("callerName", "Incoming Caller");
+                            String callType = json.optString("callType", "voice");
+
+                            handleIncomingCall(callerName, callType);
+
+                            // While device is ringing, actively monitor if caller hung up or call ended
+                            monitorCallStatusWhileRinging(cleanBase, token);
+                        }
+                    } else if (code == 401) {
+                        // Auth token invalid or expired, back off 15 seconds
+                        Thread.sleep(15000);
+                    } else {
+                        Thread.sleep(3000);
+                    }
+                    conn.disconnect();
+                } catch (SocketTimeoutException ste) {
+                    // Normal 25-second long-poll window finished with no incoming call, loop immediately
+                } catch (Exception e) {
+                    // Network switch, device asleep, or temporary network failure; retry after 2 seconds
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException ignored) {}
+                }
+            }
+        }, "SamvaadCallPollWorker");
+
+        backgroundWorkerThread.setDaemon(true);
+        backgroundWorkerThread.start();
+    }
+
+    private void monitorCallStatusWhileRinging(String cleanBase, String token) {
+        long ringStartTime = System.currentTimeMillis();
+        // Ring for max 45 seconds timeout
+        while (isRinging && (System.currentTimeMillis() - ringStartTime < 45000)) {
+            try {
+                Thread.sleep(2000);
+                if (!isRinging) break;
+
+                String checkUrl = cleanBase + "messages/pending-call";
+                URL url = new URL(checkUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Authorization", "Bearer " + token);
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(3000);
+
+                if (conn.getResponseCode() == 200) {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = in.readLine()) != null) sb.append(line);
+                    in.close();
+
+                    JSONObject json = new JSONObject(sb.toString());
+                    if (!json.optBoolean("hasPendingCall", false)) {
+                        // Call was cancelled or answered
+                        stopIncomingRinging();
+                        break;
+                    }
+                }
+                conn.disconnect();
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (isRinging && (System.currentTimeMillis() - ringStartTime >= 45000)) {
+            stopIncomingRinging();
+        }
+    }
+
+    private synchronized void handleIncomingCall(String callerName, String callType) {
+        if (isRinging) {
+            return; // Already ringing
+        }
+        isRinging = true;
+
         // 1. Wake the physical screen immediately
         try {
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -182,7 +329,8 @@ public class CallNotificationService extends Service {
         }
     }
 
-    private void stopIncomingRinging() {
+    private synchronized void stopIncomingRinging() {
+        isRinging = false;
         stopRingtonePlayer();
 
         if (vibrator != null) {
@@ -255,6 +403,11 @@ public class CallNotificationService extends Service {
 
     @Override
     public void onDestroy() {
+        isWorkerRunning = false;
+        if (backgroundWorkerThread != null) {
+            backgroundWorkerThread.interrupt();
+            backgroundWorkerThread = null;
+        }
         stopIncomingRinging();
         if (cpuWakeLock != null && cpuWakeLock.isHeld()) {
             cpuWakeLock.release();

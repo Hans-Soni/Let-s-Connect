@@ -2,11 +2,15 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 
 const IncomingCall = registerPlugin("IncomingCall");
 
-export const enableMobileBackgroundMode = async () => {
+export const enableMobileBackgroundMode = async (credentials = {}) => {
   if (Capacitor.isNativePlatform()) {
     try {
-      await IncomingCall.enableBackgroundMode();
-      console.log("[NativeCall] Background mode enabled with wake lock");
+      await IncomingCall.enableBackgroundMode({
+        serverUrl: credentials.serverUrl || "",
+        userId: credentials.userId || "",
+        token: credentials.token || "",
+      });
+      console.log("[NativeCall] Background mode enabled with wake lock and native call listener");
     } catch (err) {
       console.warn("[NativeCall] Failed to enable background mode:", err);
     }

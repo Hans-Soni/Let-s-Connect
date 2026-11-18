@@ -1,6 +1,12 @@
 import mongoose from "mongoose";
 import cloudinary from "../lib/cloudinary.js";
-import { getReceiverSocketId, io, getActivePendingCall } from "../lib/socket.js";
+import {
+  getReceiverSocketId,
+  io,
+  getActivePendingCall,
+  registerCallWaiter,
+  removeCallWaiter,
+} from "../lib/socket.js";
 import Message, {
   MESSAGE_RETENTION_MS,
   MESSAGE_RETENTION_24H_MS,
@@ -784,5 +790,90 @@ export const getPendingCallForUser = (req, res) => {
   } catch (error) {
     console.error("Error in getPendingCallForUser controller:", error.message);
     return res.status(500).json({ hasPendingCall: false });
+  }
+};
+
+export const waitForIncomingCall = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const bearerToken =
+      authHeader && typeof authHeader === "string"
+        ? authHeader.replace(/^Bearer\s+/i, "").trim()
+        : null;
+    let token = req.cookies?.jwt || bearerToken;
+    if (!token && req.query?.token) token = req.query.token;
+
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized - No token provided" });
+    }
+
+    const keys = await import("../lib/keyRotation.js");
+    let decoded;
+    try {
+      decoded = keys.verifyJwt(token, { ignoreExpiration: true });
+    } catch {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    if (!decoded?.userId) {
+      return res.status(401).json({ message: "Invalid token payload" });
+    }
+
+    // Allow 7-day token grace window for silent background waking
+    if (decoded.exp && Math.floor(Date.now() / 1000) - decoded.exp > 7 * 24 * 3600) {
+      return res.status(401).json({ message: "Token expired beyond grace window" });
+    }
+
+    const userId = decoded.userId.toString();
+
+    // 1. Immediately return if an active call is already pending
+    const activeCall = getActivePendingCall(userId);
+    if (activeCall) {
+      return res.status(200).json({
+        hasCall: true,
+        callerName: activeCall.caller?.fullName || "Incoming Caller",
+        callType: activeCall.callType || "audio",
+        callerId: activeCall.callerId,
+        createdAt: activeCall.createdAt,
+      });
+    }
+
+    // 2. Long-poll hold up to 25 seconds
+    let responded = false;
+    let timeoutId = null;
+
+    const onCallReceived = (payload) => {
+      if (responded) return;
+      responded = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      removeCallWaiter(userId, onCallReceived);
+      if (!res.headersSent) {
+        return res.status(200).json(payload);
+      }
+    };
+
+    registerCallWaiter(userId, onCallReceived);
+
+    timeoutId = setTimeout(() => {
+      if (responded) return;
+      responded = true;
+      removeCallWaiter(userId, onCallReceived);
+      if (!res.headersSent) {
+        return res.status(200).json({ hasCall: false });
+      }
+    }, 25000);
+
+    req.on("close", () => {
+      if (!responded) {
+        responded = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        removeCallWaiter(userId, onCallReceived);
+      }
+    });
+  } catch (error) {
+    console.error("Error in waitForIncomingCall controller:", error.message);
+    if (!res.headersSent) {
+      return res.status(500).json({ hasCall: false });
+    }
   }
 };

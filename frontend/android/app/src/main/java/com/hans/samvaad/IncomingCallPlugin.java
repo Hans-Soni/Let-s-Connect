@@ -16,8 +16,15 @@ public class IncomingCallPlugin extends Plugin {
     public void enableBackgroundMode(PluginCall call) {
         try {
             Context context = getContext();
+            String serverUrl = call.getString("serverUrl", "");
+            String userId = call.getString("userId", "");
+            String token = call.getString("token", "");
+
             Intent serviceIntent = new Intent(context, CallNotificationService.class);
             serviceIntent.setAction(CallNotificationService.ACTION_START_FOREGROUND);
+            if (serverUrl != null && !serverUrl.isEmpty()) serviceIntent.putExtra("serverUrl", serverUrl);
+            if (userId != null && !userId.isEmpty()) serviceIntent.putExtra("userId", userId);
+            if (token != null && !token.isEmpty()) serviceIntent.putExtra("token", token);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent);

@@ -67,7 +67,12 @@ function App() {
     axiosInstance.post("/auth/register-device", { platform }).catch(() => {});
 
     // Enable native Android Foreground Service & wake lock so device receives calls even when kept aside
-    enableMobileBackgroundMode();
+    const token = sessionStorage.getItem("jwt") || localStorage.getItem("jwt") || "";
+    enableMobileBackgroundMode({
+      serverUrl: axiosInstance.defaults.baseURL,
+      userId: String(authUser._id),
+      token,
+    });
   }, [authUser]);
 
   // Auto-reconnect socket when app wakes up or returns to foreground

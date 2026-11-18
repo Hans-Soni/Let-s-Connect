@@ -55,6 +55,59 @@ const userActiveCallMap = {}; // {userId: partnerUserId}
 // Map of targetUserId -> { callerId, caller, callType, createdAt, timeoutId }
 const pendingCallInvites = new Map();
 
+// Map of userId -> Set of callback functions for native background listeners
+const callWaitersMap = new Map();
+
+export function registerCallWaiter(userId, callback) {
+  if (!userId) return;
+  const uid = String(userId);
+  if (!callWaitersMap.has(uid)) {
+    callWaitersMap.set(uid, new Set());
+  }
+  callWaitersMap.get(uid).add(callback);
+}
+
+export function removeCallWaiter(userId, callback) {
+  if (!userId) return;
+  const uid = String(userId);
+  if (callWaitersMap.has(uid)) {
+    callWaitersMap.get(uid).delete(callback);
+    if (callWaitersMap.get(uid).size === 0) {
+      callWaitersMap.delete(uid);
+    }
+  }
+}
+
+export function dispatchCallToWaiters(targetUserId, incomingPayload) {
+  if (!targetUserId) return;
+  const uid = String(targetUserId);
+  if (!callWaitersMap.has(uid)) return;
+  const waiters = Array.from(callWaitersMap.get(uid));
+  callWaitersMap.delete(uid);
+  for (const cb of waiters) {
+    try {
+      cb({ hasCall: true, ...incomingPayload });
+    } catch (e) {
+      console.warn("Error notifying call waiter:", e?.message);
+    }
+  }
+}
+
+export function cancelCallWaiters(targetUserId) {
+  if (!targetUserId) return;
+  const uid = String(targetUserId);
+  if (!callWaitersMap.has(uid)) return;
+  const waiters = Array.from(callWaitersMap.get(uid));
+  callWaitersMap.delete(uid);
+  for (const cb of waiters) {
+    try {
+      cb({ hasCall: false, callEnded: true });
+    } catch (e) {
+      console.warn("Error cancelling call waiter:", e?.message);
+    }
+  }
+}
+
 // Helper to get any active socket ID for this user (used for WebRTC signaling)
 export function getReceiverSocketId(userId) {
   if (!userId) return null;
@@ -286,6 +339,7 @@ io.on("connection", (socket) => {
       const timeoutId = setTimeout(() => {
         if (pendingCallInvites.has(targetUserId)) {
           pendingCallInvites.delete(targetUserId);
+          cancelCallWaiters(targetUserId);
           io.to(callerUserId).emit("call:rejected", {
             by: targetUserId,
             reason: "no-answer",
@@ -305,6 +359,9 @@ io.on("connection", (socket) => {
 
       // Deliver incoming call to all connected sockets of the target user
       io.to(targetUserId).emit("call:incoming", incomingPayload);
+
+      // Immediately wake and alert any native Android background service listeners
+      dispatchCallToWaiters(targetUserId, incomingPayload);
     } catch (err) {
       console.error("Error in call:initiate socket event:", err);
     }
@@ -319,6 +376,8 @@ io.on("connection", (socket) => {
         clearTimeout(pendingCallInvites.get(receiverUserId).timeoutId);
         pendingCallInvites.delete(receiverUserId);
       }
+      cancelCallWaiters(receiverUserId);
+      cancelCallWaiters(callerUserId);
 
       userActiveCallMap[callerUserId] = receiverUserId;
       userActiveCallMap[receiverUserId] = callerUserId;
@@ -352,6 +411,7 @@ io.on("connection", (socket) => {
       if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
 
       if (targetUserId) {
+        cancelCallWaiters(targetUserId.toString());
         io.to(targetUserId.toString()).emit("call:rejected", {
           by: currentUserId,
           reason: reason || "declined",
@@ -373,11 +433,13 @@ io.on("connection", (socket) => {
         clearTimeout(pendingCallInvites.get(targetUserId.toString()).timeoutId);
         pendingCallInvites.delete(targetUserId.toString());
       }
+      cancelCallWaiters(currentUserId);
 
       delete userActiveCallMap[currentUserId];
       if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
 
       if (targetUserId) {
+        cancelCallWaiters(targetUserId.toString());
         io.to(targetUserId.toString()).emit("call:ended", {
           by: currentUserId,
         });

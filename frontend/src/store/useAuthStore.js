@@ -4,6 +4,7 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { useCallStore } from "./useCallStore";
+import { enableMobileBackgroundMode } from "../lib/nativeCall";
 
 const registerCurrentDevice = () => {
   try {
@@ -335,12 +336,19 @@ if (typeof window !== "undefined") {
     useAuthStore.getState().handleSessionExpired();
   });
   window.addEventListener("auth:token-refreshed", (e) => {
-    const socket = useAuthStore.getState().socket;
+    const { socket, authUser } = useAuthStore.getState();
     if (socket && e.detail?.token) {
       socket.auth = { token: e.detail.token };
       if (!socket.connected) {
         socket.connect();
       }
+    }
+    if (e.detail?.token && authUser?._id) {
+      enableMobileBackgroundMode({
+        serverUrl: axiosInstance.defaults.baseURL,
+        userId: String(authUser._id),
+        token: e.detail.token,
+      });
     }
   });
 }
