@@ -50,7 +50,7 @@ jobs:
 
       - name: Build Debug APK
         working-directory: frontend/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log || (echo "::error::$(tail -n 25 /tmp/gradle.log | tr '\n' ' ')" && exit 1)
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
