@@ -44,7 +44,7 @@ jobs:
 
       - name: Sync Capacitor Android
         working-directory: frontend
-        run: npx cap sync android
+        run: npx cap sync android --verbose 2>&1 | tee /tmp/cap_sync.log || (echo "::error::$(head -c 2000 /tmp/cap_sync.log)" && exit 1)
 
       - name: Build Debug APK
         working-directory: frontend/android
