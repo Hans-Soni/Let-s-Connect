@@ -23,9 +23,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
-
       - name: Set up Node.js
         uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
         with:
@@ -40,7 +37,9 @@ jobs:
         run: npm run build --prefix frontend
 
       - name: Sync Capacitor Android
-        run: npx cap sync android --prefix frontend
+        run: |
+          cd frontend
+          npx cap sync android
 
       - name: Make Gradlew Executable
         run: chmod +x frontend/android/gradlew
