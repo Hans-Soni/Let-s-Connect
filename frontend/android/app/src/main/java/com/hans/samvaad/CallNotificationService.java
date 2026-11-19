@@ -1,5 +1,6 @@
 package com.hans.samvaad;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,10 +17,12 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.Person;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -88,8 +91,10 @@ public class CallNotificationService extends Service {
             if (callerName == null || callerName.isEmpty()) callerName = "Incoming Caller";
             String callType = intent.getStringExtra("callType");
             if (callType == null || callType.isEmpty()) callType = "voice";
+            String callerId = intent.getStringExtra("callerId");
+            if (callerId == null) callerId = "";
 
-            handleIncomingCall(callerName, callType);
+            handleIncomingCall(callerName, callType, callerId);
         } else if (ACTION_STOP_RINGING.equals(action)) {
             stopIncomingRinging();
         }
@@ -153,10 +158,20 @@ public class CallNotificationService extends Service {
 
                         JSONObject json = new JSONObject(sb.toString());
                         if (json.optBoolean("hasCall", false)) {
-                            String callerName = json.optString("callerName", "Incoming Caller");
+                            String callerName = json.optString("callerName", null);
+                            if (callerName == null && json.has("caller")) {
+                                callerName = json.optJSONObject("caller").optString("fullName", "Incoming Caller");
+                            }
+                            if (callerName == null || callerName.isEmpty()) {
+                                callerName = "Incoming Caller";
+                            }
                             String callType = json.optString("callType", "voice");
+                            String callerId = json.optString("callerId", "");
+                            if (callerId.isEmpty() && json.has("caller")) {
+                                callerId = json.optJSONObject("caller").optString("_id", "");
+                            }
 
-                            handleIncomingCall(callerName, callType);
+                            handleIncomingCall(callerName, callType, callerId);
 
                             // Actively monitor on a separate thread if caller hung up or call ended
                             final String finalBase = cleanBase;
@@ -228,11 +243,14 @@ public class CallNotificationService extends Service {
         }
     }
 
-    private synchronized void handleIncomingCall(String callerName, String callType) {
+    private synchronized void handleIncomingCall(String callerName, String callType, String callerId) {
         if (isRinging) {
             return; // Already ringing
         }
         isRinging = true;
+
+        // Immediately cache in plugin static memory and notify listeners if app is alive
+        IncomingCallPlugin.sendIncomingCallEvent(callerName, callType, callerId, false);
 
         // 1. Wake the physical screen immediately
         try {
@@ -301,6 +319,7 @@ public class CallNotificationService extends Service {
         fullScreenIntent.putExtra("isIncomingCall", true);
         fullScreenIntent.putExtra("callerName", callerName);
         fullScreenIntent.putExtra("callType", callType);
+        fullScreenIntent.putExtra("callerId", callerId);
 
         int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -308,6 +327,26 @@ public class CallNotificationService extends Service {
         }
 
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 101, fullScreenIntent, pendingFlags);
+
+        // Build Answer action intent
+        Intent answerIntent = new Intent(this, MainActivity.class);
+        answerIntent.setAction("com.hans.samvaad.action.ANSWER_CALL");
+        answerIntent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK |
+            Intent.FLAG_ACTIVITY_SINGLE_TOP |
+            Intent.FLAG_ACTIVITY_CLEAR_TOP
+        );
+        answerIntent.putExtra("isIncomingCall", true);
+        answerIntent.putExtra("autoAccept", true);
+        answerIntent.putExtra("callerName", callerName);
+        answerIntent.putExtra("callType", callType);
+        answerIntent.putExtra("callerId", callerId);
+        PendingIntent answerPending = PendingIntent.getActivity(this, 102, answerIntent, pendingFlags);
+
+        // Build Decline action intent
+        Intent declineIntent = new Intent(this, CallNotificationService.class);
+        declineIntent.setAction(ACTION_STOP_RINGING);
+        PendingIntent declinePending = PendingIntent.getService(this, 103, declineIntent, pendingFlags);
 
         NotificationCompat.Builder callNotifBuilder = new NotificationCompat.Builder(this, CHANNEL_ID_CALLS)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -321,6 +360,19 @@ public class CallNotificationService extends Service {
             .setOngoing(true)
             .setAutoCancel(true);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Person callerPerson = new Person.Builder()
+                .setName(callerName)
+                .setImportant(true)
+                .build();
+            callNotifBuilder.setStyle(
+                NotificationCompat.CallStyle.forIncomingCall(callerPerson, declinePending, answerPending)
+            );
+        } else {
+            callNotifBuilder.addAction(android.R.drawable.ic_menu_call, "ANSWER", answerPending);
+            callNotifBuilder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "DECLINE", declinePending);
+        }
+
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
             manager.notify(INCOMING_CALL_ID, callNotifBuilder.build());
@@ -331,6 +383,36 @@ public class CallNotificationService extends Service {
             startActivity(fullScreenIntent);
         } catch (Exception e) {
             // FullScreenIntent from notification handles display if background start is blocked by OS
+        }
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        try {
+            Intent restartServiceIntent = new Intent(getApplicationContext(), CallNotificationService.class);
+            restartServiceIntent.setAction(ACTION_START_FOREGROUND);
+            restartServiceIntent.setPackage(getPackageName());
+            int pFlags = PendingIntent.FLAG_ONE_SHOT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                pFlags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+            PendingIntent restartPending = PendingIntent.getService(
+                getApplicationContext(),
+                1002,
+                restartServiceIntent,
+                pFlags
+            );
+            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (alarmManager != null) {
+                alarmManager.set(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime() + 1000,
+                    restartPending
+                );
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

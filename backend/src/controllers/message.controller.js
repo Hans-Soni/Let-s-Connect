@@ -875,7 +875,8 @@ export const waitForIncomingCall = async (req, res) => {
         hasCall: true,
         callerName: activeCall.caller?.fullName || "Incoming Caller",
         callType: activeCall.callType || "audio",
-        callerId: activeCall.callerId,
+        callerId: activeCall.callerId || (activeCall.caller?._id ? String(activeCall.caller._id) : ""),
+        caller: activeCall.caller,
         createdAt: activeCall.createdAt,
       });
     }
@@ -890,7 +891,19 @@ export const waitForIncomingCall = async (req, res) => {
       if (timeoutId) clearTimeout(timeoutId);
       removeCallWaiter(userId, onCallReceived);
       if (!res.headersSent) {
-        return res.status(200).json(payload);
+        if (payload.callEnded) {
+          return res.status(200).json({ hasCall: false, callEnded: true });
+        }
+        const callerName = payload.caller?.fullName || payload.callerName || "Incoming Caller";
+        const callType = payload.callType || "audio";
+        const callerId = payload.callerId || (payload.caller?._id ? String(payload.caller._id) : "");
+        return res.status(200).json({
+          hasCall: true,
+          callerName,
+          callType,
+          callerId,
+          caller: payload.caller || { _id: callerId, fullName: callerName },
+        });
       }
     };
 

@@ -13,6 +13,10 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class IncomingCallPlugin extends Plugin {
 
     private static IncomingCallPlugin instance = null;
+    private static String pendingCallerName = null;
+    private static String pendingCallType = null;
+    private static String pendingCallerId = null;
+    private static boolean pendingAutoAccept = false;
 
     @Override
     public void load() {
@@ -20,13 +24,39 @@ public class IncomingCallPlugin extends Plugin {
         instance = this;
     }
 
-    public static void sendIncomingCallEvent(String callerName, String callType) {
+    public static void sendIncomingCallEvent(String callerName, String callType, String callerId, boolean autoAccept) {
+        pendingCallerName = callerName;
+        pendingCallType = callType;
+        pendingCallerId = callerId;
+        pendingAutoAccept = autoAccept;
+
         if (instance != null) {
             JSObject data = new JSObject();
             data.put("callerName", callerName);
             data.put("callType", callType);
+            data.put("callerId", callerId);
+            data.put("autoAccept", autoAccept);
             instance.notifyListeners("onIncomingCallReceived", data);
         }
+    }
+
+    @PluginMethod
+    public void getPendingCall(PluginCall call) {
+        JSObject ret = new JSObject();
+        if (pendingCallerName != null) {
+            ret.put("hasCall", true);
+            ret.put("callerName", pendingCallerName);
+            ret.put("callType", pendingCallType);
+            ret.put("callerId", pendingCallerId);
+            ret.put("autoAccept", pendingAutoAccept);
+            pendingCallerName = null;
+            pendingCallType = null;
+            pendingCallerId = null;
+            pendingAutoAccept = false;
+        } else {
+            ret.put("hasCall", false);
+        }
+        call.resolve(ret);
     }
 
     @PluginMethod
@@ -62,12 +92,14 @@ public class IncomingCallPlugin extends Plugin {
         try {
             String callerName = call.getString("callerName", "Incoming Caller");
             String callType = call.getString("callType", "voice");
+            String callerId = call.getString("callerId", "");
             Context context = getContext();
 
             Intent serviceIntent = new Intent(context, CallNotificationService.class);
             serviceIntent.setAction(CallNotificationService.ACTION_INCOMING_CALL);
             serviceIntent.putExtra("callerName", callerName);
             serviceIntent.putExtra("callType", callType);
+            serviceIntent.putExtra("callerId", callerId);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent);

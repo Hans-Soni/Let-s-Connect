@@ -17,18 +17,30 @@ export const enableMobileBackgroundMode = async (credentials = {}) => {
   }
 };
 
-export const triggerNativeIncomingCall = async ({ callerName, callType }) => {
+export const triggerNativeIncomingCall = async ({ callerName, callType, callerId }) => {
   if (Capacitor.isNativePlatform()) {
     try {
       await IncomingCall.triggerIncomingCall({
         callerName: callerName || "Someone",
         callType: callType || "audio",
+        callerId: callerId || "",
       });
       console.log("[NativeCall] Native incoming call triggered (screen on + ringtone + vibration)");
     } catch (err) {
       console.warn("[NativeCall] Failed to trigger native incoming call:", err);
     }
   }
+};
+
+export const getPendingNativeCall = async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      return await IncomingCall.getPendingCall();
+    } catch (e) {
+      console.warn("[NativeCall] Failed to get pending call:", e);
+    }
+  }
+  return { hasCall: false };
 };
 
 export const stopNativeIncomingCall = async () => {

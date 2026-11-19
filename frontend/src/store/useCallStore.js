@@ -347,7 +347,11 @@ export const useCallStore = create((set, get) => ({
     playIncomingRingtone();
     startCallVibration();
     triggerIncomingCallNotification(data?.caller?.fullName, data?.callType);
-    triggerNativeIncomingCall({ callerName: data?.caller?.fullName, callType: data?.callType });
+    triggerNativeIncomingCall({
+      callerName: data?.caller?.fullName,
+      callType: data?.callType,
+      callerId: data?.caller?._id || data?.callerId,
+    });
 
     // 45s auto timeout on incoming call
     if (callRingingTimeout) clearTimeout(callRingingTimeout);

@@ -1,10 +1,14 @@
 package com.hans.samvaad;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -31,6 +35,7 @@ public class MainActivity extends BridgeActivity {
         }
 
         checkAndRequestPermissions();
+        requestBatteryExemption();
         checkIncomingCallIntent(getIntent());
     }
 
@@ -67,11 +72,26 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    private void requestBatteryExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
     private void checkIncomingCallIntent(Intent intent) {
         if (intent != null && intent.getBooleanExtra("isIncomingCall", false)) {
             String callerName = intent.getStringExtra("callerName");
             String callType = intent.getStringExtra("callType");
-            IncomingCallPlugin.sendIncomingCallEvent(callerName, callType);
+            String callerId = intent.getStringExtra("callerId");
+            boolean autoAccept = intent.getBooleanExtra("autoAccept", false);
+            IncomingCallPlugin.sendIncomingCallEvent(callerName, callType, callerId, autoAccept);
         }
     }
 
@@ -79,6 +99,7 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         checkAndRequestPermissions();
+        checkIncomingCallIntent(getIntent());
     }
 
     @Override

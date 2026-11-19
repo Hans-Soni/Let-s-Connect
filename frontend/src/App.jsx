@@ -11,7 +11,7 @@ import CallModal from "./components/CallModal";
 import InstallAppBanner from "./components/InstallAppBanner";
 import toast, { Toaster } from "react-hot-toast";
 import { axiosInstance } from "./lib/axios";
-import { enableMobileBackgroundMode, addIncomingCallListener } from "./lib/nativeCall";
+import { enableMobileBackgroundMode, addIncomingCallListener, getPendingNativeCall } from "./lib/nativeCall";
 import { useCallStore } from "./store/useCallStore";
 
 // Code-split pages for smaller initial bundle and faster load performance
@@ -79,18 +79,75 @@ function App() {
   useEffect(() => {
     if (!authUser) return;
 
-    const handleResume = () => {
+    const handleResume = async (incomingData = null) => {
       useAuthStore.getState().connectSocket();
       const { callState, handleIncomingCall } = useCallStore.getState();
-      if (callState === "idle") {
+
+      // 1. Direct native call event payload (instant bridge from native notification tap)
+      if (incomingData && incomingData.callerName) {
+        if (useCallStore.getState().callState === "idle") {
+          handleIncomingCall({
+            caller: {
+              _id: incomingData.callerId || "caller",
+              fullName: incomingData.callerName,
+            },
+            callType: incomingData.callType || "audio",
+          });
+          if (incomingData.autoAccept) {
+            setTimeout(() => {
+              useCallStore.getState().acceptCall();
+            }, 300);
+          }
+        }
+        return;
+      }
+
+      // 2. Query native plugin static memory for any call that woke the activity
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const pending = await getPendingNativeCall();
+          if (pending && pending.hasCall && pending.callerName) {
+            if (useCallStore.getState().callState === "idle") {
+              handleIncomingCall({
+                caller: {
+                  _id: pending.callerId || "caller",
+                  fullName: pending.callerName,
+                },
+                callType: pending.callType || "audio",
+              });
+              if (pending.autoAccept) {
+                setTimeout(() => {
+                  useCallStore.getState().acceptCall();
+                }, 300);
+              }
+            }
+            return;
+          }
+        } catch (e) {
+          console.warn("[App] Error checking pending native call:", e);
+        }
+      }
+
+      // 3. Fallback: lightweight server check for incoming calls (skips heavy middleware)
+      if (useCallStore.getState().callState === "idle") {
         axiosInstance
-          .get("/messages/pending-call")
+          .get("/messages/check-call")
           .then((res) => {
-            if (res.data?.hasPendingCall && res.data.call) {
+            if (res.data?.hasPendingCall && res.data.call && useCallStore.getState().callState === "idle") {
               handleIncomingCall(res.data.call);
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            // Secondary fallback to standard pending-call
+            axiosInstance
+              .get("/messages/pending-call")
+              .then((res) => {
+                if (res.data?.hasPendingCall && res.data.call && useCallStore.getState().callState === "idle") {
+                  handleIncomingCall(res.data.call);
+                }
+              })
+              .catch(() => {});
+          });
       }
     };
 
@@ -105,14 +162,17 @@ function App() {
         capListenerHandle = handle;
       }).catch(() => {});
 
-      const promise = addIncomingCallListener(() => {
-        handleResume();
+      const promise = addIncomingCallListener((data) => {
+        handleResume(data);
       });
       if (promise && typeof promise.then === "function") {
         promise.then((handle) => {
           callListenerHandle = handle;
         }).catch(() => {});
       }
+
+      // Initial check upon startup/mount
+      handleResume();
     }
 
     const handleVisibilityChange = () => {

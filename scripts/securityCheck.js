@@ -371,8 +371,19 @@ if (fs.existsSync(manifestPath)) {
   assert(manifest.includes("android.permission.USE_FULL_SCREEN_INTENT"), "Android manifest grants USE_FULL_SCREEN_INTENT");
   assert(manifest.includes("android.permission.FOREGROUND_SERVICE_PHONE_CALL"), "Android manifest grants FOREGROUND_SERVICE_PHONE_CALL");
   assert(manifest.includes("CallNotificationService"), "Android manifest registers CallNotificationService for background calls");
+  assert(manifest.includes('android:stopWithTask="false"'), "Android manifest configures stopWithTask='false' to survive app swiping");
+  assert(manifest.includes("BootReceiver"), "Android manifest registers BootReceiver for device reboot auto-start");
+  assert(manifest.includes("RECEIVE_BOOT_COMPLETED"), "Android manifest declares RECEIVE_BOOT_COMPLETED permission");
   assert(manifest.includes('android:showWhenLocked="true"'), "Android MainActivity configured to showWhenLocked");
   assert(manifest.includes('android:turnScreenOn="true"'), "Android MainActivity configured to turnScreenOn");
+}
+
+const bootReceiverPath = path.resolve("frontend/android/app/src/main/java/com/hans/samvaad/BootReceiver.java");
+assert(fs.existsSync(bootReceiverPath), "Android BootReceiver.java exists");
+if (fs.existsSync(bootReceiverPath)) {
+  const bootCode = fs.readFileSync(bootReceiverPath, "utf8");
+  assert(bootCode.includes("ACTION_BOOT_COMPLETED"), "BootReceiver listens for ACTION_BOOT_COMPLETED");
+  assert(bootCode.includes("ACTION_START_FOREGROUND"), "BootReceiver launches CallNotificationService on boot");
 }
 
 const mainActivityPath = path.resolve("frontend/android/app/src/main/java/com/hans/samvaad/MainActivity.java");
@@ -382,6 +393,7 @@ if (fs.existsSync(mainActivityPath)) {
   assert(mainActivity.includes("setShowWhenLocked(true)"), "MainActivity implements setShowWhenLocked for incoming calls");
   assert(mainActivity.includes("setTurnScreenOn(true)"), "MainActivity implements setTurnScreenOn for incoming calls");
   assert(mainActivity.includes("checkAndRequestPermissions"), "MainActivity implements checkAndRequestPermissions for runtime mic/camera/notifications");
+  assert(mainActivity.includes("checkIncomingCallIntent"), "MainActivity forwards incoming call intent extras to IncomingCallPlugin");
 }
 
 const servicePath = path.resolve("frontend/android/app/src/main/java/com/hans/samvaad/CallNotificationService.java");
@@ -393,7 +405,26 @@ if (fs.existsSync(servicePath)) {
   assert(serviceCode.includes("USAGE_NOTIFICATION_RINGTONE"), "CallNotificationService configures hardware ringtone audio usage");
   assert(serviceCode.includes("wait-for-call"), "CallNotificationService implements wait-for-call native background listener");
   assert(serviceCode.includes("monitorCallStatusWhileRinging"), "CallNotificationService implements monitorCallStatusWhileRinging");
+  assert(serviceCode.includes("onTaskRemoved"), "CallNotificationService implements onTaskRemoved with AlarmManager for app-close resurrection");
+  assert(serviceCode.includes("CallStyle.forIncomingCall"), "CallNotificationService uses CallStyle.forIncomingCall with ANSWER/DECLINE buttons");
 }
+
+const incomingPluginPath = path.resolve("frontend/android/app/src/main/java/com/hans/samvaad/IncomingCallPlugin.java");
+assert(fs.existsSync(incomingPluginPath), "Android IncomingCallPlugin.java exists");
+if (fs.existsSync(incomingPluginPath)) {
+  const pluginCode = fs.readFileSync(incomingPluginPath, "utf8");
+  assert(pluginCode.includes("getPendingCall"), "IncomingCallPlugin implements getPendingCall method");
+  assert(pluginCode.includes("sendIncomingCallEvent"), "IncomingCallPlugin implements sendIncomingCallEvent");
+}
+
+const nativeCallPath = path.resolve("frontend/src/lib/nativeCall.js");
+const nativeCallCode = fs.readFileSync(nativeCallPath, "utf8");
+assert(nativeCallCode.includes("getPendingNativeCall"), "nativeCall.js exports getPendingNativeCall");
+
+const appJsxPath = path.resolve("frontend/src/App.jsx");
+const appJsxCode = fs.readFileSync(appJsxPath, "utf8");
+assert(appJsxCode.includes("getPendingNativeCall"), "App.jsx queries getPendingNativeCall on resume/launch");
+assert(appJsxCode.includes("autoAccept"), "App.jsx handles autoAccept from ANSWER action button");
 
 const messageControllerCode = fs.readFileSync(path.resolve("backend/src/controllers/message.controller.js"), "utf8");
 assert(messageControllerCode.includes("waitForIncomingCall"), "message.controller.js implements waitForIncomingCall");
