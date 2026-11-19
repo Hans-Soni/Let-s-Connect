@@ -37,9 +37,7 @@ jobs:
         run: npm run build --prefix frontend
 
       - name: Sync Capacitor Android
-        run: |
-          cd frontend
-          npx cap sync android
+        run: npm run cap:sync --prefix frontend
 
       - name: Make Gradlew Executable
         run: chmod +x frontend/android/gradlew
