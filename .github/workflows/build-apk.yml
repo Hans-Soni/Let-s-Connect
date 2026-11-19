@@ -39,13 +39,16 @@ jobs:
       - name: Make Gradlew Executable
         run: chmod +x frontend/android/gradlew
 
+      - name: Accept Android SDK Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
       - name: Sync Capacitor Android
-        run: npm run cap:sync --prefix frontend
+        working-directory: frontend
+        run: npx cap sync android
 
       - name: Build Debug APK
-        run: |
-          cd frontend/android
-          ./gradlew assembleDebug --no-daemon
+        working-directory: frontend/android
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
