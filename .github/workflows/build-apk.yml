@@ -43,8 +43,7 @@ jobs:
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Copy Web Assets to Android
-        working-directory: frontend
-        run: npx cap copy android
+        run: npm run cap:copy --prefix frontend
 
       - name: Build Debug APK
         working-directory: frontend/android

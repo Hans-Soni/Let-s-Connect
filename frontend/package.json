@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "cap:sync": "cap sync",
+    "cap:copy": "cap copy android",
     "cap:build": "npm run build && cap sync",
     "cap:open": "cap open android",
     "predeploy": "npm run build",
