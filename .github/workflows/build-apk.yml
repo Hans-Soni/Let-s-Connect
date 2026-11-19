@@ -43,7 +43,10 @@ jobs:
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Copy Web Assets to Android
-        run: npm run cap:copy --prefix frontend
+        run: |
+          mkdir -p frontend/android/app/src/main/assets/public
+          cp -r frontend/dist/* frontend/android/app/src/main/assets/public/
+          cp frontend/capacitor.config.json frontend/android/app/src/main/assets/capacitor.config.json
 
       - name: Build Debug APK
         working-directory: frontend/android
