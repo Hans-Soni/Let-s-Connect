@@ -158,8 +158,13 @@ public class CallNotificationService extends Service {
 
                             handleIncomingCall(callerName, callType);
 
-                            // While device is ringing, actively monitor if caller hung up or call ended
-                            monitorCallStatusWhileRinging(cleanBase, token);
+                            // Actively monitor on a separate thread if caller hung up or call ended
+                            final String finalBase = cleanBase;
+                            final String finalToken = token;
+                            final String finalUserId = userId;
+                            new Thread(() -> monitorCallStatusWhileRinging(finalBase, finalToken, finalUserId), "SamvaadCallMonitor").start();
+                        } else if (json.optBoolean("callEnded", false)) {
+                            stopIncomingRinging();
                         }
                     } else if (code == 401) {
                         // Auth token invalid or expired, back off 15 seconds
@@ -183,15 +188,15 @@ public class CallNotificationService extends Service {
         backgroundWorkerThread.start();
     }
 
-    private void monitorCallStatusWhileRinging(String cleanBase, String token) {
+    private void monitorCallStatusWhileRinging(String cleanBase, String token, String userId) {
         long ringStartTime = System.currentTimeMillis();
         // Ring for max 45 seconds timeout
         while (isRinging && (System.currentTimeMillis() - ringStartTime < 45000)) {
             try {
-                Thread.sleep(2000);
+                Thread.sleep(1500);
                 if (!isRinging) break;
 
-                String checkUrl = cleanBase + "messages/pending-call";
+                String checkUrl = cleanBase + "messages/check-call?userId=" + userId;
                 URL url = new URL(checkUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");

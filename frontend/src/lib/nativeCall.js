@@ -41,3 +41,14 @@ export const stopNativeIncomingCall = async () => {
     }
   }
 };
+
+export const addIncomingCallListener = (callback) => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      return IncomingCall.addListener("onIncomingCallReceived", callback);
+    } catch (err) {
+      console.warn("[NativeCall] Failed to add incoming call listener:", err);
+    }
+  }
+  return null;
+};

@@ -12,6 +12,23 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "IncomingCall")
 public class IncomingCallPlugin extends Plugin {
 
+    private static IncomingCallPlugin instance = null;
+
+    @Override
+    public void load() {
+        super.load();
+        instance = this;
+    }
+
+    public static void sendIncomingCallEvent(String callerName, String callType) {
+        if (instance != null) {
+            JSObject data = new JSObject();
+            data.put("callerName", callerName);
+            data.put("callType", callType);
+            instance.notifyListeners("onIncomingCallReceived", data);
+        }
+    }
+
     @PluginMethod
     public void enableBackgroundMode(PluginCall call) {
         try {

@@ -72,6 +72,10 @@ export function stopOutgoingRingtone() {
  */
 export function playIncomingRingtone() {
   stopIncomingRingtone();
+  // On native Android/iOS, CallNotificationService handles real native phone ringtone with hardware priority
+  if (typeof window !== "undefined" && window.Capacitor?.isNativePlatform()) {
+    return;
+  }
   const ctx = getAudioContext();
   if (!ctx) return;
 

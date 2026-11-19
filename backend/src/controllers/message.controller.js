@@ -793,6 +793,48 @@ export const getPendingCallForUser = (req, res) => {
   }
 };
 
+export const checkPendingCallLightweight = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const bearerToken =
+      authHeader && typeof authHeader === "string"
+        ? authHeader.replace(/^Bearer\s+/i, "").trim()
+        : null;
+    let token = req.cookies?.jwt || bearerToken;
+    if (!token && req.query?.token) token = req.query.token;
+
+    if (!token) {
+      return res.status(401).json({ hasPendingCall: false, message: "No token provided" });
+    }
+
+    const keys = await import("../lib/keyRotation.js");
+    let decoded;
+    try {
+      decoded = keys.verifyJwt(token, { ignoreExpiration: true });
+    } catch {
+      return res.status(401).json({ hasPendingCall: false, message: "Invalid token" });
+    }
+
+    if (!decoded?.userId) {
+      return res.status(401).json({ hasPendingCall: false, message: "Invalid token payload" });
+    }
+
+    if (decoded.exp && Math.floor(Date.now() / 1000) - decoded.exp > 7 * 24 * 3600) {
+      return res.status(401).json({ hasPendingCall: false, message: "Token expired beyond grace window" });
+    }
+
+    const userId = decoded.userId.toString();
+    const pendingCall = getActivePendingCall(userId);
+    if (pendingCall) {
+      return res.status(200).json({ hasPendingCall: true, call: pendingCall });
+    }
+    return res.status(200).json({ hasPendingCall: false });
+  } catch (error) {
+    console.error("Error in checkPendingCallLightweight:", error.message);
+    return res.status(500).json({ hasPendingCall: false });
+  }
+};
+
 export const waitForIncomingCall = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;

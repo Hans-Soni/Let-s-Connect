@@ -381,6 +381,7 @@ if (fs.existsSync(mainActivityPath)) {
   const mainActivity = fs.readFileSync(mainActivityPath, "utf8");
   assert(mainActivity.includes("setShowWhenLocked(true)"), "MainActivity implements setShowWhenLocked for incoming calls");
   assert(mainActivity.includes("setTurnScreenOn(true)"), "MainActivity implements setTurnScreenOn for incoming calls");
+  assert(mainActivity.includes("checkAndRequestPermissions"), "MainActivity implements checkAndRequestPermissions for runtime mic/camera/notifications");
 }
 
 const servicePath = path.resolve("frontend/android/app/src/main/java/com/hans/samvaad/CallNotificationService.java");
@@ -396,9 +397,11 @@ if (fs.existsSync(servicePath)) {
 
 const messageControllerCode = fs.readFileSync(path.resolve("backend/src/controllers/message.controller.js"), "utf8");
 assert(messageControllerCode.includes("waitForIncomingCall"), "message.controller.js implements waitForIncomingCall");
+assert(messageControllerCode.includes("checkPendingCallLightweight"), "message.controller.js implements checkPendingCallLightweight");
 
 const socketLibCode = fs.readFileSync(path.resolve("backend/src/lib/socket.js"), "utf8");
 assert(socketLibCode.includes("dispatchCallToWaiters"), "socket.js implements dispatchCallToWaiters for background wakeup");
+assert(socketLibCode.includes("clearActiveCallForUser"), "socket.js implements clearActiveCallForUser against stuck calls");
 
 // ----------------------------------------------------
 // 11. IP & PORT PRIVACY, INPUT BOUNDS & ANTI-SPOOFING SECURITY

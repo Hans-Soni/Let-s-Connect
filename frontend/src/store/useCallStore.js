@@ -65,6 +65,10 @@ const safelyAddCandidate = async (pc, candidateData) => {
 let vibrateInterval = null;
 
 const startCallVibration = () => {
+  // On native platform, Android hardware vibrator handles vibration in CallNotificationService
+  if (typeof window !== "undefined" && window.Capacitor?.isNativePlatform()) {
+    return;
+  }
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     try {
       navigator.vibrate([1000, 500, 1000, 1000]);
@@ -409,16 +413,33 @@ export const useCallStore = create((set, get) => ({
       playCallConnectedSound();
       get().startCallTimer();
 
-      if (socket && socket.connected && callPartner?._id) {
-        console.log("[Call] Emitting call:accept to caller:", callPartner._id);
-        socket.emit("call:accept", {
-          callerId: String(callPartner._id),
-          receiver: {
-            _id: String(authUser._id),
-            fullName: authUser.fullName,
-            profilePic: authUser.profilePic,
-          },
-        });
+      const emitCallAccept = () => {
+        const currentSocket = useAuthStore.getState().socket;
+        if (currentSocket && callPartner?._id) {
+          console.log("[Call] Emitting call:accept to caller:", callPartner._id);
+          currentSocket.emit("call:accept", {
+            callerId: String(callPartner._id),
+            receiver: {
+              _id: String(authUser._id),
+              fullName: authUser.fullName,
+              profilePic: authUser.profilePic,
+            },
+          });
+        }
+      };
+
+      if (socket && socket.connected) {
+        emitCallAccept();
+      } else {
+        // Socket may still be reconnecting upon waking from lockscreen -> wait for connection
+        console.log("[Call] Socket reconnecting, waiting to dispatch call:accept...");
+        const connTimeout = setTimeout(emitCallAccept, 1500);
+        if (socket) {
+          socket.once("connect", () => {
+            clearTimeout(connTimeout);
+            emitCallAccept();
+          });
+        }
       }
     } catch (err) {
       console.error("[Call] Error accessing media devices on accept:", err);
@@ -455,13 +476,29 @@ export const useCallStore = create((set, get) => ({
       await pc.setLocalDescription(offer);
       console.log("[Call] Local SDP offer set successfully. Dispatching to partner...");
 
-      socket.emit("webrtc:signal", {
-        targetUserId: partnerId,
-        signalData: {
-          type: "offer",
-          sdp: pc.localDescription.sdp,
-        },
-      });
+      const sendOffer = () => {
+        const s = useAuthStore.getState().socket;
+        if (s && s.connected) {
+          s.emit("webrtc:signal", {
+            targetUserId: partnerId,
+            signalData: {
+              type: "offer",
+              sdp: pc.localDescription.sdp,
+            },
+          });
+        } else if (s) {
+          s.once("connect", () => {
+            s.emit("webrtc:signal", {
+              targetUserId: partnerId,
+              signalData: {
+                type: "offer",
+                sdp: pc.localDescription.sdp,
+              },
+            });
+          });
+        }
+      };
+      sendOffer();
     } catch (err) {
       console.error("[Call] Error creating WebRTC offer:", err);
       toast.error("Failed to establish peer media connection");
@@ -537,16 +574,26 @@ export const useCallStore = create((set, get) => ({
       console.warn("[Call] Local stream was not present when creating peer connection!");
     }
 
-    // ICE Candidate generation -> send to peer via Socket.io
+    // ICE Candidate generation -> send to peer via Socket.io (with reconnection buffer)
     pc.onicecandidate = (event) => {
-      if (event.candidate && socket && socket.connected) {
-        socket.emit("webrtc:signal", {
+      if (event.candidate) {
+        const candidatePayload = {
           targetUserId: String(targetUserId),
           signalData: {
             type: "candidate",
             candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate,
           },
-        });
+        };
+
+        const currentSocket = useAuthStore.getState().socket;
+        if (currentSocket && currentSocket.connected) {
+          currentSocket.emit("webrtc:signal", candidatePayload);
+        } else if (currentSocket) {
+          // Socket momentarily reconnecting -> buffer until connected
+          currentSocket.once("connect", () => {
+            currentSocket.emit("webrtc:signal", candidatePayload);
+          });
+        }
       }
     };
 
@@ -636,15 +683,29 @@ export const useCallStore = create((set, get) => ({
         await pc.setLocalDescription(answer);
         console.log("[Call] Local SDP answer set, sending to caller:", senderId);
 
-        if (socket && socket.connected) {
-          socket.emit("webrtc:signal", {
-            targetUserId: String(senderId),
-            signalData: {
-              type: "answer",
-              sdp: pc.localDescription.sdp,
-            },
-          });
-        }
+        const sendAnswer = () => {
+          const s = useAuthStore.getState().socket;
+          if (s && s.connected) {
+            s.emit("webrtc:signal", {
+              targetUserId: String(senderId),
+              signalData: {
+                type: "answer",
+                sdp: pc.localDescription.sdp,
+              },
+            });
+          } else if (s) {
+            s.once("connect", () => {
+              s.emit("webrtc:signal", {
+                targetUserId: String(senderId),
+                signalData: {
+                  type: "answer",
+                  sdp: pc.localDescription.sdp,
+                },
+              });
+            });
+          }
+        };
+        sendAnswer();
       }
 
       // 2. CALLER receives ANSWER from receiver

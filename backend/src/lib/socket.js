@@ -108,6 +108,16 @@ export function cancelCallWaiters(targetUserId) {
   }
 }
 
+export function clearActiveCallForUser(userId) {
+  if (!userId) return;
+  const uid = String(userId);
+  const partnerId = userActiveCallMap[uid];
+  delete userActiveCallMap[uid];
+  if (partnerId) {
+    delete userActiveCallMap[partnerId];
+  }
+}
+
 // Helper to get any active socket ID for this user (used for WebRTC signaling)
 export function getReceiverSocketId(userId) {
   if (!userId) return null;
@@ -282,10 +292,21 @@ io.on("connection", (socket) => {
       if (!targetUserId) return;
       const callerUserId = socket.userId.toString();
 
-      // Fast check: If receiver is already in a call, inform caller immediately
+      // Clear any stale active call locks for caller
+      if (userActiveCallMap[callerUserId]) {
+        clearActiveCallForUser(callerUserId);
+      }
+
+      // Check if receiver is in an active call, or clear stale call locks
       if (userActiveCallMap[targetUserId]) {
-        socket.emit("call:busy", { receiverId: targetUserId, message: "User is currently on another call" });
-        return;
+        const partnerId = userActiveCallMap[targetUserId];
+        const isPartnerOnline = isUserOnline(partnerId);
+        if (!isPartnerOnline || callerUserId === partnerId || callerUserId === targetUserId) {
+          clearActiveCallForUser(targetUserId);
+        } else {
+          socket.emit("call:busy", { receiverId: targetUserId, message: "User is currently on another call" });
+          return;
+        }
       }
 
       // Check if user has active connected socket
@@ -407,8 +428,8 @@ io.on("connection", (socket) => {
         pendingCallInvites.delete(targetUserId.toString());
       }
 
-      delete userActiveCallMap[currentUserId];
-      if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
+      clearActiveCallForUser(currentUserId);
+      if (targetUserId) clearActiveCallForUser(targetUserId.toString());
 
       if (targetUserId) {
         cancelCallWaiters(targetUserId.toString());
@@ -435,8 +456,8 @@ io.on("connection", (socket) => {
       }
       cancelCallWaiters(currentUserId);
 
-      delete userActiveCallMap[currentUserId];
-      if (targetUserId) delete userActiveCallMap[targetUserId.toString()];
+      clearActiveCallForUser(currentUserId);
+      if (targetUserId) clearActiveCallForUser(targetUserId.toString());
 
       if (targetUserId) {
         cancelCallWaiters(targetUserId.toString());
@@ -490,8 +511,7 @@ io.on("connection", (socket) => {
         by: userId,
         reason: "disconnected",
       });
-      delete userActiveCallMap[userId];
-      delete userActiveCallMap[partnerId];
+      clearActiveCallForUser(userId);
     }
 
     io.emit("getOnlineUsers", Array.from(userSocketsMap.keys()));

@@ -11,7 +11,7 @@ import CallModal from "./components/CallModal";
 import InstallAppBanner from "./components/InstallAppBanner";
 import toast, { Toaster } from "react-hot-toast";
 import { axiosInstance } from "./lib/axios";
-import { enableMobileBackgroundMode } from "./lib/nativeCall";
+import { enableMobileBackgroundMode, addIncomingCallListener } from "./lib/nativeCall";
 import { useCallStore } from "./store/useCallStore";
 
 // Code-split pages for smaller initial bundle and faster load performance
@@ -95,6 +95,7 @@ function App() {
     };
 
     let capListenerHandle = null;
+    let callListenerHandle = null;
     if (Capacitor.isNativePlatform()) {
       CapApp.addListener("appStateChange", ({ isActive }) => {
         if (isActive) {
@@ -103,6 +104,15 @@ function App() {
       }).then((handle) => {
         capListenerHandle = handle;
       }).catch(() => {});
+
+      const promise = addIncomingCallListener(() => {
+        handleResume();
+      });
+      if (promise && typeof promise.then === "function") {
+        promise.then((handle) => {
+          callListenerHandle = handle;
+        }).catch(() => {});
+      }
     }
 
     const handleVisibilityChange = () => {
@@ -114,6 +124,9 @@ function App() {
 
     return () => {
       if (capListenerHandle) capListenerHandle.remove();
+      if (callListenerHandle && typeof callListenerHandle.remove === "function") {
+        callListenerHandle.remove();
+      }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [authUser]);
