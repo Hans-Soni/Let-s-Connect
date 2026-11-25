@@ -312,6 +312,10 @@ if (fs.existsSync(indexHtmlPath)) {
     indexHtml.includes('http-equiv="Content-Security-Policy"') && indexHtml.includes("default-src 'self'"),
     "Content-Security-Policy (CSP) meta directive present in index.html"
   );
+  assert(
+    indexHtml.includes('name="google-site-verification"') && indexHtml.includes('content="FokCD3GyLhN6XTqAY3CKc6QLsP_dEla6Gr9uvaJ4KO4"'),
+    "Google Search Console verification meta tag present in index.html"
+  );
 }
 
 const serverJsPath = path.resolve("backend/src/server.js");
